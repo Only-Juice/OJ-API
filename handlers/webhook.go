@@ -53,7 +53,7 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 
 	// Clone the given repository to the given directory
 	log.Printf("git clone %s", GitServer+payload.Repository.FullName)
-	codePath := fmt.Sprintf("%s/%s", RepoFolder, payload.Repository.FullName+"-"+uuid.New().String())
+	codePath := fmt.Sprintf("%s/%s", RepoFolder, payload.Repository.FullName+"/"+uuid.New().String())
 	repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
 		URL:      GitServer + payload.Repository.FullName,
 		Progress: os.Stdout,
