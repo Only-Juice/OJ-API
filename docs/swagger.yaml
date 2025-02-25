@@ -1,0 +1,526 @@
+basePath: /
+definitions:
+  gitea.Commit:
+    properties:
+      author:
+        $ref: '#/definitions/gitea.User'
+      commit:
+        $ref: '#/definitions/gitea.RepoCommit'
+      committer:
+        $ref: '#/definitions/gitea.User'
+      created:
+        type: string
+      files:
+        items:
+          $ref: '#/definitions/gitea.CommitAffectedFiles'
+        type: array
+      html_url:
+        type: string
+      parents:
+        items:
+          $ref: '#/definitions/gitea.CommitMeta'
+        type: array
+      sha:
+        type: string
+      stats:
+        $ref: '#/definitions/gitea.CommitStats'
+      url:
+        type: string
+    type: object
+  gitea.CommitAffectedFiles:
+    properties:
+      filename:
+        type: string
+    type: object
+  gitea.CommitMeta:
+    properties:
+      created:
+        type: string
+      sha:
+        type: string
+      url:
+        type: string
+    type: object
+  gitea.CommitStats:
+    properties:
+      additions:
+        type: integer
+      deletions:
+        type: integer
+      total:
+        type: integer
+    type: object
+  gitea.CommitUser:
+    properties:
+      date:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+    type: object
+  gitea.ExternalTracker:
+    properties:
+      external_tracker_format:
+        description: External Issue Tracker URL Format. Use the placeholders {user},
+          {repo} and {index} for the username, repository name and issue index.
+        type: string
+      external_tracker_style:
+        description: External Issue Tracker Number Format, either `numeric` or `alphanumeric`
+        type: string
+      external_tracker_url:
+        description: URL of external issue tracker.
+        type: string
+    type: object
+  gitea.ExternalWiki:
+    properties:
+      external_wiki_url:
+        description: URL of external wiki.
+        type: string
+    type: object
+  gitea.InternalTracker:
+    properties:
+      allow_only_contributors_to_track_time:
+        description: Let only contributors track time (Built-in issue tracker)
+        type: boolean
+      enable_issue_dependencies:
+        description: Enable dependencies for issues and pull requests (Built-in issue
+          tracker)
+        type: boolean
+      enable_time_tracker:
+        description: Enable time tracking (Built-in issue tracker)
+        type: boolean
+    type: object
+  gitea.MergeStyle:
+    enum:
+    - merge
+    - rebase
+    - rebase-merge
+    - squash
+    type: string
+    x-enum-varnames:
+    - MergeStyleMerge
+    - MergeStyleRebase
+    - MergeStyleRebaseMerge
+    - MergeStyleSquash
+  gitea.PayloadCommitVerification:
+    properties:
+      payload:
+        type: string
+      reason:
+        type: string
+      signature:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  gitea.Permission:
+    properties:
+      admin:
+        type: boolean
+      pull:
+        type: boolean
+      push:
+        type: boolean
+    type: object
+  gitea.RepoCommit:
+    properties:
+      author:
+        $ref: '#/definitions/gitea.CommitUser'
+      committer:
+        $ref: '#/definitions/gitea.CommitUser'
+      message:
+        type: string
+      tree:
+        $ref: '#/definitions/gitea.CommitMeta'
+      url:
+        type: string
+      verification:
+        $ref: '#/definitions/gitea.PayloadCommitVerification'
+    type: object
+  gitea.Repository:
+    properties:
+      allow_merge_commits:
+        type: boolean
+      allow_rebase:
+        type: boolean
+      allow_rebase_explicit:
+        type: boolean
+      allow_squash_merge:
+        type: boolean
+      archived:
+        type: boolean
+      avatar_url:
+        type: string
+      clone_url:
+        type: string
+      created_at:
+        type: string
+      default_branch:
+        type: string
+      default_merge_style:
+        $ref: '#/definitions/gitea.MergeStyle'
+      description:
+        type: string
+      empty:
+        type: boolean
+      external_tracker:
+        $ref: '#/definitions/gitea.ExternalTracker'
+      external_wiki:
+        $ref: '#/definitions/gitea.ExternalWiki'
+      fork:
+        type: boolean
+      forks_count:
+        type: integer
+      full_name:
+        type: string
+      has_actions:
+        type: boolean
+      has_issues:
+        type: boolean
+      has_packages:
+        type: boolean
+      has_projects:
+        type: boolean
+      has_pull_requests:
+        type: boolean
+      has_releases:
+        type: boolean
+      has_wiki:
+        type: boolean
+      html_url:
+        type: string
+      id:
+        type: integer
+      ignore_whitespace_conflicts:
+        type: boolean
+      internal:
+        type: boolean
+      internal_tracker:
+        $ref: '#/definitions/gitea.InternalTracker'
+      mirror:
+        type: boolean
+      mirror_interval:
+        type: string
+      mirror_updated:
+        type: string
+      name:
+        type: string
+      open_issues_count:
+        type: integer
+      open_pr_counter:
+        type: integer
+      original_url:
+        type: string
+      owner:
+        $ref: '#/definitions/gitea.User'
+      parent:
+        $ref: '#/definitions/gitea.Repository'
+      permissions:
+        $ref: '#/definitions/gitea.Permission'
+      private:
+        type: boolean
+      release_counter:
+        type: integer
+      size:
+        type: integer
+      ssh_url:
+        type: string
+      stars_count:
+        type: integer
+      template:
+        type: boolean
+      updated_at:
+        type: string
+      watchers_count:
+        type: integer
+      website:
+        type: string
+    type: object
+  gitea.User:
+    properties:
+      active:
+        description: Is user active
+        type: boolean
+      avatar_url:
+        description: URL to the user's avatar
+        type: string
+      created:
+        description: Date and Time of user creation
+        type: string
+      description:
+        description: the user's description
+        type: string
+      email:
+        type: string
+      followers_count:
+        description: user counts
+        type: integer
+      following_count:
+        type: integer
+      full_name:
+        description: the user's full name
+        type: string
+      id:
+        description: the user's id
+        type: integer
+      is_admin:
+        description: Is the user an administrator
+        type: boolean
+      language:
+        description: User locale
+        type: string
+      last_login:
+        description: Date and Time of last login
+        type: string
+      location:
+        description: the user's location
+        type: string
+      login:
+        description: the user's username
+        type: string
+      login_name:
+        description: The login_name of non local users (e.g. LDAP / OAuth / SMTP)
+        type: string
+      prohibit_login:
+        description: Is user login prohibited
+        type: boolean
+      restricted:
+        description: Is user restricted
+        type: boolean
+      source_id:
+        description: The ID of the Authentication Source for non local users.
+        type: integer
+      starred_repos_count:
+        type: integer
+      visibility:
+        allOf:
+        - $ref: '#/definitions/gitea.VisibleType'
+        description: User visibility level option
+      website:
+        description: the user's website
+        type: string
+    type: object
+  gitea.VisibleType:
+    enum:
+    - public
+    - limited
+    - private
+    type: string
+    x-enum-varnames:
+    - VisibleTypePublic
+    - VisibleTypeLimited
+    - VisibleTypePrivate
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  handlers.ResponseHTTP:
+    properties:
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  handlers.WebhookPayload:
+    properties:
+      after:
+        type: string
+      before:
+        type: string
+      commits:
+        items:
+          $ref: '#/definitions/gitea.Commit'
+        type: array
+      compare_url:
+        type: string
+      pusher:
+        $ref: '#/definitions/gitea.User'
+      ref:
+        type: string
+      repository:
+        $ref: '#/definitions/gitea.Repository'
+      sender:
+        $ref: '#/definitions/gitea.User'
+    type: object
+  models.Sandbox:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      script:
+        example: |-
+          #!/bin/bash
+
+          echo 'Hello, World!'
+        type: string
+      source_git_url:
+        example: user_name/repo_name
+        type: string
+      updatedAt:
+        type: string
+    required:
+    - script
+    - source_git_url
+    type: object
+  models.Score:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      git_repo:
+        example: user_name/repo_name
+        type: string
+      id:
+        type: integer
+      message:
+        example: Scored successfully
+        type: string
+      score:
+        example: 100
+        type: number
+      updatedAt:
+        type: string
+    required:
+    - git_repo
+    - message
+    - score
+    type: object
+info:
+  contact: {}
+  description: This is a simple OJ-PoC API server.
+  title: OJ-PoC API
+  version: "1.0"
+paths:
+  /api/gitea:
+    post:
+      consumes:
+      - application/json
+      description: Receive Gitea hook
+      parameters:
+      - description: Gitea Hook
+        in: body
+        name: hook
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.WebhookPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                type:
+                  $ref: '#/definitions/handlers.WebhookPayload'
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Receive Gitea hook
+      tags:
+      - WebHook
+  /api/sandbox:
+    post:
+      consumes:
+      - application/json
+      description: Specify the shell command for the corresponding repo
+      parameters:
+      - description: Shell command
+        in: body
+        name: cmd
+        required: true
+        schema:
+          $ref: '#/definitions/models.Sandbox'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Sandbox'
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Specify the shell command for the corresponding repo
+      tags:
+      - Sandbox
+  /api/score:
+    get:
+      consumes:
+      - application/json
+      description: Get a score by repo
+      parameters:
+      - description: Repo name
+        in: query
+        name: repo
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Score'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Get a score by repo
+      tags:
+      - Score
+  /api/scores:
+    get:
+      consumes:
+      - application/json
+      description: Get all scores
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Score'
+                  type: array
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Get all scores
+      tags:
+      - Score
+swagger: "2.0"
