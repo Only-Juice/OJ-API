@@ -12,6 +12,7 @@ import (
 	"code.gitea.io/sdk/gitea"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/google/uuid"
 
 	"OJ-API/database"
 	"OJ-API/models"
@@ -52,8 +53,8 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 
 	// Clone the given repository to the given directory
 	log.Printf("git clone %s", GitServer+payload.Repository.FullName)
-	repoPath := fmt.Sprintf("%s/%s", RepoFolder, payload.Repository.FullName)
-	repo, err := git.PlainClone(repoPath, false, &git.CloneOptions{
+	codePath := fmt.Sprintf("%s/%s", RepoFolder, payload.Repository.FullName+"-"+uuid.New().String())
+	repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
 		URL:      GitServer + payload.Repository.FullName,
 		Progress: os.Stdout,
 	})
@@ -61,8 +62,8 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to clone repository", http.StatusServiceUnavailable)
 		return
 	}
-	os.Chmod(repoPath, 0777)
-	defer os.RemoveAll(repoPath)
+	os.Chmod(codePath, 0777)
+	defer os.RemoveAll(codePath)
 	log.Printf("git show-ref --head HEAD")
 	ref, err := repo.Head()
 	if err != nil {
@@ -90,10 +91,10 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println(ref.Hash())
 
-	sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(repoPath))
+	sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
 
 	// read score from file
-	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", repoPath))
+	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
 	if err != nil {
 		http.Error(w, "Failed to read score", http.StatusServiceUnavailable)
 		return
@@ -109,7 +110,7 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// read message from file
-	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", repoPath))
+	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
 	if err != nil {
 		http.Error(w, "Failed to read message", http.StatusServiceUnavailable)
 		return
