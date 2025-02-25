@@ -77,7 +77,7 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 	return string(out)
 }
 
-func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, repoPath []byte) string {
+func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte) string {
 	db := database.DBConn
 
 	var cmd models.Sandbox
@@ -85,5 +85,5 @@ func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, repoPath []byte) str
 		return fmt.Sprintf("Failed to find shell command for %v", parentsRepo)
 	}
 
-	return s.RunShellCommand([]byte(cmd.Script), repoPath)
+	return s.RunShellCommand([]byte(cmd.Script), codePath)
 }
