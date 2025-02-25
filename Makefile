@@ -6,4 +6,7 @@ run: build
 	./server
 
 watch:
-	reflex -s -R '^docs/' -r '\.go$$' make run
+	reflex -s -R '^docs/' -r '\.go$$' make run 
+
+clean:
+	rm -r /sandbox/code/* /sandbox/repo/*
