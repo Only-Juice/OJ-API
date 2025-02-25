@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/routes"
@@ -41,5 +42,5 @@ func main() {
 	database.DBConn.AutoMigrate(&models.Score{})
 
 	r := routes.New()
-	log.Fatal(http.ListenAndServe(":3002", r))
+	log.Fatal(http.ListenAndServe(":" + config.Config("API_PORT"), r))
 }
