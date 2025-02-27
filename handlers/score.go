@@ -106,26 +106,8 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	page, err := url.QueryUnescape(r.URL.Query().Get("page"))
-	if err != nil {
-		log.Printf("Failed to unescape page: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Failed to unescape page",
-		})
-		return
-	}
-	limit, err := url.QueryUnescape(r.URL.Query().Get("limit"))
-	if err != nil {
-		log.Printf("Failed to unescape limit: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Failed to unescape limit",
-		})
-		return
-	}
+	page := r.URL.Query().Get("page")
+	limit := r.URL.Query().Get("limit")
 	if page == "" {
 		page = "1"
 	}
