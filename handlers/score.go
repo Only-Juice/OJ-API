@@ -80,6 +80,14 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if owner == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "User name is required",
+		})
+		return
+	}
 	repo, err := url.QueryUnescape(r.URL.Query().Get("repo"))
 	if err != nil {
 		log.Printf("Failed to unescape repo name: %v", err)
@@ -87,6 +95,14 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(ResponseHTTP{
 			Success: false,
 			Message: "Failed to unescape repo name",
+		})
+		return
+	}
+	if repo == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Repo name is required",
 		})
 		return
 	}
@@ -157,6 +173,14 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(ResponseHTTP{
 			Success: false,
 			Message: "Failed to get score by repo",
+		})
+		return
+	}
+	if len(scores) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Score not found",
 		})
 		return
 	}
