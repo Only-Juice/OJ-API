@@ -377,23 +377,27 @@ definitions:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
-      git_repo:
-        example: user_name/repo_name
-        type: string
       id:
         type: integer
       message:
         example: Scored successfully
+        type: string
+      repo_name:
+        example: repo_name
         type: string
       score:
         example: 100
         type: number
       updatedAt:
         type: string
+      user_name:
+        example: user_name
+        type: string
     required:
-    - git_repo
     - message
+    - repo_name
     - score
+    - user_name
     type: object
 info:
   contact: {}
@@ -469,11 +473,24 @@ paths:
       - application/json
       description: Get a score by repo
       parameters:
-      - description: Repo name
+      - description: owner of the repo
+        in: query
+        name: owner
+        required: true
+        type: string
+      - description: name of the repo
         in: query
         name: repo
         required: true
         type: string
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:

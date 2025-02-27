@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"gorm.io/gorm"
 
@@ -13,6 +14,7 @@ import (
 )
 
 // GetScores is a function to get all scores
+//
 //	@Summary		Get all scores
 //	@Description	Get all scores
 //	@Tags			Score
@@ -52,18 +54,32 @@ func GetScores(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetScoreByRepo is a function to get a score by repo
+//
 //	@Summary		Get a score by repo
 //	@Description	Get a score by repo
 //	@Tags			Score
 //	@Accept			json
 //	@Produce		json
-//	@Param			repo	query		string	true	"Repo name"
+//	@Param			owner	query	string	true	"owner of the repo"
+//	@Param			repo		query	string	true	"name of the repo"
+//	@Param			page		query	int		false	"page number of results to return (1-based)"
+//	@Param			limit		query	int		false	"page size of results. Default is 10."
 //	@Success		200		{object}	ResponseHTTP{data=models.Score}
 //	@Failure		404		{object}	ResponseHTTP{}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score [get]
 func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 	db := database.DBConn
+	owner, err := url.QueryUnescape(r.URL.Query().Get("owner"))
+	if err != nil {
+		log.Printf("Failed to unescape repo name: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Failed to unescape user name",
+		})
+		return
+	}
 	repo, err := url.QueryUnescape(r.URL.Query().Get("repo"))
 	if err != nil {
 		log.Printf("Failed to unescape repo name: %v", err)
@@ -74,8 +90,60 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	var score models.Score
-	if err := db.Where("git_repo = ?", repo).Order("updated_at DESC").First(&score).Error; err != nil {
+	page, err := url.QueryUnescape(r.URL.Query().Get("page"))
+	if err != nil {
+		log.Printf("Failed to unescape page: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Failed to unescape page",
+		})
+		return
+	}
+	limit, err := url.QueryUnescape(r.URL.Query().Get("limit"))
+	if err != nil {
+		log.Printf("Failed to unescape limit: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Failed to unescape limit",
+		})
+		return
+	}
+	if page == "" {
+		page = "1"
+	}
+	if limit == "" {
+		limit = "10"
+	}
+	var scores []models.Score
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		log.Printf("Invalid page number: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Invalid page number",
+		})
+		return
+	}
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		log.Printf("Invalid limit number: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Invalid limit number",
+		})
+		return
+	}
+	offset := (pageInt - 1) * limitInt
+
+	if err := db.Where("user_name = ? AND repo_name = ?", owner, repo).
+		Order("updated_at DESC").
+		Offset(offset).
+		Limit(limitInt).
+		Find(&scores).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(ResponseHTTP{
@@ -96,6 +164,6 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ResponseHTTP{
 		Success: true,
 		Message: "Successfully get score by repo",
-		Data:    score,
+		Data:    scores,
 	})
 }

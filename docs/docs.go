@@ -135,10 +135,29 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Repo name",
+                        "description": "owner of the repo",
+                        "name": "owner",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "name of the repo",
                         "name": "repo",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -764,9 +783,10 @@ const docTemplate = `{
         "models.Score": {
             "type": "object",
             "required": [
-                "git_repo",
                 "message",
-                "score"
+                "repo_name",
+                "score",
+                "user_name"
             ],
             "properties": {
                 "createdAt": {
@@ -775,10 +795,6 @@ const docTemplate = `{
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
-                "git_repo": {
-                    "type": "string",
-                    "example": "user_name/repo_name"
-                },
                 "id": {
                     "type": "integer"
                 },
@@ -786,12 +802,20 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Scored successfully"
                 },
+                "repo_name": {
+                    "type": "string",
+                    "example": "repo_name"
+                },
                 "score": {
                     "type": "number",
                     "example": 100
                 },
                 "updatedAt": {
                     "type": "string"
+                },
+                "user_name": {
+                    "type": "string",
+                    "example": "user_name"
                 }
             }
         }
