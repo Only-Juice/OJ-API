@@ -119,7 +119,8 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new score entry in the database
 	newScore := models.Score{
-		GitRepo: payload.Repository.FullName,
+		UserName: payload.Repository.Owner.UserName,
+		RepoName: payload.Repository.Name,
 		Score:   scoreFloat,
 		Message: strings.TrimSpace(string(message)),
 	}
