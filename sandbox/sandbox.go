@@ -7,8 +7,8 @@ import (
 )
 
 type Sandbox struct {
-	mu				sync.Mutex
-	AvailableBoxIDs	[]int
+	mu              sync.Mutex
+	AvailableBoxIDs []int
 }
 
 func NewSandbox(count int) *Sandbox {

@@ -42,5 +42,5 @@ func main() {
 	database.DBConn.AutoMigrate(&models.Score{})
 
 	r := routes.New()
-	log.Fatal(http.ListenAndServe(":" + config.Config("API_PORT"), r))
+	log.Fatal(http.ListenAndServe(":"+config.Config("API_PORT"), r))
 }

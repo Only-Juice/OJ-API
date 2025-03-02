@@ -23,17 +23,18 @@ const GitServer = "http://server.gitea.orb.local/"
 const RepoFolder = "/sandbox/repo"
 
 type WebhookPayload struct {
-	Ref        string          `json:"ref"`
-	Before     string          `json:"before"`
-	After      string          `json:"after"`
-	CompareURL string          `json:"compare_url"`
-	Commits    []gitea.Commit  `json:"commits"`
+	Ref        string           `json:"ref"`
+	Before     string           `json:"before"`
+	After      string           `json:"after"`
+	CompareURL string           `json:"compare_url"`
+	Commits    []gitea.Commit   `json:"commits"`
 	Repository gitea.Repository `json:"repository"`
-	Pusher     gitea.User      `json:"pusher"`
-	Sender     gitea.User      `json:"sender"`
+	Pusher     gitea.User       `json:"pusher"`
+	Sender     gitea.User       `json:"sender"`
 }
 
 // PostGiteaHook is a function to receive Gitea hook
+//
 //	@Summary		Receive Gitea hook
 //	@Description	Receive Gitea hook
 //	@Tags			WebHook
@@ -121,8 +122,8 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 	newScore := models.Score{
 		UserName: payload.Repository.Owner.UserName,
 		RepoName: payload.Repository.Name,
-		Score:   scoreFloat,
-		Message: strings.TrimSpace(string(message)),
+		Score:    scoreFloat,
+		Message:  strings.TrimSpace(string(message)),
 	}
 
 	if err := db.Create(&newScore).Error; err != nil {

@@ -16,21 +16,21 @@ var DBConn *gorm.DB
 
 // Connect creates a connection to database
 func Connect() (err error) {
-    p := config.Config("DB_PORT")
-    port, err := strconv.ParseUint(p, 10, 32)
-    if err != nil {
-		return err
-	}
-
-    // Connection URL to connect to Postgres Database
-    dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", config.Config("DB_HOST"), port, config.Config("DB_USER"), config.Config("DB_PASSWORD"), config.Config("DB_NAME"))
-    // Connect to the DB and initialize the DB variable
-    DBConn, err = gorm.Open(postgres.Open(dsn))
+	p := config.Config("DB_PORT")
+	port, err := strconv.ParseUint(p, 10, 32)
 	if err != nil {
 		return err
 	}
 
-    sqlDB, err := DBConn.DB()
+	// Connection URL to connect to Postgres Database
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", config.Config("DB_HOST"), port, config.Config("DB_USER"), config.Config("DB_PASSWORD"), config.Config("DB_NAME"))
+	// Connect to the DB and initialize the DB variable
+	DBConn, err = gorm.Open(postgres.Open(dsn))
+	if err != nil {
+		return err
+	}
+
+	sqlDB, err := DBConn.DB()
 	if err != nil {
 		return err
 	}
@@ -39,5 +39,5 @@ func Connect() (err error) {
 	sqlDB.SetMaxOpenConns(50)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-		return nil
-	}
+	return nil
+}
