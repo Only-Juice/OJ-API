@@ -36,6 +36,7 @@ func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 	if err := db.Where("source_git_repo = ?", cmd.SourceGitRepo).First(&existingCmd).Error; err != nil {
 		// If the script does not exist, create a new one
 		db.Create(cmd)
+		existingCmd = *cmd
 	} else {
 		// If the script exists, update it
 		existingCmd.Script = cmd.Script
