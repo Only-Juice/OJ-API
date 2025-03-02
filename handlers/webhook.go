@@ -50,89 +50,92 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("Received hook: %+v", payload)
 
-	// Clone the given repository to the given directory
-	log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
-	codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
-	repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
-		URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
-		Progress: os.Stdout,
-	})
-	if err != nil {
-		http.Error(w, "Failed to clone repository", http.StatusServiceUnavailable)
-		return
-	}
-	os.Chmod(codePath, 0777)
-	defer os.RemoveAll(codePath)
-	log.Printf("git show-ref --head HEAD")
-	ref, err := repo.Head()
-	if err != nil {
-		http.Error(w, "Failed to get HEAD", http.StatusServiceUnavailable)
-		return
-	}
-	fmt.Println(ref.Hash())
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		http.Error(w, "Failed to get worktree", http.StatusServiceUnavailable)
-		return
-	}
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Hash: plumbing.NewHash(payload.After),
-	})
-	if err != nil {
-		http.Error(w, "Failed to checkout", http.StatusServiceUnavailable)
-		return
-	}
-	ref, err = repo.Head()
-	if err != nil {
-		http.Error(w, "Failed to get HEAD", http.StatusServiceUnavailable)
-		return
-	}
-	fmt.Println(ref.Hash())
-
-	sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
-
-	// read score from file
-	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
-	if err != nil {
-		http.Error(w, "Failed to read score", http.StatusServiceUnavailable)
-		return
-	}
-	log.Printf("Score: %s", score)
-	// save score to database
-	db := database.DBConn
-	scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
-	if err != nil {
-		log.Printf("Failed to convert score to int: %v", err)
-		http.Error(w, "Failed to convert score to int", http.StatusServiceUnavailable)
-		return
-	}
-
-	// read message from file
-	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
-	if err != nil {
-		http.Error(w, "Failed to read message", http.StatusServiceUnavailable)
-		return
-	}
-	log.Printf("Message: %s", message)
-
-	// Create a new score entry in the database
-	newScore := models.Score{
-		UserName: payload.Repository.Owner.UserName,
-		RepoName: payload.Repository.Name,
-		Score:    scoreFloat,
-		Message:  strings.TrimSpace(string(message)),
-	}
-
-	if err := db.Create(&newScore).Error; err != nil {
-		log.Printf("Failed to create new score entry: %v", err)
-		http.Error(w, "Failed to create new score entry", http.StatusServiceUnavailable)
-		return
-	}
+	// Respond immediately
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ResponseHTTP{
 		Success: true,
 		Message: "Successfully received hook",
 		Data:    payload,
 	})
+
+	// Process the hook in the background
+	go func() {
+		// Clone the given repository to the given directory
+		log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
+		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
+		repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
+			URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
+			Progress: os.Stdout,
+		})
+		if err != nil {
+			log.Printf("Failed to clone repository: %v", err)
+			return
+		}
+		os.Chmod(codePath, 0777)
+		defer os.RemoveAll(codePath)
+		log.Printf("git show-ref --head HEAD")
+		ref, err := repo.Head()
+		if err != nil {
+			log.Printf("Failed to get HEAD: %v", err)
+			return
+		}
+		fmt.Println(ref.Hash())
+
+		worktree, err := repo.Worktree()
+		if err != nil {
+			log.Printf("Failed to get worktree: %v", err)
+			return
+		}
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(payload.After),
+		})
+		if err != nil {
+			log.Printf("Failed to checkout: %v", err)
+			return
+		}
+		ref, err = repo.Head()
+		if err != nil {
+			log.Printf("Failed to get HEAD: %v", err)
+			return
+		}
+		fmt.Println(ref.Hash())
+
+		sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
+
+		// read score from file
+		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
+		if err != nil {
+			log.Printf("Failed to read score: %v", err)
+			return
+		}
+		// log.Printf("Score: %s", score)
+		// save score to database
+		db := database.DBConn
+		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
+		if err != nil {
+			log.Printf("Failed to convert score to int: %v", err)
+			return
+		}
+
+		// read message from file
+		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
+		if err != nil {
+			log.Printf("Failed to read message: %v", err)
+			return
+		}
+		// log.Printf("Message: %s", message)
+
+		// Create a new score entry in the database
+		newScore := models.Score{
+			UserName: payload.Repository.Owner.UserName,
+			RepoName: payload.Repository.Name,
+			Score:    scoreFloat,
+			Message:  strings.TrimSpace(string(message)),
+		}
+
+		if err := db.Create(&newScore).Error; err != nil {
+			log.Printf("Failed to create new score entry: %v", err)
+			return
+		}
+	}()
 }
