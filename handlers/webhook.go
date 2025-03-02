@@ -14,13 +14,11 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/google/uuid"
 
+	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/sandbox"
 )
-
-const GitServer = "http://server.gitea.orb.local/"
-const RepoFolder = "/sandbox/repo"
 
 type WebhookPayload struct {
 	Ref        string           `json:"ref"`
@@ -53,10 +51,10 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received hook: %+v", payload)
 
 	// Clone the given repository to the given directory
-	log.Printf("git clone %s", GitServer+payload.Repository.FullName)
-	codePath := fmt.Sprintf("%s/%s", RepoFolder, payload.Repository.FullName+"/"+uuid.New().String())
+	log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
+	codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
 	repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
-		URL:      GitServer + payload.Repository.FullName,
+		URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
 		Progress: os.Stdout,
 	})
 	if err != nil {
