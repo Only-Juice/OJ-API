@@ -319,6 +319,13 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.StatusResponse:
+    properties:
+      available_count:
+        type: integer
+      waiting_count:
+        type: integer
+    type: object
   handlers.WebhookPayload:
     properties:
       after:
@@ -437,6 +444,23 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       summary: Specify the shell command for the corresponding repo
+      tags:
+      - Sandbox
+  /api/sandbox/status:
+    get:
+      description: Get the current available sandbox count and waiting count
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.StatusResponse'
+        "500":
+          description: Sandbox instance not initialized
+          schema:
+            type: string
+      summary: Get the current available sandbox count and waiting count
       tags:
       - Sandbox
   /api/score:

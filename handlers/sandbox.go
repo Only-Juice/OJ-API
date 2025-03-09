@@ -7,6 +7,7 @@ import (
 
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/sandbox"
 )
 
 // Specify the shell command for the corresponding repo
@@ -54,4 +55,33 @@ func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 		Message: fmt.Sprintf("Success set shell command for %v.", cmd.SourceGitRepo),
 		Data:    existingCmd,
 	})
+}
+
+type StatusResponse struct {
+	AvailableCount int `json:"available_count"`
+	WaitingCount   int `json:"waiting_count"`
+}
+
+// GetSandboxStatus godoc
+//
+// @Summary Get the current available sandbox count and waiting count
+// @Description Get the current available sandbox count and waiting count
+// @Tags Sandbox
+// @Produce json
+// @Success 200 {object} StatusResponse
+// @Failure 500 {string} string "Sandbox instance not initialized"
+// @Router /api/sandbox/status [get]
+func GetSandboxStatus(w http.ResponseWriter, r *http.Request) {
+	if sandbox.SandboxPtr == nil {
+		http.Error(w, "Sandbox instance not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	status := StatusResponse{
+		AvailableCount: sandbox.SandboxPtr.AvailableCount(),
+		WaitingCount:   sandbox.SandboxPtr.WaitingCount(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
 }

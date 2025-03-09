@@ -119,6 +119,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/sandbox/status": {
+            "get": {
+                "description": "Get the current available sandbox count and waiting count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Get the current available sandbox count and waiting count",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.StatusResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Sandbox instance not initialized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/score": {
             "get": {
                 "description": "Get a score by repo",
@@ -660,6 +686,17 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "handlers.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "available_count": {
+                    "type": "integer"
+                },
+                "waiting_count": {
+                    "type": "integer"
                 }
             }
         },
