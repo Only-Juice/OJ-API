@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/go-git/go-git/v5"
@@ -124,13 +125,40 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// log.Printf("Message: %s", message)
+		var existingQuestion models.Question
+		if err := db.Where(&models.Question{GitRepoURL: payload.Repository.Parent.FullName}).First(&existingQuestion).Error; err != nil {
+			existingQuestion = models.Question{
+				GitRepoURL: payload.Repository.Parent.FullName,
+			}
+			db.Create(&existingQuestion)
+		}
+		var existingUser models.User
+		if err := db.Where(&models.User{Email: payload.Pusher.Email}).First(&existingUser).Error; err != nil {
+			existingUser = models.User{
+				UserName: payload.Pusher.UserName,
+				Email:    payload.Pusher.Email,
+			}
+			db.Create(&existingUser)
+		}
 
-		// Create a new score entry in the database
-		newScore := models.Score{
-			UserName: payload.Repository.Owner.UserName,
-			RepoName: payload.Repository.Name,
-			Score:    scoreFloat,
-			Message:  strings.TrimSpace(string(message)),
+		var existingUserQuestionRelation models.UserQuestionRelation
+		if err := db.Where(&models.UserQuestionRelation{
+			UserID:     existingUser.ID,
+			QuestionID: existingQuestion.ID,
+		}).First(&existingUserQuestionRelation).Error; err != nil {
+			// If the relation does not exist, create a new one
+			existingUserQuestionRelation = models.UserQuestionRelation{
+				User:           existingUser,
+				Question:       existingQuestion,
+				GitUserRepoURL: payload.Repository.FullName,
+			}
+			db.Create(&existingUserQuestionRelation)
+		}
+		newScore := models.UserQuestionTable{
+			UQR:       existingUserQuestionRelation,
+			Score:     scoreFloat,
+			JudgeTime: time.Now().UTC(),
+			Message:   strings.TrimSpace(string(message)),
 		}
 
 		if err := db.Create(&newScore).Error; err != nil {

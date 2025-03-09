@@ -311,14 +311,6 @@ definitions:
     - VisibleTypePublic
     - VisibleTypeLimited
     - VisibleTypePrivate
-  gorm.DeletedAt:
-    properties:
-      time:
-        type: string
-      valid:
-        description: Valid is true if Time is not NULL
-        type: boolean
-    type: object
   handlers.ResponseHTTP:
     properties:
       data: {}
@@ -350,12 +342,6 @@ definitions:
     type: object
   models.Sandbox:
     properties:
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
       script:
         example: |-
           #!/bin/bash
@@ -365,39 +351,25 @@ definitions:
       source_git_url:
         example: user_name/repo_name
         type: string
-      updatedAt:
-        type: string
     required:
     - script
     - source_git_url
     type: object
   models.Score:
     properties:
-      createdAt:
+      judge_time:
+        example: "2021-07-01T00:00:00Z"
         type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
       message:
         example: Scored successfully
-        type: string
-      repo_name:
-        example: repo_name
         type: string
       score:
         example: 100
         type: number
-      updatedAt:
-        type: string
-      user_name:
-        example: user_name
-        type: string
     required:
+    - judge_time
     - message
-    - repo_name
     - score
-    - user_name
     type: object
 info:
   contact: {}
@@ -512,32 +484,6 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       summary: Get a score by repo
-      tags:
-      - Score
-  /api/scores:
-    get:
-      consumes:
-      - application/json
-      description: Get all scores
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.Score'
-                  type: array
-              type: object
-        "503":
-          description: Service Unavailable
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-      summary: Get all scores
       tags:
       - Score
 swagger: "2.0"
