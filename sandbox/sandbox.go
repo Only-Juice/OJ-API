@@ -11,6 +11,7 @@ type Sandbox struct {
 	cond            *sync.Cond
 	AvailableBoxIDs []int
 	waitingCount    int
+	sandboxCount    int
 }
 
 func NewSandbox(count int) *Sandbox {
@@ -26,6 +27,7 @@ func NewSandbox(count int) *Sandbox {
 	}
 	s := &Sandbox{
 		AvailableBoxIDs: availableBoxIDs,
+		sandboxCount:    count,
 	}
 	s.cond = sync.NewCond(&s.mu)
 	return s
@@ -63,6 +65,12 @@ func (s *Sandbox) WaitingCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.waitingCount
+}
+
+func (s *Sandbox) ProcessingCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.sandboxCount - len(s.AvailableBoxIDs)
 }
 
 func (s *Sandbox) Cleanup() {

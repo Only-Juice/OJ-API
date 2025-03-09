@@ -695,6 +695,9 @@ const docTemplate = `{
                 "available_count": {
                     "type": "integer"
                 },
+                "processing_count": {
+                    "type": "integer"
+                },
                 "waiting_count": {
                     "type": "integer"
                 }
