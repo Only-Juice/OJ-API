@@ -18,11 +18,11 @@ const execTimeoutDuration = time.Second * 60
 var SandboxPtr *Sandbox
 
 func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
-	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutDuration)
-	defer cancel()
-
 	boxID := s.Reserve()
 	defer s.Release(boxID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutDuration)
+	defer cancel()
 
 	// saving code as file
 	shellCommand = append(shellCommand, []byte("\nrm build -rf")...)
@@ -77,10 +77,11 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte) string {
 	db := database.DBConn
 
-	var cmd models.Sandbox
-	if err := db.Where("source_git_repo = ?", parentsRepo).First(&cmd).Error; err != nil {
+	var cmd models.QuestionTestScript
+	if err := db.Joins("Question").
+		Where("git_repo_url = ?", parentsRepo).Take(&cmd).Error; err != nil {
 		return fmt.Sprintf("Failed to find shell command for %v", parentsRepo)
 	}
 
-	return s.RunShellCommand([]byte(cmd.Script), codePath)
+	return s.RunShellCommand([]byte(cmd.TestScript), codePath)
 }
