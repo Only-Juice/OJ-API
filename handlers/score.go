@@ -7,12 +7,19 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"gorm.io/gorm"
 
 	"OJ-API/database"
 	"OJ-API/models"
 )
+
+type Score struct {
+	Score     float64   `json:"score" example:"100" validate:"required"`
+	Message   string    `json:"message" example:"Scored successfully" validate:"required"`
+	JudgeTime time.Time `json:"judge_time" example:"2021-07-01T00:00:00Z" validate:"required"`
+}
 
 // GetScoreByRepo is a function to get a score by repo
 //
@@ -25,7 +32,7 @@ import (
 //	@Param			repo		query	string	true	"name of the repo"
 //	@Param			page		query	int		false	"page number of results to return (1-based)"
 //	@Param			limit		query	int		false	"page size of results. Default is 10."
-//	@Success		200		{object}	ResponseHTTP{data=models.Score}
+//	@Success		200		{object}	ResponseHTTP{data=Score}
 //	@Failure		404		{object}	ResponseHTTP{}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score [get]
@@ -129,9 +136,9 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	var scores []models.Score
+	var scores []Score
 	for _, score := range _scores {
-		scores = append(scores, models.Score{
+		scores = append(scores, Score{
 			Score:     score.Score,
 			Message:   score.Message,
 			JudgeTime: score.JudgeTime,

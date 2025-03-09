@@ -87,7 +87,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Sandbox"
+                            "$ref": "#/definitions/handlers.Sandbox"
                         }
                     }
                 ],
@@ -103,7 +103,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Sandbox"
+                                            "$ref": "#/definitions/models.QuestionTestScript"
                                         }
                                     }
                                 }
@@ -133,13 +133,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.StatusResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.StatusResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
-                        "description": "Sandbox instance not initialized",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     }
                 }
@@ -198,7 +210,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Score"
+                                            "$ref": "#/definitions/handlers.Score"
                                         }
                                     }
                                 }
@@ -689,6 +701,45 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.Sandbox": {
+            "type": "object",
+            "required": [
+                "script",
+                "source_git_url"
+            ],
+            "properties": {
+                "script": {
+                    "type": "string",
+                    "example": "#!/bin/bash\n\necho 'Hello, World!'"
+                },
+                "source_git_url": {
+                    "type": "string",
+                    "example": "user_name/repo_name"
+                }
+            }
+        },
+        "handlers.Score": {
+            "type": "object",
+            "required": [
+                "judge_time",
+                "message",
+                "score"
+            ],
+            "properties": {
+                "judge_time": {
+                    "type": "string",
+                    "example": "2021-07-01T00:00:00Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Scored successfully"
+                },
+                "score": {
+                    "type": "number",
+                    "example": 100
+                }
+            }
+        },
         "handlers.StatusResponse": {
             "type": "object",
             "properties": {
@@ -735,42 +786,37 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Sandbox": {
+        "models.Question": {
             "type": "object",
-            "required": [
-                "script",
-                "source_git_url"
-            ],
             "properties": {
-                "script": {
-                    "type": "string",
-                    "example": "#!/bin/bash\n\necho 'Hello, World!'"
+                "description": {
+                    "type": "string"
                 },
-                "source_git_url": {
-                    "type": "string",
-                    "example": "user_name/repo_name"
+                "gitRepoURL": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
-        "models.Score": {
+        "models.QuestionTestScript": {
             "type": "object",
-            "required": [
-                "judge_time",
-                "message",
-                "score"
-            ],
             "properties": {
-                "judge_time": {
-                    "type": "string",
-                    "example": "2021-07-01T00:00:00Z"
+                "id": {
+                    "type": "integer"
                 },
-                "message": {
-                    "type": "string",
-                    "example": "Scored successfully"
+                "question": {
+                    "$ref": "#/definitions/models.Question"
                 },
-                "score": {
-                    "type": "number",
-                    "example": 100
+                "questionID": {
+                    "type": "integer"
+                },
+                "testScript": {
+                    "type": "string"
                 }
             }
         }

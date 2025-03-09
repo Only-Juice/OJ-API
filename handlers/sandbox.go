@@ -10,20 +10,25 @@ import (
 	"OJ-API/sandbox"
 )
 
+type Sandbox struct {
+	SourceGitRepo string `json:"source_git_url" example:"user_name/repo_name" validate:"required"`
+	Script        string `json:"script" example:"#!/bin/bash\n\necho 'Hello, World!'" validate:"required"`
+}
+
 // Specify the shell command for the corresponding repo
 // @Summary		Specify the shell command for the corresponding repo
 // @Description	Specify the shell command for the corresponding repo
 // @Tags			Sandbox
 // @Accept			json
 // @Produce		json
-// @Param			cmd	body		models.Sandbox	true	"Shell command"
-// @Success		200		{object}	ResponseHTTP{data=models.Sandbox}
+// @Param			cmd	body		Sandbox	true	"Shell command"
+// @Success		200		{object}	ResponseHTTP{data=models.QuestionTestScript}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/sandbox [post]
 func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 	db := database.DBConn
 
-	cmd := new(models.Sandbox)
+	cmd := new(Sandbox)
 	if err := json.NewDecoder(r.Body).Decode(cmd); err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(ResponseHTTP{
@@ -69,12 +74,16 @@ type StatusResponse struct {
 // @Description Get the current available sandbox count and waiting count
 // @Tags Sandbox
 // @Produce json
-// @Success 200 {object} StatusResponse
-// @Failure 500 {string} string "Sandbox instance not initialized"
+// @Success		200		{object}	ResponseHTTP{data=StatusResponse}
+// @Failure		500		{object}	ResponseHTTP{}
 // @Router /api/sandbox/status [get]
 func GetSandboxStatus(w http.ResponseWriter, r *http.Request) {
 	if sandbox.SandboxPtr == nil {
-		http.Error(w, "Sandbox instance not initialized", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Sandbox instance not initialized",
+		})
 		return
 	}
 
@@ -85,5 +94,9 @@ func GetSandboxStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	json.NewEncoder(w).Encode(ResponseHTTP{
+		Success: true,
+		Message: "",
+		Data:    status,
+	})
 }
