@@ -319,6 +319,37 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.Sandbox:
+    properties:
+      script:
+        example: |-
+          #!/bin/bash
+
+          echo 'Hello, World!'
+        type: string
+      source_git_url:
+        example: user_name/repo_name
+        type: string
+    required:
+    - script
+    - source_git_url
+    type: object
+  handlers.Score:
+    properties:
+      judge_time:
+        example: "2021-07-01T00:00:00Z"
+        type: string
+      message:
+        example: Scored successfully
+        type: string
+      score:
+        example: 100
+        type: number
+    required:
+    - judge_time
+    - message
+    - score
+    type: object
   handlers.StatusResponse:
     properties:
       available_count:
@@ -349,36 +380,27 @@ definitions:
       sender:
         $ref: '#/definitions/gitea.User'
     type: object
-  models.Sandbox:
+  models.Question:
     properties:
-      script:
-        example: |-
-          #!/bin/bash
-
-          echo 'Hello, World!'
+      description:
         type: string
-      source_git_url:
-        example: user_name/repo_name
+      gitRepoURL:
         type: string
-    required:
-    - script
-    - source_git_url
+      id:
+        type: integer
+      title:
+        type: string
     type: object
-  models.Score:
+  models.QuestionTestScript:
     properties:
-      judge_time:
-        example: "2021-07-01T00:00:00Z"
+      id:
+        type: integer
+      question:
+        $ref: '#/definitions/models.Question'
+      questionID:
+        type: integer
+      testScript:
         type: string
-      message:
-        example: Scored successfully
-        type: string
-      score:
-        example: 100
-        type: number
-    required:
-    - judge_time
-    - message
-    - score
     type: object
 info:
   contact: {}
@@ -428,7 +450,7 @@ paths:
         name: cmd
         required: true
         schema:
-          $ref: '#/definitions/models.Sandbox'
+          $ref: '#/definitions/handlers.Sandbox'
       produces:
       - application/json
       responses:
@@ -439,7 +461,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/models.Sandbox'
+                  $ref: '#/definitions/models.QuestionTestScript'
               type: object
         "503":
           description: Service Unavailable
@@ -457,11 +479,16 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.StatusResponse'
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.StatusResponse'
+              type: object
         "500":
-          description: Sandbox instance not initialized
+          description: Internal Server Error
           schema:
-            type: string
+            $ref: '#/definitions/handlers.ResponseHTTP'
       summary: Get the current available sandbox count and waiting count
       tags:
       - Sandbox
@@ -499,7 +526,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/models.Score'
+                  $ref: '#/definitions/handlers.Score'
               type: object
         "404":
           description: Not Found
