@@ -35,7 +35,7 @@ func New() *chi.Mux {
 	))
 
 	r.Post("/api/sandbox", handlers.PostSandboxCmd)
-	r.Get("/api/scores", handlers.GetScores)
+	// r.Get("/api/scores", handlers.GetScores)
 	r.Get("/api/score", handlers.GetScoreByRepo)
 	r.Post("/api/gitea", handlers.PostGiteaHook)
 	return r

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,46 +13,6 @@ import (
 	"OJ-API/database"
 	"OJ-API/models"
 )
-
-// GetScores is a function to get all scores
-//
-//	@Summary		Get all scores
-//	@Description	Get all scores
-//	@Tags			Score
-//	@Accept			json
-//	@Produce		json
-//	@Success		200		{object}	ResponseHTTP{data=[]models.Score}
-//	@Failure		503		{object}	ResponseHTTP{}
-//	@Router			/api/scores [get]
-func GetScores(w http.ResponseWriter, r *http.Request) {
-	db := database.DBConn
-	var scores []models.Score
-	if err := db.Raw(`
-		SELECT * FROM scores
-		WHERE id IN (
-			SELECT id FROM (
-				SELECT id, ROW_NUMBER() OVER (PARTITION BY git_repo ORDER BY updated_at DESC) AS rn
-				FROM scores
-			) AS subquery
-			WHERE rn = 1
-		)
-		ORDER BY updated_at DESC
-	`).Scan(&scores).Error; err != nil {
-		log.Printf("Failed to get scores: %v", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Failed to get scores",
-		})
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ResponseHTTP{
-		Success: true,
-		Message: "Successfully get scores",
-		Data:    scores,
-	})
-}
 
 // GetScoreByRepo is a function to get a score by repo
 //
@@ -114,7 +75,7 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 	if limit == "" {
 		limit = "10"
 	}
-	var scores []models.Score
+	var _scores []models.UserQuestionTable
 	pageInt, err := strconv.Atoi(page)
 	if err != nil {
 		log.Printf("Invalid page number: %v", err)
@@ -137,11 +98,13 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 	}
 	offset := (pageInt - 1) * limitInt
 
-	if err := db.Where("user_name = ? AND repo_name = ?", owner, repo).
-		Order("updated_at DESC").
+	repoURL := fmt.Sprintf("%s/%s", owner, repo)
+	if err := db.Model(&models.UserQuestionTable{}).
+		Joins("UQR").
+		Where("git_user_repo_url = ?", repoURL).
 		Offset(offset).
 		Limit(limitInt).
-		Find(&scores).Error; err != nil {
+		Find(&_scores).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(ResponseHTTP{
@@ -158,13 +121,21 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if len(scores) == 0 {
+	if len(_scores) == 0 {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(ResponseHTTP{
 			Success: false,
 			Message: "Score not found",
 		})
 		return
+	}
+	var scores []models.Score
+	for _, score := range _scores {
+		scores = append(scores, models.Score{
+			Score:     score.Score,
+			Message:   score.Message,
+			JudgeTime: score.JudgeTime,
+		})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ResponseHTTP{

@@ -193,50 +193,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/api/scores": {
-            "get": {
-                "description": "Get all scores",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Score"
-                ],
-                "summary": "Get all scores",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.Score"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -695,18 +651,6 @@ const docTemplate = `{
                 "VisibleTypePrivate"
             ]
         },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
         "handlers.ResponseHTTP": {
             "type": "object",
             "properties": {
@@ -758,15 +702,6 @@ const docTemplate = `{
                 "source_git_url"
             ],
             "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
                 "script": {
                     "type": "string",
                     "example": "#!/bin/bash\n\necho 'Hello, World!'"
@@ -774,48 +709,28 @@ const docTemplate = `{
                 "source_git_url": {
                     "type": "string",
                     "example": "user_name/repo_name"
-                },
-                "updatedAt": {
-                    "type": "string"
                 }
             }
         },
         "models.Score": {
             "type": "object",
             "required": [
+                "judge_time",
                 "message",
-                "repo_name",
-                "score",
-                "user_name"
+                "score"
             ],
             "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
+                "judge_time": {
+                    "type": "string",
+                    "example": "2021-07-01T00:00:00Z"
                 },
                 "message": {
                     "type": "string",
                     "example": "Scored successfully"
                 },
-                "repo_name": {
-                    "type": "string",
-                    "example": "repo_name"
-                },
                 "score": {
                     "type": "number",
                     "example": 100
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "user_name": {
-                    "type": "string",
-                    "example": "user_name"
                 }
             }
         }

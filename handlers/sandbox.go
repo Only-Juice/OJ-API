@@ -32,14 +32,19 @@ func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var existingCmd models.Sandbox
-	if err := db.Where("source_git_repo = ?", cmd.SourceGitRepo).First(&existingCmd).Error; err != nil {
+	var existingCmd models.QuestionTestScript
+	if err := db.Joins("Question").
+		Where("git_repo_url = ?", cmd.SourceGitRepo).
+		Take(&existingCmd).Error; err != nil {
 		// If the script does not exist, create a new one
-		db.Create(cmd)
-		existingCmd = *cmd
+		existingCmd = models.QuestionTestScript{
+			Question:   models.Question{GitRepoURL: cmd.SourceGitRepo},
+			TestScript: cmd.Script,
+		}
+		db.Create(&existingCmd)
 	} else {
 		// If the script exists, update it
-		existingCmd.Script = cmd.Script
+		existingCmd.TestScript = cmd.Script
 		db.Save(&existingCmd)
 	}
 
