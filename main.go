@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"OJ-API/config"
@@ -23,7 +24,11 @@ func main() {
 	if err := database.Connect(); err != nil {
 		log.Panic("Can't connect database:", err.Error())
 	}
-	sandbox.SandboxPtr = sandbox.NewSandbox(10)
+	sandboxCount, err := strconv.Atoi(config.Config("SANDBOX_COUNT"))
+	if err != nil {
+		log.Panic("Invalid SANDBOX_COUNT config:", err.Error())
+	}
+	sandbox.SandboxPtr = sandbox.NewSandbox(sandboxCount)
 	defer sandbox.SandboxPtr.Cleanup()
 
 	// 設置信號處理

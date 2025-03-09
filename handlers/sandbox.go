@@ -58,8 +58,9 @@ func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 }
 
 type StatusResponse struct {
-	AvailableCount int `json:"available_count"`
-	WaitingCount   int `json:"waiting_count"`
+	AvailableCount  int `json:"available_count"`
+	WaitingCount    int `json:"waiting_count"`
+	ProcessingCount int `json:"processing_count"`
 }
 
 // GetSandboxStatus godoc
@@ -78,8 +79,9 @@ func GetSandboxStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := StatusResponse{
-		AvailableCount: sandbox.SandboxPtr.AvailableCount(),
-		WaitingCount:   sandbox.SandboxPtr.WaitingCount(),
+		AvailableCount:  sandbox.SandboxPtr.AvailableCount(),
+		WaitingCount:    sandbox.SandboxPtr.WaitingCount(),
+		ProcessingCount: sandbox.SandboxPtr.ProcessingCount(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
