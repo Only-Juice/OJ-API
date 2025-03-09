@@ -40,6 +40,17 @@ func main() {
 
 	database.DBConn.AutoMigrate(&models.Sandbox{})
 	database.DBConn.AutoMigrate(&models.Score{})
+	database.DBConn.AutoMigrate(&models.User{})
+	database.DBConn.AutoMigrate(&models.Announcement{})
+	database.DBConn.AutoMigrate(&models.Exam{})
+	database.DBConn.AutoMigrate(&models.ExamAndUser{})
+	database.DBConn.AutoMigrate(&models.Question{})
+	database.DBConn.AutoMigrate(&models.ExamQuestion{})
+	database.DBConn.AutoMigrate(&models.QuestionTestData{})
+	database.DBConn.AutoMigrate(&models.Tag{})
+	database.DBConn.AutoMigrate(&models.TagAndQuestion{})
+	database.DBConn.AutoMigrate(&models.UserQuestionRelation{})
+	database.DBConn.AutoMigrate(&models.UserQuestionTable{})
 
 	r := routes.New()
 	log.Fatal(http.ListenAndServe(":"+config.Config("API_PORT"), r))
