@@ -2,6 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
+// Deprecated in the future
 type Score struct {
 	gorm.Model
 	UserName string  `json:"user_name" example:"user_name" validate:"required"`
