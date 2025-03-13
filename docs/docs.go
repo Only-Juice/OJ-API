@@ -210,7 +210,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handlers.Score"
+                                            "$ref": "#/definitions/handlers.GetScoreResponseData"
                                         }
                                     }
                                 }
@@ -688,6 +688,24 @@ const docTemplate = `{
                 "VisibleTypeLimited",
                 "VisibleTypePrivate"
             ]
+        },
+        "handlers.GetScoreResponseData": {
+            "type": "object",
+            "required": [
+                "scores",
+                "scores_count"
+            ],
+            "properties": {
+                "scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.Score"
+                    }
+                },
+                "scores_count": {
+                    "type": "integer"
+                }
+            }
         },
         "handlers.ResponseHTTP": {
             "type": "object",
