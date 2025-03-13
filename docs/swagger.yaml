@@ -311,6 +311,18 @@ definitions:
     - VisibleTypePublic
     - VisibleTypeLimited
     - VisibleTypePrivate
+  handlers.GetScoreResponseData:
+    properties:
+      scores:
+        items:
+          $ref: '#/definitions/handlers.Score'
+        type: array
+      scores_count:
+        type: integer
+    required:
+    - scores
+    - scores_count
+    type: object
   handlers.ResponseHTTP:
     properties:
       data: {}
@@ -526,7 +538,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/handlers.Score'
+                  $ref: '#/definitions/handlers.GetScoreResponseData'
               type: object
         "404":
           description: Not Found

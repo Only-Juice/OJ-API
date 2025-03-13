@@ -21,6 +21,11 @@ type Score struct {
 	JudgeTime time.Time `json:"judge_time" example:"2021-07-01T00:00:00Z" validate:"required"`
 }
 
+type GetScoreResponseData struct {
+	ScoresCount int     `json:"scores_count" validate:"required"`
+	Scores      []Score `json:"scores" validate:"required"`
+}
+
 // GetScoreByRepo is a function to get a score by repo
 //
 //	@Summary		Get a score by repo
@@ -32,7 +37,7 @@ type Score struct {
 //	@Param			repo		query	string	true	"name of the repo"
 //	@Param			page		query	int		false	"page number of results to return (1-based)"
 //	@Param			limit		query	int		false	"page size of results. Default is 10."
-//	@Success		200		{object}	ResponseHTTP{data=Score}
+//	@Success		200		{object}	ResponseHTTP{data=GetScoreResponseData}
 //	@Failure		404		{object}	ResponseHTTP{}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score [get]
@@ -106,6 +111,20 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 	offset := (pageInt - 1) * limitInt
 
 	repoURL := fmt.Sprintf("%s/%s", owner, repo)
+	var totalCount int64
+	if err := db.Model(&models.UserQuestionTable{}).
+		Joins("UQR").
+		Where("git_user_repo_url = ?", repoURL).
+		Count(&totalCount).Error; err != nil {
+		log.Printf("Failed to count scores: %v", err)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Failed to count scores",
+		})
+		return
+	}
+
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Where("git_user_repo_url = ?", repoURL).
@@ -148,6 +167,9 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ResponseHTTP{
 		Success: true,
 		Message: "Successfully get score by repo",
-		Data:    scores,
+		Data: GetScoreResponseData{
+			Scores:      scores,
+			ScoresCount: int(totalCount),
+		},
 	})
 }
