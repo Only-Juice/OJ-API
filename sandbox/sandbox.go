@@ -8,28 +8,27 @@ import (
 
 type Sandbox struct {
 	mu              sync.Mutex
-	cond            *sync.Cond
-	AvailableBoxIDs []int
-	waitingCount    int
+	AvailableBoxIDs map[int]bool // map of boxID to availability
+	waitingQueue    []chan int
 	sandboxCount    int
 }
 
 func NewSandbox(count int) *Sandbox {
-	availableBoxIDs := make([]int, count)
+	availableBoxIDs := make(map[int]bool, count)
 	for i := 0; i < count; i++ {
 		cmd := exec.Command("isolate", "--init", fmt.Sprintf("-b %v", i))
 		err := cmd.Run()
 		if err != nil {
 			panic(err)
 		} else {
-			availableBoxIDs[i] = i
+			availableBoxIDs[i] = true
 		}
 	}
 	s := &Sandbox{
 		AvailableBoxIDs: availableBoxIDs,
 		sandboxCount:    count,
+		waitingQueue:    make([]chan int, 0),
 	}
-	s.cond = sync.NewCond(&s.mu)
 	return s
 }
 
@@ -37,22 +36,30 @@ func (s *Sandbox) Reserve() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for len(s.AvailableBoxIDs) == 0 {
-		s.waitingCount++
-		s.cond.Wait()
-		s.waitingCount--
+	for boxID := range s.AvailableBoxIDs {
+		delete(s.AvailableBoxIDs, boxID)
+		return boxID
 	}
 
-	boxID := s.AvailableBoxIDs[0]
-	s.AvailableBoxIDs = s.AvailableBoxIDs[1:]
+	waitChan := make(chan int)
+	s.waitingQueue = append(s.waitingQueue, waitChan)
+	s.mu.Unlock()
+	boxID := <-waitChan
+	s.mu.Lock()
 	return boxID
 }
 
 func (s *Sandbox) Release(boxID int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.AvailableBoxIDs = append(s.AvailableBoxIDs, boxID)
-	s.cond.Signal()
+	if len(s.waitingQueue) > 0 {
+		waitChan := s.waitingQueue[0]
+		s.waitingQueue = s.waitingQueue[1:]
+		waitChan <- boxID
+		close(waitChan)
+	} else {
+		s.AvailableBoxIDs[boxID] = true
+	}
 }
 
 func (s *Sandbox) AvailableCount() int {
@@ -64,7 +71,7 @@ func (s *Sandbox) AvailableCount() int {
 func (s *Sandbox) WaitingCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.waitingCount
+	return len(s.waitingQueue)
 }
 
 func (s *Sandbox) ProcessingCount() int {
@@ -76,7 +83,7 @@ func (s *Sandbox) ProcessingCount() int {
 func (s *Sandbox) Cleanup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, boxID := range s.AvailableBoxIDs {
+	for boxID := range s.AvailableBoxIDs {
 		cmd := exec.Command("isolate", "--cleanup", fmt.Sprintf("-b %v", boxID))
 		fmt.Printf("Cleaning up box %v\n", boxID)
 		err := cmd.Run()
