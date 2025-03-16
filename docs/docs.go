@@ -139,7 +139,7 @@ const docTemplate = `{
                 "summary": "Bulk create User",
                 "parameters": [
                     {
-                        "description": "Usernames",
+                        "description": "Username + Email Domain =\u003e username1@example.com",
                         "name": "Usernames",
                         "in": "body",
                         "required": true,
@@ -150,7 +150,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Return user",
+                        "description": "Return successful and failed users",
                         "schema": {
                             "allOf": [
                                 {
@@ -160,11 +160,17 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/gitea.User"
+                                            "$ref": "#/definitions/handlers.BulkCreateUserResponse"
                                         }
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
                     "503": {
@@ -913,6 +919,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "default_password",
+                "email_domain",
                 "usernames"
             ],
             "properties": {
@@ -920,13 +927,41 @@ const docTemplate = `{
                     "type": "string",
                     "example": "password"
                 },
+                "email_domain": {
+                    "type": "string",
+                    "example": "example.com"
+                },
                 "usernames": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
                     "example": [
-                        "usernames"
+                        "username1",
+                        "username2"
+                    ]
+                }
+            }
+        },
+        "handlers.BulkCreateUserResponse": {
+            "type": "object",
+            "properties": {
+                "failed_users": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "example": {
+                        "username1": "error"
+                    }
+                },
+                "successful_users": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "username1"
                     ]
                 }
             }

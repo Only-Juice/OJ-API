@@ -411,15 +411,35 @@ definitions:
       default_password:
         example: password
         type: string
+      email_domain:
+        example: example.com
+        type: string
       usernames:
         example:
-        - usernames
+        - username1
+        - username2
         items:
           type: string
         type: array
     required:
     - default_password
+    - email_domain
     - usernames
+    type: object
+  handlers.BulkCreateUserResponse:
+    properties:
+      failed_users:
+        additionalProperties:
+          type: string
+        example:
+          username1: error
+        type: object
+      successful_users:
+        example:
+        - username1
+        items:
+          type: string
+        type: array
     type: object
   handlers.GetScoreResponseData:
     properties:
@@ -598,7 +618,7 @@ paths:
       - application/json
       description: Bulk create User
       parameters:
-      - description: Usernames
+      - description: Username + Email Domain => username1@example.com
         in: body
         name: Usernames
         required: true
@@ -608,14 +628,18 @@ paths:
       - application/json
       responses:
         "200":
-          description: Return user
+          description: Return successful and failed users
           schema:
             allOf:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/gitea.User'
+                  $ref: '#/definitions/handlers.BulkCreateUserResponse'
               type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
         "503":
           description: Service Unavailable
           schema:
