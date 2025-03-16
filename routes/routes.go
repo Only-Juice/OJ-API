@@ -1,14 +1,43 @@
 package routes
 
 import (
+	"context"
+	"net/http"
+
+	"code.gitea.io/sdk/gitea"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 
+	"OJ-API/config"
 	_ "OJ-API/docs"
 	"OJ-API/handlers"
 )
+
+type contextKey string
+
+const clientContextKey contextKey = "client"
+const userContextKey contextKey = "user"
+
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authorization")
+		if c, err := gitea.NewClient("http://"+config.Config("GITEA_HOST"), gitea.SetToken(token)); err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			ctx := context.WithValue(r.Context(), clientContextKey, c)
+			if u, _, err := c.GetMyUserInfo(); err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			} else {
+				ctx = context.WithValue(ctx, userContextKey, u)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			}
+		}
+	})
+}
 
 // New create an instance of Book app routes
 func New() *chi.Mux {
