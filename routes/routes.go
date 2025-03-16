@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/go-chi/chi/v5"
@@ -23,13 +24,18 @@ const userContextKey contextKey = "user"
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
-		if c, err := gitea.NewClient("http://"+config.Config("GITEA_HOST"), gitea.SetToken(token)); err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if token == "" {
+			http.Error(w, "Missing Token", http.StatusUnauthorized)
+			return
+		}
+		token = strings.TrimPrefix(token, "token ")
+		if c, err := gitea.NewClient("http://"+config.Config("GIT_HOST"), gitea.SetToken(token)); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		} else {
 			ctx := context.WithValue(r.Context(), clientContextKey, c)
 			if u, _, err := c.GetMyUserInfo(); err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			} else {
 				ctx = context.WithValue(ctx, userContextKey, u)
@@ -39,7 +45,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// New create an instance of Book app routes
 func New() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -69,5 +74,6 @@ func New() *chi.Mux {
 	r.Get("/api/score", handlers.GetScoreByRepo)
 	r.Post("/api/gitea", handlers.PostGiteaHook)
 	r.Post("/api/gitea/auth", handlers.PostBasicAuthenticationGitea)
+	r.With(AuthMiddleware).Post("/api/gitea/user/bulk", handlers.PostBulkCreateUserGitea)
 	return r
 }

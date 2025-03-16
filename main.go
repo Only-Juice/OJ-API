@@ -20,6 +20,11 @@ import (
 // @version		1.0
 // @description	This is a simple OJ-PoC API server.
 // @BasePath		/
+// @securityDefinitions.apikey AuthorizationHeaderToken
+// @type apiKey
+// @description API tokens must be prepended with "token" followed by a space.
+// @name Authorization
+// @in header
 func main() {
 	if err := database.Connect(); err != nil {
 		log.Panic("Can't connect database:", err.Error())

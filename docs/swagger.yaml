@@ -406,6 +406,21 @@ definitions:
     - password
     - username
     type: object
+  handlers.BulkCreateUser:
+    properties:
+      default_password:
+        example: password
+        type: string
+      usernames:
+        example:
+        - usernames
+        items:
+          type: string
+        type: array
+    required:
+    - default_password
+    - usernames
+    type: object
   handlers.GetScoreResponseData:
     properties:
       scores:
@@ -577,6 +592,39 @@ paths:
       summary: Use basic authentication to access the Gitea API
       tags:
       - Gitea
+  /api/gitea/user/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Bulk create User
+      parameters:
+      - description: Usernames
+        in: body
+        name: Usernames
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkCreateUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return user
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/gitea.User'
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
+      summary: Bulk create User
+      tags:
+      - Gitea
   /api/sandbox:
     post:
       consumes:
@@ -677,4 +725,10 @@ paths:
       summary: Get a score by repo
       tags:
       - Score
+securityDefinitions:
+  AuthorizationHeaderToken:
+    description: API tokens must be prepended with "token" followed by a space.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
