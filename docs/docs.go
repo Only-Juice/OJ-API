@@ -83,7 +83,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Basic Authentication",
-                        "name": "cmd",
+                        "name": "BasicAuthentication",
                         "in": "body",
                         "required": true,
                         "schema": {

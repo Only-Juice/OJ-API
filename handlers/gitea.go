@@ -19,7 +19,7 @@ type BasicAuthentication struct {
 // @Tags			Gitea
 // @Accept			json
 // @Produce		json
-// @Param			cmd	body		BasicAuthentication	true	"Basic Authentication"
+// @Param			BasicAuthentication	body		BasicAuthentication	true	"Basic Authentication"
 // @Success		200		{object}	ResponseHTTP{data=gitea.AccessToken} "Return access token"
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/gitea/auth [post]
