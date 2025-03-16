@@ -67,3 +67,23 @@ func PostBasicAuthenticationGitea(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+type BulkCreateUser struct {
+	Usernames       []string `json:"usernames" validate:"required" example:"usernames"`
+	DefaultPassword string   `json:"default_password" validate:"required" example:"password"`
+}
+
+// Bulk create User
+// @Summary	Bulk create User
+// @Description Bulk create User
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			Usernames	body		BulkCreateUser		true	"Usernames"
+// @Success		200		{object}	ResponseHTTP{data=gitea.User} "Return user"
+// @Failure		503		{object}	ResponseHTTP{}
+// @Security	AuthorizationHeaderToken
+// @Router		/api/gitea/user/bulk [post]
+func PostBulkCreateUserGitea(w http.ResponseWriter, r *http.Request) {
+	return
+}

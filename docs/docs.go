@@ -119,6 +119,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/gitea/user/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "AuthorizationHeaderToken": []
+                    }
+                ],
+                "description": "Bulk create User",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Bulk create User",
+                "parameters": [
+                    {
+                        "description": "Usernames",
+                        "name": "Usernames",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkCreateUser"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return user",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/gitea.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
         "/api/sandbox": {
             "post": {
                 "description": "Specify the shell command for the corresponding repo",
@@ -852,6 +909,28 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.BulkCreateUser": {
+            "type": "object",
+            "required": [
+                "default_password",
+                "usernames"
+            ],
+            "properties": {
+                "default_password": {
+                    "type": "string",
+                    "example": "password"
+                },
+                "usernames": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "usernames"
+                    ]
+                }
+            }
+        },
         "handlers.GetScoreResponseData": {
             "type": "object",
             "required": [
@@ -1000,6 +1079,14 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "AuthorizationHeaderToken": {
+            "description": "API tokens must be prepended with \"token\" followed by a space.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
