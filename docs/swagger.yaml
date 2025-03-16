@@ -554,7 +554,7 @@ paths:
       parameters:
       - description: Basic Authentication
         in: body
-        name: cmd
+        name: BasicAuthentication
         required: true
         schema:
           $ref: '#/definitions/handlers.BasicAuthentication'
