@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"OJ-API/config"
+	"OJ-API/database"
 	"OJ-API/models"
 	"encoding/json"
 	"net/http"
@@ -93,6 +94,7 @@ type BulkCreateUserResponse struct {
 // @Security	AuthorizationHeaderToken
 // @Router		/api/gitea/user/bulk [post]
 func PostBulkCreateUserGitea(w http.ResponseWriter, r *http.Request) {
+	db := database.DBConn
 	user := r.Context().Value(models.UserContextKey).(*gitea.User)
 	if !user.IsAdmin {
 		w.WriteHeader(http.StatusForbidden)
@@ -125,6 +127,10 @@ func PostBulkCreateUserGitea(w http.ResponseWriter, r *http.Request) {
 			failedUsers[username] = err.Error()
 		} else {
 			successfulUsers = append(successfulUsers, username)
+			db.Create(&models.User{
+				UserName: username,
+				Email:    username + "@" + bulkUsers.EmailDomain,
+			})
 		}
 	}
 
