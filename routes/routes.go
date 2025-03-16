@@ -14,12 +14,8 @@ import (
 	"OJ-API/config"
 	_ "OJ-API/docs"
 	"OJ-API/handlers"
+	"OJ-API/models"
 )
-
-type contextKey string
-
-const clientContextKey contextKey = "client"
-const userContextKey contextKey = "user"
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -33,12 +29,12 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		} else {
-			ctx := context.WithValue(r.Context(), clientContextKey, c)
+			ctx := context.WithValue(r.Context(), models.ClientContextKey, c)
 			if u, _, err := c.GetMyUserInfo(); err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			} else {
-				ctx = context.WithValue(ctx, userContextKey, u)
+				ctx = context.WithValue(ctx, models.UserContextKey, u)
 				next.ServeHTTP(w, r.WithContext(ctx))
 			}
 		}
