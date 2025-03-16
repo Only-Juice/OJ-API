@@ -1,5 +1,88 @@
 basePath: /
 definitions:
+  gitea.AccessToken:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      scopes:
+        items:
+          $ref: '#/definitions/gitea.AccessTokenScope'
+        type: array
+      sha1:
+        type: string
+      token_last_eight:
+        type: string
+    type: object
+  gitea.AccessTokenScope:
+    enum:
+    - all
+    - repo
+    - repo:status
+    - public_repo
+    - admin:org
+    - write:org
+    - read:org
+    - admin:public_key
+    - write:public_key
+    - read:public_key
+    - admin:repo_hook
+    - write:repo_hook
+    - read:repo_hook
+    - admin:org_hook
+    - admin:user_hook
+    - notification
+    - user
+    - read:user
+    - user:email
+    - user:follow
+    - delete_repo
+    - package
+    - write:package
+    - read:package
+    - delete:package
+    - admin:gpg_key
+    - write:gpg_key
+    - read:gpg_key
+    - admin:application
+    - write:application
+    - read:application
+    - sudo
+    type: string
+    x-enum-varnames:
+    - AccessTokenScopeAll
+    - AccessTokenScopeRepo
+    - AccessTokenScopeRepoStatus
+    - AccessTokenScopePublicRepo
+    - AccessTokenScopeAdminOrg
+    - AccessTokenScopeWriteOrg
+    - AccessTokenScopeReadOrg
+    - AccessTokenScopeAdminPublicKey
+    - AccessTokenScopeWritePublicKey
+    - AccessTokenScopeReadPublicKey
+    - AccessTokenScopeAdminRepoHook
+    - AccessTokenScopeWriteRepoHook
+    - AccessTokenScopeReadRepoHook
+    - AccessTokenScopeAdminOrgHook
+    - AccessTokenScopeAdminUserHook
+    - AccessTokenScopeNotification
+    - AccessTokenScopeUser
+    - AccessTokenScopeReadUser
+    - AccessTokenScopeUserEmail
+    - AccessTokenScopeUserFollow
+    - AccessTokenScopeDeleteRepo
+    - AccessTokenScopePackage
+    - AccessTokenScopeWritePackage
+    - AccessTokenScopeReadPackage
+    - AccessTokenScopeDeletePackage
+    - AccessTokenScopeAdminGPGKey
+    - AccessTokenScopeWriteGPGKey
+    - AccessTokenScopeReadGPGKey
+    - AccessTokenScopeAdminApplication
+    - AccessTokenScopeWriteApplication
+    - AccessTokenScopeReadApplication
+    - AccessTokenScopeSudo
   gitea.Commit:
     properties:
       author:
@@ -311,6 +394,18 @@ definitions:
     - VisibleTypePublic
     - VisibleTypeLimited
     - VisibleTypePrivate
+  handlers.BasicAuthentication:
+    properties:
+      password:
+        example: password
+        type: string
+      username:
+        example: username
+        type: string
+    required:
+    - password
+    - username
+    type: object
   handlers.GetScoreResponseData:
     properties:
       scores:
@@ -450,7 +545,38 @@ paths:
             $ref: '#/definitions/handlers.ResponseHTTP'
       summary: Receive Gitea hook
       tags:
-      - WebHook
+      - Gitea
+  /api/gitea/auth:
+    post:
+      consumes:
+      - application/json
+      description: Use basic authentication to access the Gitea API
+      parameters:
+      - description: Basic Authentication
+        in: body
+        name: cmd
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BasicAuthentication'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return access token
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/gitea.AccessToken'
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Use basic authentication to access the Gitea API
+      tags:
+      - Gitea
   /api/sandbox:
     post:
       consumes:
