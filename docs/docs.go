@@ -25,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "WebHook"
+                    "Gitea"
                 ],
                 "summary": "Receive Gitea hook",
                 "parameters": [
@@ -52,6 +52,58 @@ const docTemplate = `{
                                     "properties": {
                                         "type": {
                                             "$ref": "#/definitions/handlers.WebhookPayload"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/gitea/auth": {
+            "post": {
+                "description": "Use basic authentication to access the Gitea API",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Use basic authentication to access the Gitea API",
+                "parameters": [
+                    {
+                        "description": "Basic Authentication",
+                        "name": "cmd",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BasicAuthentication"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return access token",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/gitea.AccessToken"
                                         }
                                     }
                                 }
@@ -234,6 +286,100 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "gitea.AccessToken": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gitea.AccessTokenScope"
+                    }
+                },
+                "sha1": {
+                    "type": "string"
+                },
+                "token_last_eight": {
+                    "type": "string"
+                }
+            }
+        },
+        "gitea.AccessTokenScope": {
+            "type": "string",
+            "enum": [
+                "all",
+                "repo",
+                "repo:status",
+                "public_repo",
+                "admin:org",
+                "write:org",
+                "read:org",
+                "admin:public_key",
+                "write:public_key",
+                "read:public_key",
+                "admin:repo_hook",
+                "write:repo_hook",
+                "read:repo_hook",
+                "admin:org_hook",
+                "admin:user_hook",
+                "notification",
+                "user",
+                "read:user",
+                "user:email",
+                "user:follow",
+                "delete_repo",
+                "package",
+                "write:package",
+                "read:package",
+                "delete:package",
+                "admin:gpg_key",
+                "write:gpg_key",
+                "read:gpg_key",
+                "admin:application",
+                "write:application",
+                "read:application",
+                "sudo"
+            ],
+            "x-enum-varnames": [
+                "AccessTokenScopeAll",
+                "AccessTokenScopeRepo",
+                "AccessTokenScopeRepoStatus",
+                "AccessTokenScopePublicRepo",
+                "AccessTokenScopeAdminOrg",
+                "AccessTokenScopeWriteOrg",
+                "AccessTokenScopeReadOrg",
+                "AccessTokenScopeAdminPublicKey",
+                "AccessTokenScopeWritePublicKey",
+                "AccessTokenScopeReadPublicKey",
+                "AccessTokenScopeAdminRepoHook",
+                "AccessTokenScopeWriteRepoHook",
+                "AccessTokenScopeReadRepoHook",
+                "AccessTokenScopeAdminOrgHook",
+                "AccessTokenScopeAdminUserHook",
+                "AccessTokenScopeNotification",
+                "AccessTokenScopeUser",
+                "AccessTokenScopeReadUser",
+                "AccessTokenScopeUserEmail",
+                "AccessTokenScopeUserFollow",
+                "AccessTokenScopeDeleteRepo",
+                "AccessTokenScopePackage",
+                "AccessTokenScopeWritePackage",
+                "AccessTokenScopeReadPackage",
+                "AccessTokenScopeDeletePackage",
+                "AccessTokenScopeAdminGPGKey",
+                "AccessTokenScopeWriteGPGKey",
+                "AccessTokenScopeReadGPGKey",
+                "AccessTokenScopeAdminApplication",
+                "AccessTokenScopeWriteApplication",
+                "AccessTokenScopeReadApplication",
+                "AccessTokenScopeSudo"
+            ]
+        },
         "gitea.Commit": {
             "type": "object",
             "properties": {
@@ -688,6 +834,23 @@ const docTemplate = `{
                 "VisibleTypeLimited",
                 "VisibleTypePrivate"
             ]
+        },
+        "handlers.BasicAuthentication": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "password"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "username"
+                }
+            }
         },
         "handlers.GetScoreResponseData": {
             "type": "object",
