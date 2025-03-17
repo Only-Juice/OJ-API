@@ -112,6 +112,55 @@
                 }
             }
         },
+        "/api/gitea/question/{question_id}": {
+            "post": {
+                "security": [
+                    {
+                        "AuthorizationHeaderToken": []
+                    }
+                ],
+                "description": "Take a question and create a repository in Gitea",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Take a question and create a repository in Gitea",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
         "/api/gitea/user/bulk": {
             "post": {
                 "security": [
