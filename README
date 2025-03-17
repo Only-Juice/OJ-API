@@ -9,7 +9,7 @@ OJ-API is a powerful and flexible API designed to handle various operations. Thi
 ## Building the Docker Image
 To build the Docker image for OJ-API, navigate to the project directory and run the following command:
 ```sh
-docker build -t ojapi .
+docker build -t ojapi .  --no-cache
 ```
 
 ## Running the Docker Container
