@@ -93,6 +93,7 @@ type BulkCreateUserResponse struct {
 // @Produce			json
 // @Param			Usernames	body		BulkCreateUser		true	"Username + Email Domain => username1@example.com"
 // @Success		200		{object}	ResponseHTTP{data=BulkCreateUserResponse} "Return successful and failed users"
+// @Failure		401		{object}	ResponseHTTP{}
 // @Failure		403		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Security	AuthorizationHeaderToken
@@ -157,6 +158,7 @@ func PostBulkCreateUserGitea(w http.ResponseWriter, r *http.Request) {
 // @Produce			json
 // @Param			question_id	path		int		true	"Question ID"
 // @Success		200		{object}	ResponseHTTP{}
+// @Failure		401		{object}	ResponseHTTP{}
 // @Failure		403		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Security	AuthorizationHeaderToken

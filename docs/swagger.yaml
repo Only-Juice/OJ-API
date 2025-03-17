@@ -630,6 +630,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
         "403":
           description: Forbidden
           schema:
@@ -667,6 +671,10 @@ paths:
                 data:
                   $ref: '#/definitions/handlers.BulkCreateUserResponse'
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
         "403":
           description: Forbidden
           schema:

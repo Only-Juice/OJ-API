@@ -153,6 +153,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
@@ -214,6 +220,12 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
                     "403": {
