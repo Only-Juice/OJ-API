@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -21,7 +22,11 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		if token == "" {
-			http.Error(w, "Missing Token", http.StatusUnauthorized)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(handlers.ResponseHTTP{
+				Success: false,
+				Message: "Missing Token",
+			})
 			return
 		}
 		token = strings.TrimPrefix(token, "token ")
