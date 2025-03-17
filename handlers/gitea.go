@@ -217,7 +217,7 @@ func PostCreateQuestionRepositoryGitea(w http.ResponseWriter, r *http.Request) {
 			"push",
 		},
 		Config: map[string]string{
-			"url":          "http://" + config.Config("OJ_HOST") + "/api/gitea/",
+			"url":          "http://" + config.Config("OJ_HOST") + "/api/gitea",
 			"content_type": "json",
 		},
 	})
