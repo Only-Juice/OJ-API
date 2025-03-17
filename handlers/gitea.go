@@ -6,8 +6,11 @@ import (
 	"OJ-API/models"
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
+	"github.com/go-chi/chi/v5"
 )
 
 type BasicAuthentication struct {
@@ -142,5 +145,83 @@ func PostBulkCreateUserGitea(w http.ResponseWriter, r *http.Request) {
 			FailedUsers:     failedUsers,
 		},
 		Message: "Bulk user creation completed",
+	})
+}
+
+// take a question and create a repository in Gitea
+// @Summary	Take a question and create a repository in Gitea
+// @Description Take a question and create a repository in Gitea
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			question_id	path		int		true	"Question ID"
+// @Success		200		{object}	ResponseHTTP{}
+// @Failure		403		{object}	ResponseHTTP{}
+// @Failure		503		{object}	ResponseHTTP{}
+// @Security	AuthorizationHeaderToken
+// @Router		/api/gitea/question/{question_id} [post]
+func PostCreateQuestionRepositoryGitea(w http.ResponseWriter, r *http.Request) {
+	db := database.DBConn
+	questionIDStr := chi.URLParam(r, "question_id")
+	questionID, err := strconv.Atoi(questionIDStr)
+	if err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Invalid question ID",
+		})
+		return
+	}
+	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	var existingUser models.User
+	if err := db.Where(&models.User{UserName: giteaUser.UserName}).First(&existingUser).Error; err != nil {
+		existingUser = models.User{
+			UserName: giteaUser.UserName,
+			Email:    giteaUser.Email,
+		}
+		db.Create(&existingUser)
+	}
+	var existingQuestion models.Question
+	if err := db.Where(&models.Question{ID: uint(questionID)}).First(&existingQuestion).Error; err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+	parentRepoURLParts := strings.Split(existingQuestion.GitRepoURL, "/")
+	parentRepoUsername := parentRepoURLParts[0]
+	parentRepoName := parentRepoURLParts[1]
+	db.Create(&models.UserQuestionRelation{
+		UserID:         existingUser.ID,
+		QuestionID:     uint(questionID),
+		GitUserRepoURL: giteaUser.UserName + "/" + parentRepoName,
+	})
+	client := r.Context().Value(models.ClientContextKey).(*gitea.Client)
+	if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
+		Name: &parentRepoName,
+	}); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Failed to fork repository",
+		})
+		return
+	}
+	client.CreateRepoHook(giteaUser.UserName, parentRepoName, gitea.CreateHookOption{
+		Type:   "gitea",
+		Active: true,
+		Events: []string{
+			"push",
+		},
+		Config: map[string]string{
+			"url": "http://" + config.Config("OJ_HOST") + "/api/gitea/",
+		},
+	})
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(ResponseHTTP{
+		Success: true,
+		Message: "Repository created",
 	})
 }
