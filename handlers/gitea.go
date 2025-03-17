@@ -204,9 +204,6 @@ func PostCreateQuestionRepositoryGitea(w http.ResponseWriter, r *http.Request) {
 			QuestionID:     uint(questionID),
 			GitUserRepoURL: giteaUser.UserName + "/" + parentRepoName,
 		})
-	} else {
-		userQuestionRelation.GitUserRepoURL = giteaUser.UserName + "/" + parentRepoName
-		db.Save(&userQuestionRelation)
 	}
 	client := r.Context().Value(models.ClientContextKey).(*gitea.Client)
 	if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
