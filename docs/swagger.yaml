@@ -612,6 +612,37 @@ paths:
       summary: Use basic authentication to access the Gitea API
       tags:
       - Gitea
+  /api/gitea/question/{question_id}:
+    post:
+      consumes:
+      - application/json
+      description: Take a question and create a repository in Gitea
+      parameters:
+      - description: Question ID
+        in: path
+        name: question_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
+      summary: Take a question and create a repository in Gitea
+      tags:
+      - Gitea
   /api/gitea/user/bulk:
     post:
       consumes:
