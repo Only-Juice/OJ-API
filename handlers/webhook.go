@@ -59,48 +59,48 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 		Data:    payload,
 	})
 
+	// Clone the given repository to the given directory
+	log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
+	codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
+	repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
+		URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
+		Progress: os.Stdout,
+	})
+	if err != nil {
+		log.Printf("Failed to clone repository: %v", err)
+		return
+	}
+	os.Chmod(codePath, 0777)
+	log.Printf("git show-ref --head HEAD")
+	ref, err := repo.Head()
+	if err != nil {
+		log.Printf("Failed to get HEAD: %v", err)
+		return
+	}
+	fmt.Println(ref.Hash())
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		log.Printf("Failed to get worktree: %v", err)
+		return
+	}
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Hash: plumbing.NewHash(payload.After),
+	})
+	if err != nil {
+		log.Printf("Failed to checkout: %v", err)
+		return
+	}
+	ref, err = repo.Head()
+	if err != nil {
+		log.Printf("Failed to get HEAD: %v", err)
+		return
+	}
+	fmt.Println(ref.Hash())
+
 	// Process the hook in the background
 	go func() {
-		// Clone the given repository to the given directory
-		log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
-		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
-		repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
-			URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
-			Progress: os.Stdout,
-		})
-		if err != nil {
-			log.Printf("Failed to clone repository: %v", err)
-			return
-		}
-		os.Chmod(codePath, 0777)
 		defer os.RemoveAll(codePath)
-		log.Printf("git show-ref --head HEAD")
-		ref, err := repo.Head()
-		if err != nil {
-			log.Printf("Failed to get HEAD: %v", err)
-			return
-		}
-		fmt.Println(ref.Hash())
-
-		worktree, err := repo.Worktree()
-		if err != nil {
-			log.Printf("Failed to get worktree: %v", err)
-			return
-		}
-		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(payload.After),
-		})
-		if err != nil {
-			log.Printf("Failed to checkout: %v", err)
-			return
-		}
-		ref, err = repo.Head()
-		if err != nil {
-			log.Printf("Failed to get HEAD: %v", err)
-			return
-		}
-		fmt.Println(ref.Hash())
-
 		sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
 
 		// read score from file
