@@ -194,11 +194,20 @@ func PostCreateQuestionRepositoryGitea(w http.ResponseWriter, r *http.Request) {
 	parentRepoURLParts := strings.Split(existingQuestion.GitRepoURL, "/")
 	parentRepoUsername := parentRepoURLParts[0]
 	parentRepoName := parentRepoURLParts[1]
-	db.Create(&models.UserQuestionRelation{
-		UserID:         existingUser.ID,
-		QuestionID:     uint(questionID),
-		GitUserRepoURL: giteaUser.UserName + "/" + parentRepoName,
-	})
+	var userQuestionRelation models.UserQuestionRelation
+	if err := db.Where(&models.UserQuestionRelation{
+		UserID:     existingUser.ID,
+		QuestionID: uint(questionID),
+	}).First(&userQuestionRelation).Error; err != nil {
+		db.Create(&models.UserQuestionRelation{
+			UserID:         existingUser.ID,
+			QuestionID:     uint(questionID),
+			GitUserRepoURL: giteaUser.UserName + "/" + parentRepoName,
+		})
+	} else {
+		userQuestionRelation.GitUserRepoURL = giteaUser.UserName + "/" + parentRepoName
+		db.Save(&userQuestionRelation)
+	}
 	client := r.Context().Value(models.ClientContextKey).(*gitea.Client)
 	if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
 		Name: &parentRepoName,
