@@ -133,7 +133,7 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 			db.Create(&existingQuestion)
 		}
 		var existingUser models.User
-		if err := db.Where(&models.User{Email: payload.Pusher.Email}).First(&existingUser).Error; err != nil {
+		if err := db.Where(&models.User{UserName: payload.Pusher.UserName}).First(&existingUser).Error; err != nil {
 			existingUser = models.User{
 				UserName: payload.Pusher.UserName,
 				Email:    payload.Pusher.Email,
