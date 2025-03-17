@@ -1,9 +1,6 @@
 package handlers
 
 import (
-	"OJ-API/config"
-	"OJ-API/database"
-	"OJ-API/models"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -11,6 +8,10 @@ import (
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/go-chi/chi/v5"
+
+	"OJ-API/config"
+	"OJ-API/database"
+	"OJ-API/models"
 )
 
 type BasicAuthentication struct {
