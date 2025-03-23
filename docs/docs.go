@@ -427,6 +427,11 @@ const docTemplate = `{
         },
         "/api/sandbox": {
             "post": {
+                "security": [
+                    {
+                        "AuthorizationHeaderToken": []
+                    }
+                ],
                 "description": "Specify the shell command for the corresponding repo",
                 "consumes": [
                     "application/json"
@@ -466,6 +471,12 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
                     "503": {

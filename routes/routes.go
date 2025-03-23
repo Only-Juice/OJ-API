@@ -69,7 +69,7 @@ func New() *chi.Mux {
 		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition
 	))
 
-	r.Post("/api/sandbox", handlers.PostSandboxCmd)
+	r.With(AuthMiddleware).Post("/api/sandbox", handlers.PostSandboxCmd)
 	r.Get("/api/sandbox/status", handlers.GetSandboxStatus)
 	// r.Get("/api/scores", handlers.GetScores)
 	r.With(AuthMiddleware).Get("/api/score", handlers.GetScoreByRepo)
