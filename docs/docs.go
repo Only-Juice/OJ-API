@@ -353,12 +353,61 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/handlers.GetQuestionResponseData"
+                                                "$ref": "#/definitions/handlers.GetUsersQuestionsResponseData"
                                             }
                                         }
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/question/{UQR_ID}": {
+            "get": {
+                "security": [
+                    {
+                        "AuthorizationHeaderToken": []
+                    }
+                ],
+                "description": "Get a question by UQR_ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Question"
+                ],
+                "summary": "Get a question by UQR_ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID of the UserQuestionRelation to get",
+                        "name": "UQR_ID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
                     "404": {
@@ -1178,24 +1227,6 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.GetQuestionResponseData": {
-            "type": "object",
-            "required": [
-                "question",
-                "question_count"
-            ],
-            "properties": {
-                "question": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/handlers._GetQuestionResponseData"
-                    }
-                },
-                "question_count": {
-                    "type": "integer"
-                }
-            }
-        },
         "handlers.GetScoreResponseData": {
             "type": "object",
             "required": [
@@ -1210,6 +1241,24 @@ const docTemplate = `{
                     }
                 },
                 "scores_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.GetUsersQuestionsResponseData": {
+            "type": "object",
+            "required": [
+                "question",
+                "question_count"
+            ],
+            "properties": {
+                "question": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers._GetUsersQuestionsResponseData"
+                    }
+                },
+                "question_count": {
                     "type": "integer"
                 }
             }
@@ -1311,7 +1360,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers._GetQuestionResponseData": {
+        "handlers._GetUsersQuestionsResponseData": {
             "type": "object",
             "required": [
                 "description",

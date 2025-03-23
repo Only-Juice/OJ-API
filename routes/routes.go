@@ -79,5 +79,6 @@ func New() *chi.Mux {
 	r.With(AuthMiddleware).Post("/api/gitea/question/{question_id}", handlers.PostCreateQuestionRepositoryGitea)
 	r.Get("/api/question", handlers.GetQuestionList)
 	r.With(AuthMiddleware).Get("/api/question/user", handlers.GetUsersQuestions)
+	r.With(AuthMiddleware).Get("/api/question/{UQR_ID}", handlers.GetQuestion)
 	return r
 }
