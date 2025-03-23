@@ -869,10 +869,16 @@ paths:
                 data:
                   $ref: '#/definitions/models.QuestionTestScript'
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
         "503":
           description: Service Unavailable
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
       summary: Specify the shell command for the corresponding repo
       tags:
       - Sandbox

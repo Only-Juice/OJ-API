@@ -8,6 +8,8 @@ import (
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/sandbox"
+
+	"code.gitea.io/sdk/gitea"
 )
 
 type Sandbox struct {
@@ -23,10 +25,21 @@ type Sandbox struct {
 // @Produce		json
 // @Param			cmd	body		Sandbox	true	"Shell command"
 // @Success		200		{object}	ResponseHTTP{data=models.QuestionTestScript}
+// @Failure		401		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/sandbox [post]
+// @Security		AuthorizationHeaderToken
 func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 	db := database.DBConn
+	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	if !giteaUser.IsAdmin {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
 
 	cmd := new(Sandbox)
 	if err := json.NewDecoder(r.Body).Decode(cmd); err != nil {
