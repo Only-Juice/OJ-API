@@ -122,7 +122,7 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 	var responseQuestions []_GetQuestionResponseData
 	for _, question := range questions {
 		responseQuestions = append(responseQuestions, _GetQuestionResponseData{
-			GitRepoUrl:       question.GitUserRepoURL,
+			GitRepoUrl:       question.GitUserRepoURL, // Notice GitUserRepoURL instead of GitRepoURL
 			ParentGitRepoUrl: question.GitRepoURL,
 			Title:            question.Title,
 			Description:      question.Description,
