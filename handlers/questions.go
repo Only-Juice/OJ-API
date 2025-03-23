@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
+	"github.com/go-chi/chi/v5"
 )
 
 type GetQuestionListResponseData struct {
@@ -60,7 +63,7 @@ func GetQuestionList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-type _GetQuestionResponseData struct {
+type _GetUsersQuestionsResponseData struct {
 	GitRepoUrl       string `json:"git_repo_url" validate:"required"`
 	ParentGitRepoUrl string `json:"parent_git_repo_url" validate:"required"`
 	Title            string `json:"title" validate:"required"`
@@ -69,9 +72,9 @@ type _GetQuestionResponseData struct {
 	QID              uint   `json:"q_id" validate:"required"`
 }
 
-type GetQuestionResponseData struct {
-	QuestionCount int                        `json:"question_count" validate:"required"`
-	Questions     []_GetQuestionResponseData `json:"question" validate:"required"`
+type GetUsersQuestionsResponseData struct {
+	QuestionCount int                              `json:"question_count" validate:"required"`
+	Questions     []_GetUsersQuestionsResponseData `json:"question" validate:"required"`
 }
 
 // GetUsersQuestions is a function to get a list of questions by user
@@ -82,7 +85,7 @@ type GetQuestionResponseData struct {
 // @Produce		json
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
-// @Success		200		{object}	ResponseHTTP{data=[]GetQuestionResponseData}
+// @Success		200		{object}	ResponseHTTP{data=[]GetUsersQuestionsResponseData}
 // @Failure		404		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question/user [get]
@@ -119,9 +122,9 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 	}
 	db.Table("questions").Select("questions.*, user_question_relations.id as uqr_id, user_question_relations.git_user_repo_url").Joins("JOIN user_question_relations ON questions.id = user_question_relations.question_id").Where("user_question_relations.user_id = ?", userID).Offset(offset).Limit(limitNum).Scan(&questions)
 
-	var responseQuestions []_GetQuestionResponseData
+	var responseQuestions []_GetUsersQuestionsResponseData
 	for _, question := range questions {
-		responseQuestions = append(responseQuestions, _GetQuestionResponseData{
+		responseQuestions = append(responseQuestions, _GetUsersQuestionsResponseData{
 			GitRepoUrl:       question.GitUserRepoURL, // Notice GitUserRepoURL instead of GitRepoURL
 			ParentGitRepoUrl: question.GitRepoURL,
 			Title:            question.Title,
@@ -133,9 +136,96 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ResponseHTTP{
 		Success: true,
 		Message: "Questions fetched successfully",
-		Data: GetQuestionResponseData{
+		Data: GetUsersQuestionsResponseData{
 			QuestionCount: int(totalQuestions),
 			Questions:     responseQuestions,
+		},
+	})
+}
+
+type GetQuestionResponseData struct {
+	Title            string `json:"title" validate:"required"`
+	Description      string `json:"description" validate:"required"`
+	README           string `json:"readme" validate:"required"`
+	GitRepoURL       string `json:"git_repo_url" validate:"required"`
+	ParentGitRepoURL string `json:"parent_git_repo_url" validate:"required"`
+}
+
+func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string {
+	branches := []string{"main", "master"}
+	readmeFiles := []string{"README.md", "README"}
+
+	for _, branch := range branches {
+		for _, readmeFile := range readmeFiles {
+			fileContent, _, err := client.GetFile(user.UserName, gitRepoURL, branch, readmeFile)
+			if err == nil {
+				return string(fileContent)
+			}
+		}
+	}
+	return ""
+}
+
+// GetQuestion is a function to get a question by UQR_ID
+// @Summary		Get a question by UQR_ID
+// @Description	Get a question by UQR_ID
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			UQR_ID	path	int	true	"ID of the UserQuestionRelation to get"
+// @Success		200		{object}	ResponseHTTP{}
+// @Failure		404		{object}	ResponseHTTP{}
+// @Failure		503		{object}	ResponseHTTP{}
+// @Router			/api/question/{UQR_ID} [get]
+// @Security		AuthorizationHeaderToken
+func GetQuestion(w http.ResponseWriter, r *http.Request) {
+	db := database.DBConn
+	client := r.Context().Value(models.ClientContextKey).(*gitea.Client)
+	user := r.Context().Value(models.UserContextKey).(*gitea.User)
+	userID := user.ID
+
+	UQR_IDstr := chi.URLParam(r, "UQR_ID")
+	UQR_ID, err := strconv.Atoi(UQR_IDstr)
+	if err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Invalid UQR ID",
+		})
+		return
+	}
+
+	var uqr models.UserQuestionRelation
+	db.Where("id = ? AND user_id = ?", UQR_ID, userID).First(&uqr)
+	if uqr.ID == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	var question models.Question
+	db.Where("id = ?", uqr.QuestionID).First(&question)
+	if question.ID == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(ResponseHTTP{
+		Success: true,
+		Message: "Question fetched successfully",
+		Data: GetQuestionResponseData{
+			Title:            question.Title,
+			Description:      question.Description,
+			README:           GetReadme(client, user, strings.Split(uqr.GitUserRepoURL, "/")[1]),
+			GitRepoURL:       uqr.GitUserRepoURL,
+			ParentGitRepoURL: question.GitRepoURL,
 		},
 	})
 }

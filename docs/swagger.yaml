@@ -394,7 +394,7 @@ definitions:
     - VisibleTypePublic
     - VisibleTypeLimited
     - VisibleTypePrivate
-  handlers._GetQuestionResponseData:
+  handlers._GetUsersQuestionsResponseData:
     properties:
       description:
         type: string
@@ -475,18 +475,6 @@ definitions:
     - question_count
     - questions
     type: object
-  handlers.GetQuestionResponseData:
-    properties:
-      question:
-        items:
-          $ref: '#/definitions/handlers._GetQuestionResponseData'
-        type: array
-      question_count:
-        type: integer
-    required:
-    - question
-    - question_count
-    type: object
   handlers.GetScoreResponseData:
     properties:
       scores:
@@ -498,6 +486,18 @@ definitions:
     required:
     - scores
     - scores_count
+    type: object
+  handlers.GetUsersQuestionsResponseData:
+    properties:
+      question:
+        items:
+          $ref: '#/definitions/handlers._GetUsersQuestionsResponseData'
+        type: array
+      question_count:
+        type: integer
+    required:
+    - question
+    - question_count
     type: object
   handlers.ResponseHTTP:
     properties:
@@ -773,6 +773,37 @@ paths:
       summary: Get a list of questions
       tags:
       - Question
+  /api/question/{UQR_ID}:
+    get:
+      consumes:
+      - application/json
+      description: Get a question by UQR_ID
+      parameters:
+      - description: ID of the UserQuestionRelation to get
+        in: path
+        name: UQR_ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
+      summary: Get a question by UQR_ID
+      tags:
+      - Question
   /api/question/user:
     get:
       consumes:
@@ -798,7 +829,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/handlers.GetQuestionResponseData'
+                    $ref: '#/definitions/handlers.GetUsersQuestionsResponseData'
                   type: array
               type: object
         "404":
