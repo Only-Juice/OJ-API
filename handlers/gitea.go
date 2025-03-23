@@ -214,7 +214,7 @@ func PostCreateQuestionRepositoryGitea(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(ResponseHTTP{
 			Success: false,
-			Message: "Failed to fork repository",
+			Message: err.Error(),
 		})
 		return
 	}

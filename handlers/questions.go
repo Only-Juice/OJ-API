@@ -92,7 +92,9 @@ type GetUsersQuestionsResponseData struct {
 // @Security		AuthorizationHeaderToken
 func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 	db := database.DBConn
-	user := r.Context().Value(models.UserContextKey).(*gitea.User)
+	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	user := models.User{UserName: giteaUser.UserName}
+	db.Where(&user).First(&user)
 	userID := user.ID
 
 	// Parse query parameters for pagination
@@ -121,7 +123,18 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 		GitUserRepoURL string
 	}
 	db.Table("questions").Select("questions.*, user_question_relations.id as uqr_id, user_question_relations.git_user_repo_url").Joins("JOIN user_question_relations ON questions.id = user_question_relations.question_id").Where("user_question_relations.user_id = ?", userID).Offset(offset).Limit(limitNum).Scan(&questions)
-
+	if len(questions) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ResponseHTTP{
+			Success: true,
+			Message: "No questions found",
+			Data: GetUsersQuestionsResponseData{
+				QuestionCount: 0,
+				Questions:     []_GetUsersQuestionsResponseData{},
+			},
+		})
+		return
+	}
 	var responseQuestions []_GetUsersQuestionsResponseData
 	for _, question := range questions {
 		responseQuestions = append(responseQuestions, _GetUsersQuestionsResponseData{
@@ -133,6 +146,7 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 			QID:              question.ID,
 		})
 	}
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ResponseHTTP{
 		Success: true,
 		Message: "Questions fetched successfully",
@@ -181,7 +195,9 @@ func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string
 func GetQuestion(w http.ResponseWriter, r *http.Request) {
 	db := database.DBConn
 	client := r.Context().Value(models.ClientContextKey).(*gitea.Client)
-	user := r.Context().Value(models.UserContextKey).(*gitea.User)
+	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	user := models.User{UserName: giteaUser.UserName}
+	db.Where(&user).First(&user)
 	userID := user.ID
 
 	UQR_IDstr := chi.URLParam(r, "UQR_ID")
@@ -223,7 +239,7 @@ func GetQuestion(w http.ResponseWriter, r *http.Request) {
 		Data: GetQuestionResponseData{
 			Title:            question.Title,
 			Description:      question.Description,
-			README:           GetReadme(client, user, strings.Split(uqr.GitUserRepoURL, "/")[1]),
+			README:           GetReadme(client, giteaUser, strings.Split(uqr.GitUserRepoURL, "/")[1]),
 			GitRepoURL:       uqr.GitUserRepoURL,
 			ParentGitRepoURL: question.GitRepoURL,
 		},
