@@ -441,6 +441,18 @@ definitions:
           type: string
         type: array
     type: object
+  handlers.GetQuestionListResponseData:
+    properties:
+      question_count:
+        type: integer
+      questions:
+        items:
+          $ref: '#/definitions/models.Question'
+        type: array
+    required:
+    - question_count
+    - questions
+    type: object
   handlers.GetScoreResponseData:
     properties:
       scores:
@@ -688,6 +700,45 @@ paths:
       summary: Bulk create User
       tags:
       - Gitea
+  /api/question:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of questions
+      parameters:
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/handlers.GetQuestionListResponseData'
+                  type: array
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Get a list of questions
+      tags:
+      - Question
   /api/sandbox:
     post:
       consumes:

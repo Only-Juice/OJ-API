@@ -77,5 +77,6 @@ func New() *chi.Mux {
 	r.Post("/api/gitea/auth", handlers.PostBasicAuthenticationGitea)
 	r.With(AuthMiddleware).Post("/api/gitea/user/bulk", handlers.PostBulkCreateUserGitea)
 	r.With(AuthMiddleware).Post("/api/gitea/question/{question_id}", handlers.PostCreateQuestionRepositoryGitea)
+	r.Get("/api/question", handlers.GetQuestionList)
 	return r
 }
