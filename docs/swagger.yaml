@@ -394,6 +394,28 @@ definitions:
     - VisibleTypePublic
     - VisibleTypeLimited
     - VisibleTypePrivate
+  handlers._GetQuestionResponseData:
+    properties:
+      description:
+        type: string
+      git_repo_url:
+        type: string
+      parent_git_repo_url:
+        type: string
+      q_id:
+        type: integer
+      title:
+        type: string
+      uqr_id:
+        type: integer
+    required:
+    - description
+    - git_repo_url
+    - parent_git_repo_url
+    - q_id
+    - title
+    - uqr_id
+    type: object
   handlers.BasicAuthentication:
     properties:
       password:
@@ -452,6 +474,18 @@ definitions:
     required:
     - question_count
     - questions
+    type: object
+  handlers.GetQuestionResponseData:
+    properties:
+      question:
+        items:
+          $ref: '#/definitions/handlers._GetQuestionResponseData'
+        type: array
+      question_count:
+        type: integer
+    required:
+    - question
+    - question_count
     type: object
   handlers.GetScoreResponseData:
     properties:
@@ -737,6 +771,47 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       summary: Get a list of questions
+      tags:
+      - Question
+  /api/question/user:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of questions by user
+      parameters:
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/handlers.GetQuestionResponseData'
+                  type: array
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
+      summary: Get a list of questions by user
       tags:
       - Question
   /api/sandbox:
