@@ -72,7 +72,7 @@ func New() *chi.Mux {
 	r.Post("/api/sandbox", handlers.PostSandboxCmd)
 	r.Get("/api/sandbox/status", handlers.GetSandboxStatus)
 	// r.Get("/api/scores", handlers.GetScores)
-	r.Get("/api/score", handlers.GetScoreByRepo)
+	r.With(AuthMiddleware).Get("/api/score", handlers.GetScoreByRepo)
 	r.Post("/api/gitea", handlers.PostGiteaHook)
 	r.Post("/api/gitea/auth", handlers.PostBasicAuthenticationGitea)
 	r.With(AuthMiddleware).Post("/api/gitea/user/bulk", handlers.PostBulkCreateUserGitea)
@@ -80,5 +80,6 @@ func New() *chi.Mux {
 	r.Get("/api/question", handlers.GetQuestionList)
 	r.With(AuthMiddleware).Get("/api/question/user", handlers.GetUsersQuestions)
 	r.With(AuthMiddleware).Get("/api/question/{UQR_ID}", handlers.GetQuestion)
+	r.With(AuthMiddleware).Get("/api/score/{UQR_ID}", handlers.GetScoreByUQRID)
 	return r
 }

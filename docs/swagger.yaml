@@ -934,6 +934,10 @@ paths:
                 data:
                   $ref: '#/definitions/handlers.GetScoreResponseData'
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
         "404":
           description: Not Found
           schema:
@@ -942,7 +946,57 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
       summary: Get a score by repo
+      tags:
+      - Score
+  /api/score/{UQR_ID}:
+    get:
+      consumes:
+      - application/json
+      description: Get a score by UQR ID
+      parameters:
+      - description: UQR ID
+        in: path
+        name: UQR_ID
+        required: true
+        type: integer
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.Score'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - AuthorizationHeaderToken: []
+      summary: Get a score by UQR ID
       tags:
       - Score
 securityDefinitions:
