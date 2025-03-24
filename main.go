@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -27,6 +28,14 @@ import (
 // @name Authorization
 // @in header
 func main() {
+	decodedKey, err := base64.StdEncoding.DecodeString(config.Config("ENCRYPTION_KEY"))
+	if err != nil {
+		log.Panic("Invalid ENCRYPTION_KEY config:", err.Error())
+	}
+	if len(decodedKey) != 16 && len(decodedKey) != 24 && len(decodedKey) != 32 {
+		log.Panic("Invalid ENCRYPTION_KEY length:", len(decodedKey))
+	}
+
 	if err := database.Connect(); err != nil {
 		log.Panic("Can't connect database:", err.Error())
 	}
