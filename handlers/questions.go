@@ -147,13 +147,13 @@ type GetQuestionResponseData struct {
 	ParentGitRepoURL string `json:"parent_git_repo_url" validate:"required"`
 }
 
-func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string {
+func GetReadme(client *gitea.Client, userName string, gitRepoURL string) string {
 	branches := []string{"main", "master"}
 	readmeFiles := []string{"README.md", "README"}
 
 	for _, branch := range branches {
 		for _, readmeFile := range readmeFiles {
-			fileContent, _, err := client.GetFile(user.UserName, gitRepoURL, branch, readmeFile)
+			fileContent, _, err := client.GetFile(userName, gitRepoURL, branch, readmeFile)
 			if err == nil {
 				return string(fileContent)
 			}
@@ -195,14 +195,6 @@ func GetQuestion(c *gin.Context) {
 		})
 		return
 	}
-	giteaUser, _, err := client.GetMyUserInfo()
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: "Failed to connect to Gitea",
-		})
-		return
-	}
 
 	UQR_IDstr := c.Param("UQR_ID")
 	UQR_ID, err := strconv.Atoi(UQR_IDstr)
@@ -240,9 +232,149 @@ func GetQuestion(c *gin.Context) {
 		Data: GetQuestionResponseData{
 			Title:            question.Title,
 			Description:      question.Description,
-			README:           GetReadme(client, giteaUser, strings.Split(uqr.GitUserRepoURL, "/")[1]),
+			README:           GetReadme(client, jwtClaims.Username, strings.Split(uqr.GitUserRepoURL, "/")[1]),
 			GitRepoURL:       uqr.GitUserRepoURL,
 			ParentGitRepoURL: question.GitRepoURL,
+		},
+	})
+}
+
+// GetQuestionByID is a function to get a question by ID
+// @Summary		Get a question by ID
+// @Description Retrieve only public questions
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			ID	path	int	true	"ID of the Question to get"
+// @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
+// @Failure		404		{object}	ResponseHTTP{}
+// @Failure		503		{object}	ResponseHTTP{}
+// @Router			/api/question/id/{ID} [get]
+func GetQuestionByID(c *gin.Context) {
+	db := database.DBConn
+
+	client, err := gitea.NewClient("http://" + config.Config("GIT_HOST"))
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	IDstr := c.Param("ID")
+	ID, err := strconv.Atoi(IDstr)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	var question models.Question
+	db.Where("id = ?", ID).First(&question)
+	if question.ID == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question fetched successfully",
+		Data: GetQuestionResponseData{
+			Title:            question.Title,
+			Description:      question.Description,
+			GitRepoURL:       question.GitRepoURL,
+			ParentGitRepoURL: "",
+			README:           GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
+		},
+	})
+}
+
+type GetUserQuestionResponseData struct {
+	GetQuestionResponseData
+	UQR_ID uint `json:"uqr_id" validate:"required"`
+}
+
+// GetUserQuestionByID is a function to get a user's question by Question ID
+// @Summary		Get a user's question by Question ID
+// @Description	Retrieve a specific question associated with a user by its Question ID
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			ID	path	int	true	"ID of the Question to get"
+// @Success		200		{object}	ResponseHTTP{data=GetUserQuestionResponseData}
+// @Failure		404		{object}	ResponseHTTP{}
+// @Failure		503		{object}	ResponseHTTP{}
+// @Router			/api/question/user/id/{ID} [get]
+// @Security		BearerAuth
+func GetUserQuestionByID(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	IDstr := c.Param("ID")
+	ID, err := strconv.Atoi(IDstr)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	var uqr models.UserQuestionRelation
+	db.Where("question_id = ? AND user_id = ?", ID, jwtClaims.UserID).First(&uqr)
+	if uqr.ID == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	var question models.Question
+	db.Where("id = ?", uqr.QuestionID).First(&question)
+	if question.ID == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question fetched successfully",
+		Data: GetUserQuestionResponseData{
+			GetQuestionResponseData: GetQuestionResponseData{
+				Title:            question.Title,
+				Description:      question.Description,
+				README:           GetReadme(client, jwtClaims.Username, strings.Split(uqr.GitUserRepoURL, "/")[1]),
+				GitRepoURL:       uqr.GitUserRepoURL,
+				ParentGitRepoURL: question.GitRepoURL,
+			},
+			UQR_ID: uqr.ID,
 		},
 	})
 }

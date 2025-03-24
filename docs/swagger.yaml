@@ -423,6 +423,28 @@ definitions:
     - scores
     - scores_count
     type: object
+  handlers.GetUserQuestionResponseData:
+    properties:
+      description:
+        type: string
+      git_repo_url:
+        type: string
+      parent_git_repo_url:
+        type: string
+      readme:
+        type: string
+      title:
+        type: string
+      uqr_id:
+        type: integer
+    required:
+    - description
+    - git_repo_url
+    - parent_git_repo_url
+    - readme
+    - title
+    - uqr_id
+    type: object
   handlers.GetUsersQuestionsResponseData:
     properties:
       question:
@@ -740,6 +762,40 @@ paths:
       summary: Get a question by UQR_ID
       tags:
       - Question
+  /api/question/id/{ID}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve only public questions
+      parameters:
+      - description: ID of the Question to get
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetQuestionResponseData'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Get a question by ID
+      tags:
+      - Question
   /api/question/user:
     get:
       consumes:
@@ -779,6 +835,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Get a list of questions by user
+      tags:
+      - Question
+  /api/question/user/id/{ID}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific question associated with a user by its Question
+        ID
+      parameters:
+      - description: ID of the Question to get
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetUserQuestionResponseData'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
+      summary: Get a user's question by Question ID
       tags:
       - Question
   /api/sandbox:
