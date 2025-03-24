@@ -2,15 +2,13 @@ package routes
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
-	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"OJ-API/config"
 	_ "OJ-API/docs"
@@ -18,68 +16,57 @@ import (
 	"OJ-API/models"
 )
 
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("Authorization")
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
 		if token == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(handlers.ResponseHTTP{
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Missing Token",
 			})
+			c.Abort()
 			return
 		}
 		token = strings.TrimPrefix(token, "token ")
-		if c, err := gitea.NewClient("http://"+config.Config("GIT_HOST"), gitea.SetToken(token)); err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+		client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"), gitea.SetToken(token))
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.Abort()
 			return
-		} else {
-			ctx := context.WithValue(r.Context(), models.ClientContextKey, c)
-			if u, _, err := c.GetMyUserInfo(); err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			} else {
-				ctx = context.WithValue(ctx, models.UserContextKey, u)
-				next.ServeHTTP(w, r.WithContext(ctx))
-			}
 		}
-	})
+		ctx := context.WithValue(c.Request.Context(), models.ClientContextKey, client)
+		user, _, err := client.GetMyUserInfo()
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.Abort()
+			return
+		}
+		ctx = context.WithValue(ctx, models.UserContextKey, user)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
 }
 
-func New() *chi.Mux {
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+func RegisterRoutes(r *gin.Engine) {
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 
-	// Basic CORS
-	// for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
-	r.Use(cors.Handler(cors.Options{
-		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
-		AllowedOrigins: []string{"https://*", "http://*"},
-		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	}))
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition
-	))
-
-	r.With(AuthMiddleware).Post("/api/sandbox", handlers.PostSandboxCmd)
-	r.Get("/api/sandbox/status", handlers.GetSandboxStatus)
-	// r.Get("/api/scores", handlers.GetScores)
-	r.With(AuthMiddleware).Get("/api/score", handlers.GetScoreByRepo)
-	r.Post("/api/gitea", handlers.PostGiteaHook)
-	r.Post("/api/gitea/auth", handlers.PostBasicAuthenticationGitea)
-	r.With(AuthMiddleware).Post("/api/gitea/user/bulk", handlers.PostBulkCreateUserGitea)
-	r.With(AuthMiddleware).Post("/api/gitea/question/{question_id}", handlers.PostCreateQuestionRepositoryGitea)
-	r.Get("/api/question", handlers.GetQuestionList)
-	r.With(AuthMiddleware).Get("/api/question/user", handlers.GetUsersQuestions)
-	r.With(AuthMiddleware).Get("/api/question/{UQR_ID}", handlers.GetQuestion)
-	r.With(AuthMiddleware).Get("/api/score/{UQR_ID}", handlers.GetScoreByUQRID)
-	return r
+	// Routes
+	api := r.Group("/api")
+	{
+		api.POST("/sandbox", AuthMiddleware(), handlers.PostSandboxCmd)
+		api.GET("/sandbox/status", handlers.GetSandboxStatus)
+		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
+		api.POST("/gitea", handlers.PostGiteaHook)
+		api.POST("/gitea/auth", handlers.PostBasicAuthenticationGitea)
+		api.POST("/gitea/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
+		api.POST("/gitea/question/:question_id", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
+		api.GET("/question", handlers.GetQuestionList)
+		api.GET("/question/user", AuthMiddleware(), handlers.GetUsersQuestions)
+		api.GET("/question/:UQR_ID", AuthMiddleware(), handlers.GetQuestion)
+		api.GET("/score/:UQR_ID", AuthMiddleware(), handlers.GetScoreByUQRID)
+	}
 }

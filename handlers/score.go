@@ -1,16 +1,13 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"OJ-API/database"
@@ -45,83 +42,35 @@ type GetScoreResponseData struct {
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score [get]
 //	@Security		AuthorizationHeaderToken
-func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
+func GetScoreByRepo(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
-	owner, err := url.QueryUnescape(r.URL.Query().Get("owner"))
-	if err != nil {
-		log.Printf("Failed to unescape repo name: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
+	owner, err := url.QueryUnescape(c.Query("owner"))
+	if err != nil || owner == "" {
+		c.JSON(400, ResponseHTTP{
 			Success: false,
-			Message: "Failed to unescape user name",
-		})
-		return
-	}
-	if owner == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "User name is required",
+			Message: "Invalid or missing owner parameter",
 		})
 		return
 	}
 	if giteaUser.UserName != owner {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
 		})
 		return
 	}
-	repo, err := url.QueryUnescape(r.URL.Query().Get("repo"))
-	if err != nil {
-		log.Printf("Failed to unescape repo name: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+	repo, err := url.QueryUnescape(c.Query("repo"))
+	if err != nil || repo == "" {
+		c.JSON(400, ResponseHTTP{
 			Success: false,
-			Message: "Failed to unescape repo name",
+			Message: "Invalid or missing repo parameter",
 		})
 		return
 	}
-	if repo == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Repo name is required",
-		})
-		return
-	}
-	page := r.URL.Query().Get("page")
-	limit := r.URL.Query().Get("limit")
-	if page == "" {
-		page = "1"
-	}
-	if limit == "" {
-		limit = "10"
-	}
-	var _scores []models.UserQuestionTable
-	pageInt, err := strconv.Atoi(page)
-	if err != nil {
-		log.Printf("Invalid page number: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Invalid page number",
-		})
-		return
-	}
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil {
-		log.Printf("Invalid limit number: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Invalid limit number",
-		})
-		return
-	}
-	offset := (pageInt - 1) * limitInt
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
 
 	repoURL := fmt.Sprintf("%s/%s", owner, repo)
 	var totalCount int64
@@ -129,45 +78,34 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 		Joins("UQR").
 		Where("git_user_repo_url = ?", repoURL).
 		Count(&totalCount).Error; err != nil {
-		log.Printf("Failed to count scores: %v", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to count scores",
 		})
 		return
 	}
 
+	var _scores []models.UserQuestionTable
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Where("git_user_repo_url = ?", repoURL).
 		Offset(offset).
-		Limit(limitInt).
+		Limit(limit).
 		Find(&_scores).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(ResponseHTTP{
+			c.JSON(404, ResponseHTTP{
 				Success: false,
 				Message: "Score not found",
 			})
 			return
 		}
-		log.Printf("Failed to get score by repo: %v", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to get score by repo",
 		})
 		return
 	}
-	if len(_scores) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Score not found",
-		})
-		return
-	}
+
 	var scores []Score
 	for _, score := range _scores {
 		scores = append(scores, Score{
@@ -176,10 +114,9 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 			JudgeTime: score.JudgeTime,
 		})
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
-		Message: "Successfully get score by repo",
+		Message: "Successfully retrieved scores by repo",
 		Data: GetScoreResponseData{
 			Scores:      scores,
 			ScoresCount: int(totalCount),
@@ -203,17 +140,16 @@ func GetScoreByRepo(w http.ResponseWriter, r *http.Request) {
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score/{UQR_ID} [get]
 //	@Security		AuthorizationHeaderToken
-func GetScoreByUQRID(w http.ResponseWriter, r *http.Request) {
+func GetScoreByUQRID(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
 	user := models.User{UserName: giteaUser.UserName}
 	db.Where(&user).First(&user)
 	userID := user.ID
 
-	UQRID := chi.URLParam(r, "UQR_ID")
+	UQRID := c.Param("UQR_ID")
 	if UQRID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(400, ResponseHTTP{
 			Success: false,
 			Message: "UQR ID is required",
 		})
@@ -223,103 +159,61 @@ func GetScoreByUQRID(w http.ResponseWriter, r *http.Request) {
 	UQR := models.UserQuestionRelation{}
 	if err := db.Where("id = ?", UQRID).First(&UQR).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(ResponseHTTP{
+			c.JSON(404, ResponseHTTP{
 				Success: false,
 				Message: "UQR ID not found",
 			})
 			return
 		}
-		log.Printf("Failed to get UQR by ID: %v", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to get UQR by ID",
 		})
 		return
 	}
 	if UQR.UserID != userID {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
 		})
 		return
 	}
 
-	page := r.URL.Query().Get("page")
-	limit := r.URL.Query().Get("limit")
-	if page == "" {
-		page = "1"
-	}
-	if limit == "" {
-		limit = "10"
-	}
-	var _scores []models.UserQuestionTable
-	pageInt, err := strconv.Atoi(page)
-	if err != nil {
-		log.Printf("Invalid page number: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Invalid page number",
-		})
-		return
-	}
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil {
-		log.Printf("Invalid limit number: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Invalid limit number",
-		})
-		return
-	}
-	offset := (pageInt - 1) * limitInt
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
 
 	var totalCount int64
 	if err := db.Model(&models.UserQuestionTable{}).
 		Where("UQR_ID = ?", UQRID).
 		Count(&totalCount).Error; err != nil {
-		log.Printf("Failed to count scores: %v", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to count scores",
 		})
 		return
 	}
 
+	var _scores []models.UserQuestionTable
 	if err := db.Model(&models.UserQuestionTable{}).
 		Where("UQR_ID = ?", UQRID).
 		Offset(offset).
-		Limit(limitInt).
+		Limit(limit).
 		Find(&_scores).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(ResponseHTTP{
+			c.JSON(404, ResponseHTTP{
 				Success: false,
 				Message: "Score not found",
 			})
 			return
 		}
-		log.Printf("Failed to get score by UQR ID: %v", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to get score by UQR ID",
 		})
 		return
 	}
-	if len(_scores) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ResponseHTTP{
-			Success: false,
-			Message: "Score not found",
-		})
-		return
-	}
+
 	var scores []Score
 	for _, score := range _scores {
 		scores = append(scores, Score{
@@ -328,10 +222,9 @@ func GetScoreByUQRID(w http.ResponseWriter, r *http.Request) {
 			JudgeTime: score.JudgeTime,
 		})
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
-		Message: "Successfully get score by UQR ID",
+		Message: "Successfully retrieved scores by UQR ID",
 		Data: GetScoreResponseData{
 			Scores:      scores,
 			ScoresCount: int(totalCount),
