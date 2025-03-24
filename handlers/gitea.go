@@ -167,7 +167,7 @@ type BulkCreateUserResponse struct {
 // @Failure		401		{object}	ResponseHTTP{}
 // @Failure		403		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
-// @Security	AuthorizationHeaderToken
+// @Security	BearerAuth
 // @Router		/api/gitea/user/bulk [post]
 func PostBulkCreateUserGitea(c *gin.Context) {
 	db := database.DBConn
@@ -251,7 +251,7 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 // @Failure		401		{object}	ResponseHTTP{}
 // @Failure		403		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
-// @Security	AuthorizationHeaderToken
+// @Security	BearerAuth
 // @Router		/api/gitea/question/{question_id} [post]
 func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	db := database.DBConn

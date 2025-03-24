@@ -80,7 +80,7 @@ type GetUsersQuestionsResponseData struct {
 // @Failure		404		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question/user [get]
-// @Security		AuthorizationHeaderToken
+// @Security		BearerAuth
 func GetUsersQuestions(c *gin.Context) {
 	db := database.DBConn
 	jwtClaim := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -173,7 +173,7 @@ func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string
 // @Failure		404		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question/{UQR_ID} [get]
-// @Security		AuthorizationHeaderToken
+// @Security		BearerAuth
 func GetQuestion(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)

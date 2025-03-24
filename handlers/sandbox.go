@@ -27,7 +27,7 @@ type Sandbox struct {
 // @Failure		401		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/sandbox [post]
-// @Security		AuthorizationHeaderToken
+// @Security		BearerAuth
 func PostSandboxCmd(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)

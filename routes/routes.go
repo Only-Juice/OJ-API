@@ -16,15 +16,28 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		jwt := c.GetHeader("Authorization")
-		if jwt == "" {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
-				Message: "Missing JWT",
+				Message: "Missing Authorization header",
 			})
 			c.Abort()
 			return
 		}
+
+		const bearerPrefix = "Bearer "
+		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Invalid Authorization header format",
+			})
+			c.Abort()
+			return
+		}
+
+		jwt := authHeader[len(bearerPrefix):]
+
 		jwtClaims, err := utils.ParseJWT(jwt)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
@@ -34,6 +47,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
 		ctx := context.WithValue(c.Request.Context(), models.JWTClaimsKey, jwtClaims)
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()

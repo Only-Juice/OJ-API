@@ -620,7 +620,7 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Take a question and create a repository in Gitea
       tags:
       - Gitea
@@ -661,7 +661,7 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Bulk create User
       tags:
       - Gitea
@@ -736,7 +736,7 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Get a question by UQR_ID
       tags:
       - Question
@@ -777,7 +777,7 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Get a list of questions by user
       tags:
       - Question
@@ -814,7 +814,7 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Specify the shell command for the corresponding repo
       tags:
       - Sandbox
@@ -889,7 +889,7 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Get a score by repo
       tags:
       - Score
@@ -937,13 +937,12 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
-      - AuthorizationHeaderToken: []
+      - BearerAuth: []
       summary: Get a score by UQR ID
       tags:
       - Score
 securityDefinitions:
-  AuthorizationHeaderToken:
-    description: API tokens must be prepended with "token" followed by a space.
+  BearerAuth:
     in: header
     name: Authorization
     type: apiKey

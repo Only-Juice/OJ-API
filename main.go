@@ -22,11 +22,9 @@ import (
 // @version		1.0
 // @description	This is a simple OJ-PoC API server.
 // @BasePath		/
-// @securityDefinitions.apikey AuthorizationHeaderToken
-// @type apiKey
-// @description API tokens must be prepended with "token" followed by a space.
-// @name Authorization
-// @in header
+// @SecurityDefinitions.apikey BearerAuth
+// @In header
+// @Name Authorization
 func main() {
 	decodedKey, err := base64.StdEncoding.DecodeString(config.Config("ENCRYPTION_KEY"))
 	if err != nil {

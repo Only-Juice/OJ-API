@@ -111,7 +111,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Take a question and create a repository in Gitea",
@@ -166,7 +166,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Bulk create User",
@@ -299,7 +299,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a list of questions by user",
@@ -368,7 +368,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a question by UQR_ID",
@@ -429,7 +429,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Specify the shell command for the corresponding repo",
@@ -530,7 +530,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a score by repo",
@@ -616,7 +616,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a score by UQR ID",
@@ -1461,8 +1461,7 @@ const docTemplate = `{
         }
     },
     "securityDefinitions": {
-        "AuthorizationHeaderToken": {
-            "description": "API tokens must be prepended with \"token\" followed by a space.",
+        "BearerAuth": {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
