@@ -6,8 +6,8 @@ import (
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/sandbox"
+	"OJ-API/utils"
 
-	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,8 +30,8 @@ type Sandbox struct {
 // @Security		AuthorizationHeaderToken
 func PostSandboxCmd(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
-	if !giteaUser.IsAdmin {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
 		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",

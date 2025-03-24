@@ -3,45 +3,38 @@ package routes
 import (
 	"context"
 	"net/http"
-	"strings"
 
-	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"OJ-API/config"
 	_ "OJ-API/docs"
 	"OJ-API/handlers"
 	"OJ-API/models"
+	"OJ-API/utils"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
+		jwt := c.GetHeader("Authorization")
+		if jwt == "" {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
-				Message: "Missing Token",
+				Message: "Missing JWT",
 			})
 			c.Abort()
 			return
 		}
-		token = strings.TrimPrefix(token, "token ")
-		client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"), gitea.SetToken(token))
+		jwtClaims, err := utils.ParseJWT(jwt)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Invalid JWT",
+			})
 			c.Abort()
 			return
 		}
-		ctx := context.WithValue(c.Request.Context(), models.ClientContextKey, client)
-		user, _, err := client.GetMyUserInfo()
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			c.Abort()
-			return
-		}
-		ctx = context.WithValue(ctx, models.UserContextKey, user)
+		ctx := context.WithValue(c.Request.Context(), models.JWTClaimsKey, jwtClaims)
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}

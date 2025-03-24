@@ -127,12 +127,20 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 			})
 			return
 		}
-		tokenString = newToken.Token
+	}
+
+	signedToken, err := utils.GenerateJWT(existingUser.ID, existingUser.UserName, giteaUser.IsAdmin)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to generate JWT",
+		})
+		return
 	}
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
-		Data:    tokenString,
+		Data:    signedToken,
 		Message: "Access token created",
 	})
 }
@@ -163,8 +171,8 @@ type BulkCreateUserResponse struct {
 // @Router		/api/gitea/user/bulk [post]
 func PostBulkCreateUserGitea(c *gin.Context) {
 	db := database.DBConn
-	user := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
-	if !user.IsAdmin {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
 		c.JSON(403, ResponseHTTP{
 			Success: false,
 			Message: "Permission denied",
@@ -181,7 +189,27 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 		return
 	}
 
-	client := c.Request.Context().Value(models.ClientContextKey).(*gitea.Client)
+	user := models.User{
+		UserName: jwtClaims.Username,
+	}
+	if err := db.Where(&user).First(&user).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(user.GiteaToken),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
 	successfulUsers := []string{}
 	failedUsers := map[string]string{}
 
@@ -237,14 +265,24 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		return
 	}
 
-	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
-	var existingUser models.User
-	if err := db.Where(&models.User{UserName: giteaUser.UserName}).First(&existingUser).Error; err != nil {
-		existingUser = models.User{
-			UserName: giteaUser.UserName,
-			Email:    giteaUser.Email,
-		}
-		db.Create(&existingUser)
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
 	}
 
 	var existingQuestion models.Question
@@ -262,17 +300,16 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 
 	var userQuestionRelation models.UserQuestionRelation
 	if err := db.Where(&models.UserQuestionRelation{
-		UserID:     existingUser.ID,
+		UserID:     jwtClaims.UserID,
 		QuestionID: uint(questionID),
 	}).First(&userQuestionRelation).Error; err != nil {
 		db.Create(&models.UserQuestionRelation{
-			UserID:         existingUser.ID,
+			UserID:         jwtClaims.UserID,
 			QuestionID:     uint(questionID),
-			GitUserRepoURL: giteaUser.UserName + "/" + parentRepoName,
+			GitUserRepoURL: jwtClaims.Username + "/" + parentRepoName,
 		})
 	}
 
-	client := c.Request.Context().Value(models.ClientContextKey).(*gitea.Client)
 	if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
 		Name: &parentRepoName,
 	}); err != nil {
@@ -283,7 +320,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		return
 	}
 
-	client.CreateRepoHook(giteaUser.UserName, parentRepoName, gitea.CreateHookOption{
+	client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
 		Type:   "gitea",
 		Active: true,
 		Events: []string{"push"},
