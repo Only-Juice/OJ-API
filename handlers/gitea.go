@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/utils"
 )
 
 type BasicAuthentication struct {
@@ -24,10 +26,11 @@ type BasicAuthentication struct {
 // @Accept			json
 // @Produce		json
 // @Param			BasicAuthentication	body		BasicAuthentication	true	"Basic Authentication"
-// @Success		200		{object}	ResponseHTTP{data=gitea.AccessToken} "Return access token"
+// @Success		200		{object}	ResponseHTTP{} "Return access token"
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/gitea/auth [post]
 func PostBasicAuthenticationGitea(c *gin.Context) {
+	db := database.DBConn
 	account := new(BasicAuthentication)
 	if err := c.ShouldBindJSON(account); err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -48,11 +51,54 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 		return
 	}
 
-	client.DeleteAccessToken("OJ-API")
-	token, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
-		Name:   "OJ-API",
-		Scopes: []gitea.AccessTokenScope{gitea.AccessTokenScopeAll},
-	})
+	giteaUser, _, err := client.GetMyUserInfo()
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.Abort()
+		return
+	}
+
+	var existingUser models.User
+	if err := db.Where(&models.User{UserName: giteaUser.UserName}).First(&existingUser).Error; err != nil {
+		existingUser = models.User{
+			UserName: giteaUser.UserName,
+			Email:    giteaUser.Email,
+		}
+		db.Create(&existingUser)
+	}
+
+	if existingUser.GiteaToken == "" {
+		client.DeleteAccessToken("OJ-API")
+		token, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
+			Name:   "OJ-API",
+			Scopes: []gitea.AccessTokenScope{gitea.AccessTokenScopeAll},
+		})
+		if err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+		if err := utils.StoreToken(existingUser.ID, token.Token); err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+	}
+
+	fail := false
+	tokenString, err := utils.GetToken(existingUser.ID)
+	if err != nil {
+		fail = true
+	}
+
+	// Check if the token is valid
+	client_check, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(tokenString),
+	)
 	if err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -60,10 +106,33 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 		})
 		return
 	}
+	_, _, err = client_check.GetMyUserInfo()
+	if err != nil || fail {
+		client.DeleteAccessToken("OJ-API")
+		newToken, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
+			Name:   "OJ-API",
+			Scopes: []gitea.AccessTokenScope{gitea.AccessTokenScopeAll},
+		})
+		if err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+		if err := utils.StoreToken(existingUser.ID, newToken.Token); err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+		tokenString = newToken.Token
+	}
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
-		Data:    token,
+		Data:    tokenString,
 		Message: "Access token created",
 	})
 }
