@@ -3,6 +3,7 @@ package models
 type contextKey string
 
 const (
-	ClientContextKey contextKey = "client"
+	JWTClaimsKey     contextKey = "jwtClaims"
 	UserContextKey   contextKey = "user"
+	ClientContextKey contextKey = "client"
 )

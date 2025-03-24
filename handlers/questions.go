@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/utils"
 	"strconv"
 	"strings"
 
@@ -81,10 +83,8 @@ type GetUsersQuestionsResponseData struct {
 // @Security		AuthorizationHeaderToken
 func GetUsersQuestions(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
-	user := models.User{UserName: giteaUser.UserName}
-	db.Where(&user).First(&user)
-	userID := user.ID
+	jwtClaim := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	userID := jwtClaim.UserID
 
 	// Parse query parameters for pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -176,11 +176,33 @@ func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string
 // @Security		AuthorizationHeaderToken
 func GetQuestion(c *gin.Context) {
 	db := database.DBConn
-	client := c.Request.Context().Value(models.ClientContextKey).(*gitea.Client)
-	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
-	user := models.User{UserName: giteaUser.UserName}
-	db.Where(&user).First(&user)
-	userID := user.ID
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	giteaUser, _, err := client.GetMyUserInfo()
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to connect to Gitea",
+		})
+		return
+	}
 
 	UQR_IDstr := c.Param("UQR_ID")
 	UQR_ID, err := strconv.Atoi(UQR_IDstr)
@@ -193,7 +215,7 @@ func GetQuestion(c *gin.Context) {
 	}
 
 	var uqr models.UserQuestionRelation
-	db.Where("id = ? AND user_id = ?", UQR_ID, userID).First(&uqr)
+	db.Where("id = ? AND user_id = ?", UQR_ID, jwtClaims.UserID).First(&uqr)
 	if uqr.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,

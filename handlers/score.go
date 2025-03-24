@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/utils"
 )
 
 type Score struct {
@@ -44,7 +44,7 @@ type GetScoreResponseData struct {
 //	@Security		AuthorizationHeaderToken
 func GetScoreByRepo(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
 	owner, err := url.QueryUnescape(c.Query("owner"))
 	if err != nil || owner == "" {
 		c.JSON(400, ResponseHTTP{
@@ -53,7 +53,7 @@ func GetScoreByRepo(c *gin.Context) {
 		})
 		return
 	}
-	if giteaUser.UserName != owner {
+	if jwtClaims.Username != owner {
 		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
@@ -142,10 +142,7 @@ func GetScoreByRepo(c *gin.Context) {
 //	@Security		AuthorizationHeaderToken
 func GetScoreByUQRID(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
-	user := models.User{UserName: giteaUser.UserName}
-	db.Where(&user).First(&user)
-	userID := user.ID
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
 
 	UQRID := c.Param("UQR_ID")
 	if UQRID == "" {
@@ -171,7 +168,7 @@ func GetScoreByUQRID(c *gin.Context) {
 		})
 		return
 	}
-	if UQR.UserID != userID {
+	if UQR.UserID != jwtClaims.UserID {
 		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
