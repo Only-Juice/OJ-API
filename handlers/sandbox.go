@@ -1,15 +1,14 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/sandbox"
 
 	"code.gitea.io/sdk/gitea"
+	"github.com/gin-gonic/gin"
 )
 
 type Sandbox struct {
@@ -29,12 +28,11 @@ type Sandbox struct {
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/sandbox [post]
 // @Security		AuthorizationHeaderToken
-func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
+func PostSandboxCmd(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
 	if !giteaUser.IsAdmin {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
 		})
@@ -42,9 +40,8 @@ func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cmd := new(Sandbox)
-	if err := json.NewDecoder(r.Body).Decode(cmd); err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+	if err := c.ShouldBindJSON(cmd); err != nil {
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to parse shell command",
 		})
@@ -67,8 +64,7 @@ func PostSandboxCmd(w http.ResponseWriter, r *http.Request) {
 		db.Save(&existingCmd)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: fmt.Sprintf("Success set shell command for %v.", cmd.SourceGitRepo),
 		Data:    existingCmd,
@@ -90,10 +86,9 @@ type StatusResponse struct {
 // @Success		200		{object}	ResponseHTTP{data=StatusResponse}
 // @Failure		500		{object}	ResponseHTTP{}
 // @Router /api/sandbox/status [get]
-func GetSandboxStatus(w http.ResponseWriter, r *http.Request) {
+func GetSandboxStatus(c *gin.Context) {
 	if sandbox.SandboxPtr == nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(500, ResponseHTTP{
 			Success: false,
 			Message: "Sandbox instance not initialized",
 		})
@@ -106,8 +101,7 @@ func GetSandboxStatus(w http.ResponseWriter, r *http.Request) {
 		ProcessingCount: sandbox.SandboxPtr.ProcessingCount(),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "",
 		Data:    status,

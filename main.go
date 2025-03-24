@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"github.com/gin-gonic/gin"
 
 	"OJ-API/config"
 	"OJ-API/database"
@@ -36,7 +37,7 @@ func main() {
 	sandbox.SandboxPtr = sandbox.NewSandbox(sandboxCount)
 	defer sandbox.SandboxPtr.Cleanup()
 
-	// 設置信號處理
+	// Signal handling
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -46,8 +47,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	sandbox.SandboxPtr.RunShellCommandByRepo("user_name/repo_name", nil)
-
+	// Database migrations
 	database.DBConn.AutoMigrate(&models.User{})
 	database.DBConn.AutoMigrate(&models.Announcement{})
 	database.DBConn.AutoMigrate(&models.Exam{})
@@ -60,6 +60,13 @@ func main() {
 	database.DBConn.AutoMigrate(&models.UserQuestionRelation{})
 	database.DBConn.AutoMigrate(&models.UserQuestionTable{})
 
-	r := routes.New()
-	log.Fatal(http.ListenAndServe(":"+config.Config("API_PORT"), r))
+	// Initialize Gin router
+	r := gin.Default()
+	routes.RegisterRoutes(r)
+
+	// Start the server
+	port := config.Config("API_PORT")
+	if err := r.Run(":" + port); err != nil {
+		log.Fatal("Failed to start server:", err)
+	}
 }

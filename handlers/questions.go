@@ -3,14 +3,11 @@ package handlers
 import (
 	"OJ-API/database"
 	"OJ-API/models"
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 )
 
 type GetQuestionListResponseData struct {
@@ -30,36 +27,28 @@ type GetQuestionListResponseData struct {
 // @Failure		404		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question [get]
-func GetQuestionList(w http.ResponseWriter, r *http.Request) {
+func GetQuestionList(c *gin.Context) {
 	db := database.DBConn
 
 	// Parse query parameters for pagination
-	page := r.URL.Query().Get("page")
-	limit := r.URL.Query().Get("limit")
-
-	// Default values for page and limit
-	pageNum := 1
-	limitNum := 10
-
-	if page != "" {
-		fmt.Sscanf(page, "%d", &pageNum)
-	}
-	if limit != "" {
-		fmt.Sscanf(limit, "%d", &limitNum)
-	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
 	// Calculate offset
-	offset := (pageNum - 1) * limitNum
+	offset := (page - 1) * limit
 
 	var totalQuestions int64
 	db.Model(&models.Question{}).Count(&totalQuestions)
 	var questions []models.Question
-	db.Offset(offset).Limit(limitNum).Find(&questions)
+	db.Offset(offset).Limit(limit).Find(&questions)
 
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Questions fetched successfully",
-		Data:    GetQuestionListResponseData{QuestionCount: int(totalQuestions), Questions: questions},
+		Data: GetQuestionListResponseData{
+			QuestionCount: int(totalQuestions),
+			Questions:     questions,
+		},
 	})
 }
 
@@ -90,30 +79,19 @@ type GetUsersQuestionsResponseData struct {
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question/user [get]
 // @Security		AuthorizationHeaderToken
-func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
+func GetUsersQuestions(c *gin.Context) {
 	db := database.DBConn
-	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
 	user := models.User{UserName: giteaUser.UserName}
 	db.Where(&user).First(&user)
 	userID := user.ID
 
 	// Parse query parameters for pagination
-	page := r.URL.Query().Get("page")
-	limit := r.URL.Query().Get("limit")
-
-	// Default values for page and limit
-	pageNum := 1
-	limitNum := 10
-
-	if page != "" {
-		fmt.Sscanf(page, "%d", &pageNum)
-	}
-	if limit != "" {
-		fmt.Sscanf(limit, "%d", &limitNum)
-	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
 	// Calculate offset
-	offset := (pageNum - 1) * limitNum
+	offset := (page - 1) * limit
 
 	var totalQuestions int64
 	db.Model(&models.UserQuestionRelation{}).Where("user_id = ?", userID).Count(&totalQuestions)
@@ -122,10 +100,13 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 		UQRID          uint
 		GitUserRepoURL string
 	}
-	db.Table("questions").Select("questions.*, user_question_relations.id as uqr_id, user_question_relations.git_user_repo_url").Joins("JOIN user_question_relations ON questions.id = user_question_relations.question_id").Where("user_question_relations.user_id = ?", userID).Offset(offset).Limit(limitNum).Scan(&questions)
+	db.Table("questions").Select("questions.*, user_question_relations.id as uqr_id, user_question_relations.git_user_repo_url").
+		Joins("JOIN user_question_relations ON questions.id = user_question_relations.question_id").
+		Where("user_question_relations.user_id = ?", userID).
+		Offset(offset).Limit(limit).Scan(&questions)
+
 	if len(questions) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(404, ResponseHTTP{
 			Success: true,
 			Message: "No questions found",
 			Data: GetUsersQuestionsResponseData{
@@ -135,10 +116,11 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
 	var responseQuestions []_GetUsersQuestionsResponseData
 	for _, question := range questions {
 		responseQuestions = append(responseQuestions, _GetUsersQuestionsResponseData{
-			GitRepoUrl:       question.GitUserRepoURL, // Notice GitUserRepoURL instead of GitRepoURL
+			GitRepoUrl:       question.GitUserRepoURL,
 			ParentGitRepoUrl: question.GitRepoURL,
 			Title:            question.Title,
 			Description:      question.Description,
@@ -146,8 +128,8 @@ func GetUsersQuestions(w http.ResponseWriter, r *http.Request) {
 			QID:              question.ID,
 		})
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(ResponseHTTP{
+
+	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Questions fetched successfully",
 		Data: GetUsersQuestionsResponseData{
@@ -192,19 +174,18 @@ func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question/{UQR_ID} [get]
 // @Security		AuthorizationHeaderToken
-func GetQuestion(w http.ResponseWriter, r *http.Request) {
+func GetQuestion(c *gin.Context) {
 	db := database.DBConn
-	client := r.Context().Value(models.ClientContextKey).(*gitea.Client)
-	giteaUser := r.Context().Value(models.UserContextKey).(*gitea.User)
+	client := c.Request.Context().Value(models.ClientContextKey).(*gitea.Client)
+	giteaUser := c.Request.Context().Value(models.UserContextKey).(*gitea.User)
 	user := models.User{UserName: giteaUser.UserName}
 	db.Where(&user).First(&user)
 	userID := user.ID
 
-	UQR_IDstr := chi.URLParam(r, "UQR_ID")
+	UQR_IDstr := c.Param("UQR_ID")
 	UQR_ID, err := strconv.Atoi(UQR_IDstr)
 	if err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Invalid UQR ID",
 		})
@@ -214,8 +195,7 @@ func GetQuestion(w http.ResponseWriter, r *http.Request) {
 	var uqr models.UserQuestionRelation
 	db.Where("id = ? AND user_id = ?", UQR_ID, userID).First(&uqr)
 	if uqr.ID == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
 		})
@@ -225,15 +205,14 @@ func GetQuestion(w http.ResponseWriter, r *http.Request) {
 	var question models.Question
 	db.Where("id = ?", uqr.QuestionID).First(&question)
 	if question.ID == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ResponseHTTP{
+		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
 		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question fetched successfully",
 		Data: GetQuestionResponseData{

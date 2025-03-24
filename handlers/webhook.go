@@ -1,16 +1,15 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
+	"github.com/gin-gonic/gin"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/google/uuid"
@@ -43,17 +42,19 @@ type WebhookPayload struct {
 //	@Success		200		{object}	ResponseHTTP{type=WebhookPayload}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/gitea [post]
-func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
+func PostGiteaHook(c *gin.Context) {
 	var payload WebhookPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Failed to parse hook", http.StatusServiceUnavailable)
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to parse hook",
+		})
 		return
 	}
 	log.Printf("Received hook: %+v", payload)
 
 	// Respond immediately
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ResponseHTTP{
+	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Successfully received hook",
 		Data:    payload,
@@ -109,7 +110,6 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Failed to read score: %v", err)
 			return
 		}
-		// log.Printf("Score: %s", score)
 		// save score to database
 		db := database.DBConn
 		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
@@ -124,7 +124,6 @@ func PostGiteaHook(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Failed to read message: %v", err)
 			return
 		}
-		// log.Printf("Message: %s", message)
 		var existingQuestion models.Question
 		if err := db.Where(&models.Question{GitRepoURL: payload.Repository.Parent.FullName}).First(&existingQuestion).Error; err != nil {
 			existingQuestion = models.Question{
