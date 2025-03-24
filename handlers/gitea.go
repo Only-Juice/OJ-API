@@ -27,7 +27,7 @@ type BasicAuthentication struct {
 // @Produce		json
 // @Param			BasicAuthentication	body		BasicAuthentication	true	"Basic Authentication"
 // @Success		200		{object}	ResponseHTTP{} "Return access token"
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		503
 // @Router			/api/gitea/auth [post]
 func PostBasicAuthenticationGitea(c *gin.Context) {
 	db := database.DBConn
@@ -164,9 +164,10 @@ type BulkCreateUserResponse struct {
 // @Produce			json
 // @Param			Usernames	body		BulkCreateUser		true	"Username + Email Domain => username1@example.com"
 // @Success		200		{object}	ResponseHTTP{data=BulkCreateUserResponse} "Return successful and failed users"
-// @Failure		401		{object}	ResponseHTTP{}
-// @Failure		403		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
 // @Security	BearerAuth
 // @Router		/api/gitea/user/bulk [post]
 func PostBulkCreateUserGitea(c *gin.Context) {
@@ -248,9 +249,10 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 // @Produce			json
 // @Param			question_id	path		int		true	"Question ID"
 // @Success		200		{object}	ResponseHTTP{}
-// @Failure		401		{object}	ResponseHTTP{}
-// @Failure		403		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
 // @Security	BearerAuth
 // @Router		/api/gitea/question/{question_id} [post]
 func PostCreateQuestionRepositoryGitea(c *gin.Context) {

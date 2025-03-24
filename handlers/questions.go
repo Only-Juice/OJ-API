@@ -26,8 +26,8 @@ type GetQuestionListResponseData struct {
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
 // @Success		200		{object}	ResponseHTTP{data=[]GetQuestionListResponseData}
-// @Failure		404		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		404
+// @Failure		503
 // @Router			/api/question [get]
 func GetQuestionList(c *gin.Context) {
 	db := database.DBConn
@@ -43,6 +43,14 @@ func GetQuestionList(c *gin.Context) {
 	db.Model(&models.Question{}).Count(&totalQuestions)
 	var questions []models.Question
 	db.Offset(offset).Limit(limit).Find(&questions)
+	if len(questions) == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: true,
+			Message: "No questions found",
+			Data:    nil,
+		})
+		return
+	}
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
@@ -77,8 +85,10 @@ type GetUsersQuestionsResponseData struct {
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
 // @Success		200		{object}	ResponseHTTP{data=[]GetUsersQuestionsResponseData}
-// @Failure		404		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
 // @Router			/api/question/user [get]
 // @Security		BearerAuth
 func GetUsersQuestions(c *gin.Context) {
@@ -170,8 +180,10 @@ func GetReadme(client *gitea.Client, userName string, gitRepoURL string) string 
 // @Produce		json
 // @Param			UQR_ID	path	int	true	"ID of the UserQuestionRelation to get"
 // @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
-// @Failure		404		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
 // @Router			/api/question/{UQR_ID} [get]
 // @Security		BearerAuth
 func GetQuestion(c *gin.Context) {
@@ -247,8 +259,8 @@ func GetQuestion(c *gin.Context) {
 // @Produce		json
 // @Param			ID	path	int	true	"ID of the Question to get"
 // @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
-// @Failure		404		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		404
+// @Failure		503
 // @Router			/api/question/id/{ID} [get]
 func GetQuestionByID(c *gin.Context) {
 	db := database.DBConn
@@ -307,8 +319,10 @@ type GetUserQuestionResponseData struct {
 // @Produce		json
 // @Param			ID	path	int	true	"ID of the Question to get"
 // @Success		200		{object}	ResponseHTTP{data=GetUserQuestionResponseData}
-// @Failure		404		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
 // @Router			/api/question/user/id/{ID} [get]
 // @Security		BearerAuth
 func GetUserQuestionByID(c *gin.Context) {
