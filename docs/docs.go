@@ -407,7 +407,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetQuestionResponseData"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
@@ -1325,6 +1337,33 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.Question"
                     }
+                }
+            }
+        },
+        "handlers.GetQuestionResponseData": {
+            "type": "object",
+            "required": [
+                "description",
+                "git_repo_url",
+                "parent_git_repo_url",
+                "readme",
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "git_repo_url": {
+                    "type": "string"
+                },
+                "parent_git_repo_url": {
+                    "type": "string"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },

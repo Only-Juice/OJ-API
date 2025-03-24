@@ -475,6 +475,25 @@ definitions:
     - question_count
     - questions
     type: object
+  handlers.GetQuestionResponseData:
+    properties:
+      description:
+        type: string
+      git_repo_url:
+        type: string
+      parent_git_repo_url:
+        type: string
+      readme:
+        type: string
+      title:
+        type: string
+    required:
+    - description
+    - git_repo_url
+    - parent_git_repo_url
+    - readme
+    - title
+    type: object
   handlers.GetScoreResponseData:
     properties:
       scores:
@@ -790,7 +809,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetQuestionResponseData'
+              type: object
         "404":
           description: Not Found
           schema:

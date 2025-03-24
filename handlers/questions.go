@@ -169,7 +169,7 @@ func GetReadme(client *gitea.Client, user *gitea.User, gitRepoURL string) string
 // @Accept			json
 // @Produce		json
 // @Param			UQR_ID	path	int	true	"ID of the UserQuestionRelation to get"
-// @Success		200		{object}	ResponseHTTP{}
+// @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
 // @Failure		404		{object}	ResponseHTTP{}
 // @Failure		503		{object}	ResponseHTTP{}
 // @Router			/api/question/{UQR_ID} [get]
