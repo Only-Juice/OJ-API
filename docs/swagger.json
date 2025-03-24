@@ -104,7 +104,7 @@
             "post": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Take a question and create a repository in Gitea",
@@ -159,7 +159,7 @@
             "post": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Bulk create User",
@@ -292,7 +292,7 @@
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a list of questions by user",
@@ -361,7 +361,7 @@
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a question by UQR_ID",
@@ -422,7 +422,7 @@
             "post": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Specify the shell command for the corresponding repo",
@@ -523,7 +523,7 @@
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a score by repo",
@@ -609,7 +609,7 @@
             "get": {
                 "security": [
                     {
-                        "AuthorizationHeaderToken": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get a score by UQR ID",
@@ -1454,8 +1454,7 @@
         }
     },
     "securityDefinitions": {
-        "AuthorizationHeaderToken": {
-            "description": "API tokens must be prepended with \"token\" followed by a space.",
+        "BearerAuth": {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

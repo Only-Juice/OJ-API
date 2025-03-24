@@ -41,7 +41,7 @@ type GetScoreResponseData struct {
 //	@Failure		404		{object}	ResponseHTTP{}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score [get]
-//	@Security		AuthorizationHeaderToken
+//	@Security		BearerAuth
 func GetScoreByRepo(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -139,7 +139,7 @@ func GetScoreByRepo(c *gin.Context) {
 //	@Failure		404		{object}	ResponseHTTP{}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/score/{UQR_ID} [get]
-//	@Security		AuthorizationHeaderToken
+//	@Security		BearerAuth
 func GetScoreByUQRID(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
