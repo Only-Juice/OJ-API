@@ -298,6 +298,63 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	parentRepoUsername := parentRepoURLParts[0]
 	parentRepoName := parentRepoURLParts[1]
 
+	repo, _, err := client.GetRepo(parentRepoUsername, parentRepoName)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if repo == nil {
+		if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
+			Name: &parentRepoName,
+		}); err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+
+	}
+
+	hooks, _, err := client.ListRepoHooks(jwtClaims.Username, parentRepoName, gitea.ListHooksOptions{})
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to list repository hooks: " + err.Error(),
+		})
+		return
+	}
+
+	hookExists := false
+	for _, hook := range hooks {
+		if hook.Config["url"] == "http://"+config.Config("OJ_HOST")+"/api/gitea" {
+			hookExists = true
+			break
+		}
+	}
+
+	if !hookExists {
+		if _, _, err := client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
+			Type:   "gitea",
+			Active: true,
+			Events: []string{"push"},
+			Config: map[string]string{
+				"url":          "http://" + config.Config("OJ_HOST") + "/api/gitea",
+				"content_type": "json",
+			},
+		}); err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: "Failed to create repository hook: " + err.Error(),
+			})
+			return
+		}
+	}
+
 	var userQuestionRelation models.UserQuestionRelation
 	if err := db.Where(&models.UserQuestionRelation{
 		UserID:     jwtClaims.UserID,
@@ -310,25 +367,13 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		})
 	}
 
-	if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
-		Name: &parentRepoName,
-	}); err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: err.Error(),
+	if repo != nil {
+		c.JSON(200, ResponseHTTP{
+			Success: true,
+			Message: "Repository exists, relation updated",
 		})
 		return
 	}
-
-	client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
-		Type:   "gitea",
-		Active: true,
-		Events: []string{"push"},
-		Config: map[string]string{
-			"url":          "http://" + config.Config("OJ_HOST") + "/api/gitea",
-			"content_type": "json",
-		},
-	})
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
