@@ -640,6 +640,36 @@ paths:
       summary: Take a question and create a repository in Gitea
       tags:
       - Gitea
+  /api/gitea/user:
+    get:
+      consumes:
+      - application/json
+      description: Get User Profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/gitea.User'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get User Profile
+      tags:
+      - Gitea
   /api/gitea/user/bulk:
     post:
       consumes:
