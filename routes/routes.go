@@ -28,7 +28,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		const bearerPrefix = "Bearer "
 		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+			c.JSON(http.StatusBadRequest, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Invalid Authorization header format",
 			})
@@ -59,7 +59,7 @@ func RegisterRoutes(r *gin.Engine) {
 	r.Use(gin.Recovery())
 
 	// Swagger documentation
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.DefaultModelsExpandDepth(0)))
 
 	// Routes
 	api := r.Group("/api")

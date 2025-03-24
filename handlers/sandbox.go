@@ -24,8 +24,10 @@ type Sandbox struct {
 // @Produce		json
 // @Param			cmd	body		Sandbox	true	"Shell command"
 // @Success		200		{object}	ResponseHTTP{data=models.QuestionTestScript}
-// @Failure		401		{object}	ResponseHTTP{}
-// @Failure		503		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
 // @Router			/api/sandbox [post]
 // @Security		BearerAuth
 func PostSandboxCmd(c *gin.Context) {

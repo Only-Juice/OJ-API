@@ -37,9 +37,10 @@ type GetScoreResponseData struct {
 //	@Param			page		query	int		false	"page number of results to return (1-based)"
 //	@Param			limit		query	int		false	"page size of results. Default is 10."
 //	@Success		200		{object}	ResponseHTTP{data=GetScoreResponseData}
-//	@Failure		401		{object}	ResponseHTTP{}
-//	@Failure		404		{object}	ResponseHTTP{}
-//	@Failure		503		{object}	ResponseHTTP{}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
 //	@Router			/api/score [get]
 //	@Security		BearerAuth
 func GetScoreByRepo(c *gin.Context) {
@@ -135,9 +136,10 @@ func GetScoreByRepo(c *gin.Context) {
 //	@Param			page		query	int		false	"page number of results to return (1-based)"
 //	@Param			limit		query	int		false	"page size of results. Default is 10."
 //	@Success		200		{object}	ResponseHTTP{data=Score}
-//	@Failure		401		{object}	ResponseHTTP{}
-//	@Failure		404		{object}	ResponseHTTP{}
-//	@Failure		503		{object}	ResponseHTTP{}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
 //	@Router			/api/score/{UQR_ID} [get]
 //	@Security		BearerAuth
 func GetScoreByUQRID(c *gin.Context) {
