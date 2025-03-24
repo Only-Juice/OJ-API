@@ -189,20 +189,16 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 		})
 		return
 	}
-
-	user := models.User{
-		UserName: jwtClaims.Username,
-	}
-	if err := db.Where(&user).First(&user).Error; err != nil {
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
-			Message: "User not found",
+			Message: "Failed to retrieve token",
 		})
 		return
 	}
-
 	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
-		gitea.SetToken(user.GiteaToken),
+		gitea.SetToken(token),
 	)
 	if err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -380,5 +376,55 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Repository created",
+	})
+}
+
+// Get User Profile
+// @Summary	Get User Profile
+// @Description Get User Profile
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Success		200		{object}	ResponseHTTP{data=gitea.User}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/user [get]
+func GetUserProfileGitea(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	user, _, err := client.GetMyUserInfo()
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Data:    user,
+		Message: "User profile retrieved",
 	})
 }
