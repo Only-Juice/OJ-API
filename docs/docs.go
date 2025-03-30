@@ -1742,10 +1742,10 @@ const docTemplate = `{
                 "question": {
                     "$ref": "#/definitions/models.Question"
                 },
-                "questionID": {
+                "question_id": {
                     "type": "integer"
                 },
-                "testScript": {
+                "test_script": {
                     "type": "string"
                 }
             }
