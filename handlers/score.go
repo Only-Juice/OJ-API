@@ -366,15 +366,6 @@ func ReScore(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := db.Where("id = ?", jwtClaims.UserID).First(&user).Error; err != nil {
-		c.JSON(404, ResponseHTTP{
-			Success: false,
-			Message: "User not found",
-		})
-		return
-	}
-
 	var uqr models.UserQuestionRelation
 	if err := db.Model(&models.UserQuestionRelation{}).
 		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
@@ -386,6 +377,25 @@ func ReScore(c *gin.Context) {
 		return
 	}
 
+	newScore := models.UserQuestionTable{
+		UQR:       uqr,
+		Score:     -1,
+		JudgeTime: time.Now().UTC(),
+		Message:   "Judging in progress",
+	}
+	if err := db.Create(&newScore).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to create new score entry",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Re-scoring the question",
+	})
+
 	go func() {
 		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
 		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
@@ -393,7 +403,10 @@ func ReScore(c *gin.Context) {
 			Progress: os.Stdout,
 		})
 		if err != nil {
-			log.Printf("Failed to clone repository: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: "Failed to clone repository",
+			})
 			return
 		}
 		os.Chmod(codePath, 0777)
@@ -404,45 +417,40 @@ func ReScore(c *gin.Context) {
 		// read score from file
 		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
 		if err != nil {
-			log.Printf("Failed to read score: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to read score: %v", err),
+			})
 			return
 		}
 		// save score to database
 		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
 		if err != nil {
-			log.Printf("Failed to convert score to int: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to convert score to int: %v", err),
+			})
 			return
 		}
 
 		// read message from file
 		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
 		if err != nil {
-			log.Printf("Failed to read message: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to read message: %v", err),
+			})
 			return
 		}
 
-		var existingUserQuestionRelation models.UserQuestionRelation
-		if err := db.Where(&models.UserQuestionRelation{
-			UserID:     user.ID,
-			QuestionID: question.ID,
-		}).First(&existingUserQuestionRelation).Error; err != nil {
-			// If the relation does not exist, create a new one
-			existingUserQuestionRelation = models.UserQuestionRelation{
-				User:           user,
-				Question:       question,
-				GitUserRepoURL: uqr.GitUserRepoURL,
-			}
-			db.Create(&existingUserQuestionRelation)
-		}
-		newScore := models.UserQuestionTable{
-			UQR:       existingUserQuestionRelation,
-			Score:     scoreFloat,
-			JudgeTime: time.Now().UTC(),
-			Message:   strings.TrimSpace(string(message)),
-		}
-
-		if err := db.Create(&newScore).Error; err != nil {
-			log.Printf("Failed to create new score entry: %v", err)
+		if err := db.Model(&newScore).Updates(models.UserQuestionTable{
+			Score:   scoreFloat,
+			Message: strings.TrimSpace(string(message)),
+		}).Error; err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to update score: %v", err),
+			})
 			return
 		}
 		log.Printf("Successfully re-scored the question: %s, score: %f", question.GitRepoURL, scoreFloat)
