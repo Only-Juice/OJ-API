@@ -43,6 +43,7 @@ type WebhookPayload struct {
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/gitea [post]
 func PostGiteaHook(c *gin.Context) {
+	db := database.DBConn
 	var payload WebhookPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -53,7 +54,50 @@ func PostGiteaHook(c *gin.Context) {
 	}
 	log.Printf("Received hook: %+v", payload)
 
-	// Respond immediately
+	var existingQuestion models.Question
+	if err := db.Where(&models.Question{GitRepoURL: payload.Repository.Parent.FullName}).First(&existingQuestion).Error; err != nil {
+		existingQuestion = models.Question{
+			GitRepoURL: payload.Repository.Parent.FullName,
+		}
+		db.Create(&existingQuestion)
+	}
+	var existingUser models.User
+	if err := db.Where(&models.User{UserName: payload.Pusher.UserName}).First(&existingUser).Error; err != nil {
+		existingUser = models.User{
+			UserName: payload.Pusher.UserName,
+			Email:    payload.Pusher.Email,
+		}
+		db.Create(&existingUser)
+	}
+
+	var existingUserQuestionRelation models.UserQuestionRelation
+	if err := db.Where(&models.UserQuestionRelation{
+		UserID:     existingUser.ID,
+		QuestionID: existingQuestion.ID,
+	}).First(&existingUserQuestionRelation).Error; err != nil {
+		// If the relation does not exist, create a new one
+		existingUserQuestionRelation = models.UserQuestionRelation{
+			User:           existingUser,
+			Question:       existingQuestion,
+			GitUserRepoURL: payload.Repository.FullName,
+		}
+		db.Create(&existingUserQuestionRelation)
+	}
+
+	newScore := models.UserQuestionTable{
+		UQR:       existingUserQuestionRelation,
+		Score:     -1,
+		JudgeTime: time.Now().UTC(),
+		Message:   "Judging in progress",
+	}
+	if err := db.Create(&newScore).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to create new score entry",
+		})
+		return
+	}
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Successfully received hook",
@@ -70,33 +114,48 @@ func PostGiteaHook(c *gin.Context) {
 			Progress: os.Stdout,
 		})
 		if err != nil {
-			log.Printf("Failed to clone repository: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to clone repository: %v", err),
+			})
 			return
 		}
 		os.Chmod(codePath, 0777)
 		log.Printf("git show-ref --head HEAD")
 		ref, err := repo.Head()
 		if err != nil {
-			log.Printf("Failed to get HEAD: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to get HEAD: %v", err),
+			})
 			return
 		}
 		fmt.Println(ref.Hash())
 
 		worktree, err := repo.Worktree()
 		if err != nil {
-			log.Printf("Failed to get worktree: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to get worktree: %v", err),
+			})
 			return
 		}
 		err = worktree.Checkout(&git.CheckoutOptions{
 			Hash: plumbing.NewHash(payload.After),
 		})
 		if err != nil {
-			log.Printf("Failed to checkout: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to checkout: %v", err),
+			})
 			return
 		}
 		ref, err = repo.Head()
 		if err != nil {
-			log.Printf("Failed to get HEAD: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to get HEAD: %v", err),
+			})
 			return
 		}
 		fmt.Println(ref.Hash())
@@ -107,11 +166,14 @@ func PostGiteaHook(c *gin.Context) {
 		// read score from file
 		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
 		if err != nil {
-			log.Printf("Failed to read score: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to read score: %v", err),
+			})
 			return
 		}
+
 		// save score to database
-		db := database.DBConn
 		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
 		if err != nil {
 			log.Printf("Failed to convert score to int: %v", err)
@@ -121,47 +183,21 @@ func PostGiteaHook(c *gin.Context) {
 		// read message from file
 		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
 		if err != nil {
-			log.Printf("Failed to read message: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to read message: %v", err),
+			})
 			return
 		}
-		var existingQuestion models.Question
-		if err := db.Where(&models.Question{GitRepoURL: payload.Repository.Parent.FullName}).First(&existingQuestion).Error; err != nil {
-			existingQuestion = models.Question{
-				GitRepoURL: payload.Repository.Parent.FullName,
-			}
-			db.Create(&existingQuestion)
-		}
-		var existingUser models.User
-		if err := db.Where(&models.User{UserName: payload.Pusher.UserName}).First(&existingUser).Error; err != nil {
-			existingUser = models.User{
-				UserName: payload.Pusher.UserName,
-				Email:    payload.Pusher.Email,
-			}
-			db.Create(&existingUser)
-		}
 
-		var existingUserQuestionRelation models.UserQuestionRelation
-		if err := db.Where(&models.UserQuestionRelation{
-			UserID:     existingUser.ID,
-			QuestionID: existingQuestion.ID,
-		}).First(&existingUserQuestionRelation).Error; err != nil {
-			// If the relation does not exist, create a new one
-			existingUserQuestionRelation = models.UserQuestionRelation{
-				User:           existingUser,
-				Question:       existingQuestion,
-				GitUserRepoURL: payload.Repository.FullName,
-			}
-			db.Create(&existingUserQuestionRelation)
-		}
-		newScore := models.UserQuestionTable{
-			UQR:       existingUserQuestionRelation,
-			Score:     scoreFloat,
-			JudgeTime: time.Now().UTC(),
-			Message:   strings.TrimSpace(string(message)),
-		}
-
-		if err := db.Create(&newScore).Error; err != nil {
-			log.Printf("Failed to create new score entry: %v", err)
+		if err := db.Model(&newScore).Updates(models.UserQuestionTable{
+			Score:   scoreFloat,
+			Message: strings.TrimSpace(string(message)),
+		}).Error; err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to update score: %v", err),
+			})
 			return
 		}
 	}()
