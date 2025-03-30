@@ -2,15 +2,22 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-git/go-git/v5"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/sandbox"
 	"OJ-API/utils"
 )
 
@@ -266,7 +273,8 @@ func GetScoreByQuestionID(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	var totalCount int64
-	if err := db.Model(&models.UserQuestionRelation{}).
+	if err := db.Model(&models.UserQuestionTable{}).
+		Joins("UQR").
 		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -319,4 +327,124 @@ func GetScoreByQuestionID(c *gin.Context) {
 			ScoresCount: int(totalCount),
 		},
 	})
+}
+
+// ReScore is a function to re-score a question
+//
+//	@Summary		Re-score a question
+//	@Description	Re-score a question
+//	@Tags			Score
+//	@Accept			json
+//	@Produce		json
+//	@Param			question_id	path	int	true	"question ID"
+//	@Success		200		{object}	ResponseHTTP{}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
+//	@Router			/api/score/rescore/{question_id} [post]
+//	@Security		BearerAuth
+func ReScore(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+
+	questionID := c.Param("question_id")
+	if questionID == "" {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Question ID is required",
+		})
+		return
+	}
+
+	var question models.Question
+	if err := db.Where("id = ?", questionID).First(&question).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	var user models.User
+	if err := db.Where("id = ?", jwtClaims.UserID).First(&user).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	var uqr models.UserQuestionRelation
+	if err := db.Model(&models.UserQuestionRelation{}).
+		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
+		First(&uqr).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to re-score the question",
+		})
+		return
+	}
+
+	go func() {
+		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
+		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
+			URL:      "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL,
+			Progress: os.Stdout,
+		})
+		if err != nil {
+			log.Printf("Failed to clone repository: %v", err)
+			return
+		}
+		os.Chmod(codePath, 0777)
+
+		defer os.RemoveAll(codePath)
+		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath))
+
+		// read score from file
+		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
+		if err != nil {
+			log.Printf("Failed to read score: %v", err)
+			return
+		}
+		// save score to database
+		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
+		if err != nil {
+			log.Printf("Failed to convert score to int: %v", err)
+			return
+		}
+
+		// read message from file
+		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
+		if err != nil {
+			log.Printf("Failed to read message: %v", err)
+			return
+		}
+
+		var existingUserQuestionRelation models.UserQuestionRelation
+		if err := db.Where(&models.UserQuestionRelation{
+			UserID:     user.ID,
+			QuestionID: question.ID,
+		}).First(&existingUserQuestionRelation).Error; err != nil {
+			// If the relation does not exist, create a new one
+			existingUserQuestionRelation = models.UserQuestionRelation{
+				User:           user,
+				Question:       question,
+				GitUserRepoURL: uqr.GitUserRepoURL,
+			}
+			db.Create(&existingUserQuestionRelation)
+		}
+		newScore := models.UserQuestionTable{
+			UQR:       existingUserQuestionRelation,
+			Score:     scoreFloat,
+			JudgeTime: time.Now().UTC(),
+			Message:   strings.TrimSpace(string(message)),
+		}
+
+		if err := db.Create(&newScore).Error; err != nil {
+			log.Printf("Failed to create new score entry: %v", err)
+			return
+		}
+		log.Printf("Successfully re-scored the question: %s, score: %f", question.GitRepoURL, scoreFloat)
+	}()
 }
