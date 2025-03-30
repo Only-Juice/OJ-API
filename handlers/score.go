@@ -304,6 +304,13 @@ func GetScoreByQuestionID(c *gin.Context) {
 			JudgeTime: score.JudgeTime,
 		})
 	}
+	if len(scores) == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "No scores found for this question ID",
+		})
+		return
+	}
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Successfully retrieved scores by question ID",
