@@ -1714,11 +1714,17 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "endTime": {
+                    "type": "string"
+                },
                 "gitRepoURL": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "startTime": {
+                    "type": "string"
                 },
                 "title": {
                     "type": "string"
