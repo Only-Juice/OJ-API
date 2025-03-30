@@ -55,17 +55,19 @@ func main() {
 	}()
 
 	// Database migrations
-	database.DBConn.AutoMigrate(&models.User{})
-	database.DBConn.AutoMigrate(&models.Announcement{})
-	database.DBConn.AutoMigrate(&models.Exam{})
-	database.DBConn.AutoMigrate(&models.ExamAndUser{})
-	database.DBConn.AutoMigrate(&models.Question{})
-	database.DBConn.AutoMigrate(&models.ExamQuestion{})
-	database.DBConn.AutoMigrate(&models.QuestionTestScript{})
-	database.DBConn.AutoMigrate(&models.Tag{})
-	database.DBConn.AutoMigrate(&models.TagAndQuestion{})
-	database.DBConn.AutoMigrate(&models.UserQuestionRelation{})
-	database.DBConn.AutoMigrate(&models.UserQuestionTable{})
+	database.DBConn.AutoMigrate(
+		&models.User{},
+		&models.Announcement{},
+		&models.Exam{},
+		&models.ExamAndUser{},
+		&models.Question{},
+		&models.ExamQuestion{},
+		&models.QuestionTestScript{},
+		&models.Tag{},
+		&models.TagAndQuestion{},
+		&models.UserQuestionRelation{},
+		&models.UserQuestionTable{},
+	)
 
 	// Initialize Gin router
 	r := gin.Default()
