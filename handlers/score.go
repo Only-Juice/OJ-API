@@ -230,3 +230,86 @@ func GetScoreByUQRID(c *gin.Context) {
 		},
 	})
 }
+
+// GetScoreByQuestionID is a function to get a score by question ID
+//
+//	@Summary		Get a score by question ID
+//	@Description	Get a score by question ID
+//	@Tags			Score
+//	@Accept			json
+//	@Produce		json
+//	@Param			question_id	path	int	true	"question ID"
+//	@Param			page			query	int		false	"page number of results to return (1-based)"
+//	@Param			limit			query	int		false	"page size of results. Default is 10."
+//	@Success		200			{object}	ResponseHTTP{data=Score}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
+//	@Router			/api/score/question/{question_id} [get]
+//	@Security		BearerAuth
+func GetScoreByQuestionID(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+
+	questionID := c.Param("question_id")
+	if questionID == "" {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Question ID is required",
+		})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	var totalCount int64
+	if err := db.Model(&models.UserQuestionRelation{}).
+		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
+		Count(&totalCount).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count scores",
+		})
+		return
+	}
+
+	var _scores []models.UserQuestionTable
+	if err := db.Model(&models.UserQuestionTable{}).
+		Joins("UQR").
+		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
+		Offset(offset).
+		Limit(limit).
+		Find(&_scores).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Score not found",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get score by question ID",
+		})
+		return
+	}
+	var scores []Score
+	for _, score := range _scores {
+		scores = append(scores, Score{
+			Score:     score.Score,
+			Message:   score.Message,
+			JudgeTime: score.JudgeTime,
+		})
+	}
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Successfully retrieved scores by question ID",
+		Data: GetScoreResponseData{
+			Scores:      scores,
+			ScoresCount: int(totalCount),
+		},
+	})
+}

@@ -1038,6 +1038,50 @@ paths:
       summary: Get a score by UQR ID
       tags:
       - Score
+  /api/score/question/{question_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a score by question ID
+      parameters:
+      - description: question ID
+        in: path
+        name: question_id
+        required: true
+        type: integer
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.Score'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get a score by question ID
+      tags:
+      - Score
 securityDefinitions:
   BearerAuth:
     in: header
