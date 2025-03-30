@@ -1,7 +1,7 @@
 package models
 
 type ExamAndUser struct {
-	ID         uint     `gorm:"primarykey"`
+	ID         uint     `gorm:"primaryKey"`
 	ExamID     uint     `gorm:"not null"`
 	Exam       Exam     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	UserID     uint     `gorm:"not null"`

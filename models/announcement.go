@@ -1,7 +1,7 @@
 package models
 
 type Announcement struct {
-	ID          uint   `gorm:"primarykey"`
+	ID          uint   `gorm:"primaryKey"`
 	UserID      uint   `gorm:"not null"`
 	User        User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Title       string `gorm:"not null;size:50"`
