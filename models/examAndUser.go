@@ -3,10 +3,10 @@ package models
 type ExamAndUser struct {
 	ID         uint     `gorm:"primarykey"`
 	ExamID     uint     `gorm:"not null"`
-	Exam       Exam     `gorm:"foreignKey:ExamID"`
+	Exam       Exam     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	UserID     uint     `gorm:"not null"`
-	User       User     `gorm:"foreignKey:UserID"`
+	User       User     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	QuestionID uint     `gorm:"not null"`
-	Question   Question `gorm:"foreignKey:QuestionID"`
+	Question   Question `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Score      int      `gorm:"not null"`
 }
