@@ -93,5 +93,6 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/question/user/id/:ID", AuthMiddleware(), handlers.GetUserQuestionByID)
 		api.GET("/score/:UQR_ID", AuthMiddleware(), handlers.GetScoreByUQRID)
 		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
+		api.GET("/score/question/:question_id", AuthMiddleware(), handlers.GetScoreByQuestionID)
 	}
 }
