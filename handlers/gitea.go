@@ -141,7 +141,7 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Data:    signedToken,
-		Message: "Access token created",
+		Message: "JWT generated successfully",
 	})
 }
 
