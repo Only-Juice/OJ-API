@@ -98,7 +98,7 @@ func StoreToken(userID uint, token string) error {
 func GetToken(userID uint) (string, error) {
 	var user models.User
 	db := database.DBConn
-	if err := db.Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := db.Where("id = ?", userID).Limit(1).Find(&user).Error; err != nil {
 		return "", err
 	}
 
