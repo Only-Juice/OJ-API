@@ -5,5 +5,5 @@ type ExamQuestion struct {
 	Exam       Exam     `gorm:"foreignKey:ExamID"`
 	QuestionID uint     `gorm:"primarykey"`
 	Question   Question `gorm:"foreignKey:QuestionID"`
-	Score      int      `gorm:"not null"`
+	Point      int      `gorm:"not null"` // Points for the question in the exam
 }
