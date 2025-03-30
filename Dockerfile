@@ -21,7 +21,7 @@ FROM debian:bookworm
 
 # Install isolate from the official repository
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git pkg-config libcap-dev libsystemd-dev ca-certificates make gcc g++ cmake python3 python3-pip python3-venv ninja-build libgtest-dev && \
+    apt-get install -y --no-install-recommends git pkg-config libcap-dev libsystemd-dev ca-certificates make gcc g++ cmake python3 python3-pip python3-venv ninja-build libgtest-dev valgrind && \
     git clone https://github.com/ioi/isolate.git /isolate && \
     cd /isolate && \
     make install && \
