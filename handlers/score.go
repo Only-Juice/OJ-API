@@ -24,7 +24,7 @@ import (
 type Score struct {
 	Score     float64   `json:"score" example:"100" validate:"required"`
 	Message   string    `json:"message" example:"Scored successfully" validate:"required"`
-	JudgeTime time.Time `json:"judge_time" example:"2021-07-01T00:00:00Z" validate:"required"`
+	JudgeTime time.Time `json:"judge_time" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339" validate:"required"`
 }
 
 type GetScoreResponseData struct {

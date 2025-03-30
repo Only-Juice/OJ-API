@@ -483,7 +483,7 @@ definitions:
   handlers.Score:
     properties:
       judge_time:
-        example: "2021-07-01T00:00:00Z"
+        example: 2006-01-02T15:04:05Z07:00
         type: string
       message:
         example: Scored successfully
@@ -530,13 +530,15 @@ definitions:
     properties:
       description:
         type: string
-      endTime:
+      end_time:
+        example: 2006-01-02T15:04:05Z07:00
         type: string
-      gitRepoURL:
+      git_repo_url:
         type: string
       id:
         type: integer
-      startTime:
+      start_time:
+        example: 2006-01-02T15:04:05Z07:00
         type: string
       title:
         type: string

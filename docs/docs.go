@@ -1619,7 +1619,7 @@ const docTemplate = `{
             "properties": {
                 "judge_time": {
                     "type": "string",
-                    "example": "2021-07-01T00:00:00Z"
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "message": {
                     "type": "string",
@@ -1714,17 +1714,19 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "endTime": {
-                    "type": "string"
+                "end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
-                "gitRepoURL": {
+                "git_repo_url": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "startTime": {
-                    "type": "string"
+                "start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "title": {
                     "type": "string"
