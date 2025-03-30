@@ -219,7 +219,7 @@ func GetQuestion(c *gin.Context) {
 	}
 
 	var uqr models.UserQuestionRelation
-	db.Where("id = ? AND user_id = ?", UQR_ID, jwtClaims.UserID).First(&uqr)
+	db.Where("id = ? AND user_id = ?", UQR_ID, jwtClaims.UserID).Limit(1).Find(&uqr)
 	if uqr.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -229,7 +229,7 @@ func GetQuestion(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ?", uqr.QuestionID).First(&question)
+	db.Where("id = ?", uqr.QuestionID).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -284,7 +284,7 @@ func GetQuestionByID(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ?", ID).First(&question)
+	db.Where("id = ?", ID).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -358,7 +358,7 @@ func GetUserQuestionByID(c *gin.Context) {
 	}
 
 	var uqr models.UserQuestionRelation
-	db.Where("question_id = ? AND user_id = ?", ID, jwtClaims.UserID).First(&uqr)
+	db.Where("question_id = ? AND user_id = ?", ID, jwtClaims.UserID).Limit(1).Find(&uqr)
 	if uqr.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -368,7 +368,7 @@ func GetUserQuestionByID(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ?", uqr.QuestionID).First(&question)
+	db.Where("id = ?", uqr.QuestionID).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
