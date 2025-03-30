@@ -3,10 +3,10 @@ package models
 import "time"
 
 type UserQuestionTable struct {
-	ID        uint                 `gorm:"primaryKey"`
-	UQRID     uint                 `gorm:"not null"`
-	UQR       UserQuestionRelation `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Score     float64              `gorm:"not null"`
-	JudgeTime time.Time            `gorm:"not null"`
-	Message   string
+	ID        uint                 `gorm:"primaryKey" json:"id"`
+	UQRID     uint                 `gorm:"not null" json:"uqr_id"`
+	UQR       UserQuestionRelation `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"uqr"`
+	Score     float64              `gorm:"not null" json:"score"`
+	JudgeTime time.Time            `gorm:"not null;default:CURRENT_TIMESTAMP" json:"judge_time" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339"`
+	Message   string               `gorm:"not null" json:"message"`
 }
