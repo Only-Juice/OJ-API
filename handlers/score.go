@@ -97,6 +97,7 @@ func GetScoreByRepo(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Where("git_user_repo_url = ?", repoURL).
+		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&_scores).Error; err != nil {
@@ -203,6 +204,7 @@ func GetScoreByUQRID(c *gin.Context) {
 	var _scores []models.UserQuestionTable
 	if err := db.Model(&models.UserQuestionTable{}).
 		Where("UQR_ID = ?", UQRID).
+		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&_scores).Error; err != nil {
@@ -288,6 +290,7 @@ func GetScoreByQuestionID(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
+		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&_scores).Error; err != nil {
