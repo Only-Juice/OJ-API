@@ -415,7 +415,14 @@ func ReScore(c *gin.Context) {
 		os.Chmod(codePath, 0777)
 
 		defer os.RemoveAll(codePath)
-		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath))
+		_, err = sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath))
+		if err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: err.Error(),
+			})
+			return
+		}
 
 		// read score from file
 		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
