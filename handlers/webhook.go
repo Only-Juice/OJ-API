@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -83,10 +82,9 @@ func PostGiteaHook(c *gin.Context) {
 	}
 
 	newScore := models.UserQuestionTable{
-		UQR:       existingUserQuestionRelation,
-		Score:     -3,
-		JudgeTime: time.Now().UTC(),
-		Message:   "Waiting for judging...",
+		UQR:     existingUserQuestionRelation,
+		Score:   -3,
+		Message: "Waiting for judging...",
 	}
 	if err := db.Create(&newScore).Error; err != nil {
 		c.JSON(503, ResponseHTTP{

@@ -396,7 +396,7 @@ func ReScore(c *gin.Context) {
 		Success: true,
 		Message: "Re-scoring the question",
 	})
-	
+
 	go func() {
 		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
 		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
@@ -413,6 +413,7 @@ func ReScore(c *gin.Context) {
 		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
 		defer os.RemoveAll(codePath)
+
 		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScore)
 	}()
 }

@@ -22,10 +22,14 @@ var SandboxPtr *Sandbox
 func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
-	boxID := s.Reserve(userQuestion)
+	db.Model(&userQuestion).Updates(models.UserQuestionTable{
+		JudgeTime: time.Now().UTC(),
+	})
+
+	boxID := s.Reserve()
 	defer s.Release(boxID)
 
-	database.DBConn.Model(&userQuestion).Updates(models.UserQuestionTable{
+	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		Score:   -1,
 		Message: "Judging...",
 	})
