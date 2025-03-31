@@ -22,7 +22,7 @@ var SandboxPtr *Sandbox
 func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
-	boxID := s.Reserve()
+	boxID := s.Reserve(userQuestion)
 	defer s.Release(boxID)
 
 	database.DBConn.Model(&userQuestion).Updates(models.UserQuestionTable{

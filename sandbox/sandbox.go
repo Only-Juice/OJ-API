@@ -1,16 +1,57 @@
 package sandbox
 
 import (
+	"OJ-API/models"
+	"container/heap"
 	"fmt"
 	"os/exec"
 	"sync"
+	"time"
 )
 
 type Sandbox struct {
 	mu              sync.Mutex
 	AvailableBoxIDs map[int]bool // map of boxID to availability
-	waitingQueue    []chan int
+	waitingQueue    PriorityQueue
 	sandboxCount    int
+}
+
+type WaitItem struct {
+	waitChan chan int
+	priority time.Time // Timestamp for priority
+	index    int       // Index in the heap
+}
+
+// PriorityQueue implements a priority queue for WaitItem.
+type PriorityQueue []*WaitItem
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	// Earlier time has higher priority
+	return pq[i].priority.Before(pq[j].priority)
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+func (pq *PriorityQueue) Push(x interface{}) {
+	item := x.(*WaitItem)
+	item.index = len(*pq)
+	*pq = append(*pq, item)
+}
+
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil // Avoid memory leak
+	item.index = -1
+	*pq = old[0 : n-1]
+	return item
 }
 
 func NewSandbox(count int) *Sandbox {
@@ -27,12 +68,13 @@ func NewSandbox(count int) *Sandbox {
 	s := &Sandbox{
 		AvailableBoxIDs: availableBoxIDs,
 		sandboxCount:    count,
-		waitingQueue:    make([]chan int, 0),
+		waitingQueue:    make(PriorityQueue, 0),
 	}
+	heap.Init(&s.waitingQueue)
 	return s
 }
 
-func (s *Sandbox) Reserve() int {
+func (s *Sandbox) Reserve(userQuestion models.UserQuestionTable) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -42,7 +84,12 @@ func (s *Sandbox) Reserve() int {
 	}
 
 	waitChan := make(chan int)
-	s.waitingQueue = append(s.waitingQueue, waitChan)
+	priority := userQuestion.JudgeTime
+	item := &WaitItem{
+		waitChan: waitChan,
+		priority: priority,
+	}
+	heap.Push(&s.waitingQueue, item)
 	s.mu.Unlock()
 	boxID := <-waitChan
 	s.mu.Lock()
@@ -52,11 +99,10 @@ func (s *Sandbox) Reserve() int {
 func (s *Sandbox) Release(boxID int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.waitingQueue) > 0 {
-		waitChan := s.waitingQueue[0]
-		s.waitingQueue = s.waitingQueue[1:]
-		waitChan <- boxID
-		close(waitChan)
+	if s.waitingQueue.Len() > 0 {
+		item := heap.Pop(&s.waitingQueue).(*WaitItem)
+		item.waitChan <- boxID
+		close(item.waitChan)
 	} else {
 		s.AvailableBoxIDs[boxID] = true
 	}
@@ -71,7 +117,7 @@ func (s *Sandbox) AvailableCount() int {
 func (s *Sandbox) WaitingCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return len(s.waitingQueue)
+	return s.waitingQueue.Len()
 }
 
 func (s *Sandbox) ProcessingCount() int {
