@@ -118,9 +118,14 @@ def __main():
         f.write(f"{parser.get_score():.1f}")
     print("Score has been saved to score.txt")
     # save output to message.txt
-    with open("message.txt", "w") as f:
-        f.write(parser.parser())
-    print("Output has been saved to message.txt")
+    # with open("message.txt", "w") as f:
+    #     f.write(parser.parser())
+    # print("Output has been saved to message.txt")
+    # save the content of <path to json> to message.txt
+    with open(sys.argv[1], "r") as json_file:
+        with open("message.txt", "w") as message_file:
+            message_file.write(json_file.read())
+    print("JSON content has been saved to message.txt")
 
 
 if __name__ == "__main__":
