@@ -161,7 +161,15 @@ func PostGiteaHook(c *gin.Context) {
 		fmt.Println(ref.Hash())
 
 		defer os.RemoveAll(codePath)
-		sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
+
+		_, err = sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
+		if err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: err.Error(),
+			})
+			return
+		}
 
 		// read score from file
 		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))

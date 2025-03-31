@@ -74,14 +74,19 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 	return string(out)
 }
 
-func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte) string {
+func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte) (string, error) {
 	db := database.DBConn
 
 	var cmd models.QuestionTestScript
 	if err := db.Joins("Question").
 		Where("git_repo_url = ?", parentsRepo).Take(&cmd).Error; err != nil {
-		return fmt.Sprintf("Failed to find shell command for %v", parentsRepo)
+		return "", fmt.Errorf("failed to find shell command for %v: %w", parentsRepo, err)
 	}
 
-	return s.RunShellCommand([]byte(cmd.TestScript), codePath)
+	output := s.RunShellCommand([]byte(cmd.TestScript), codePath)
+	if output == "" {
+		return "", fmt.Errorf("failed to execute shell command for %v", parentsRepo)
+	}
+
+	return output, nil
 }
