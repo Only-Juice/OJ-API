@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -382,9 +380,9 @@ func ReScore(c *gin.Context) {
 
 	newScore := models.UserQuestionTable{
 		UQR:       uqr,
-		Score:     -1,
+		Score:     -3,
 		JudgeTime: time.Now().UTC(),
-		Message:   "Judging in progress",
+		Message:   "Waiting for judging...",
 	}
 	if err := db.Create(&newScore).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -398,7 +396,7 @@ func ReScore(c *gin.Context) {
 		Success: true,
 		Message: "Re-scoring the question",
 	})
-
+	
 	go func() {
 		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
 		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
@@ -412,57 +410,9 @@ func ReScore(c *gin.Context) {
 			})
 			return
 		}
-		os.Chmod(codePath, 0777)
+		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
 		defer os.RemoveAll(codePath)
-		_, err = sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath))
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: err.Error(),
-			})
-			return
-		}
-
-		// read score from file
-		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to read score: %v", err),
-			})
-			return
-		}
-		// save score to database
-		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to convert score to int: %v", err),
-			})
-			return
-		}
-
-		// read message from file
-		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to read message: %v", err),
-			})
-			return
-		}
-
-		if err := db.Model(&newScore).Updates(models.UserQuestionTable{
-			Score:   scoreFloat,
-			Message: strings.TrimSpace(string(message)),
-		}).Error; err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to update score: %v", err),
-			})
-			return
-		}
-		log.Printf("Successfully re-scored the question: %s, score: %f", question.GitRepoURL, scoreFloat)
+		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScore)
 	}()
 }

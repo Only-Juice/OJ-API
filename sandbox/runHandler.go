@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 
 	"OJ-API/database"
@@ -17,9 +19,16 @@ const execTimeoutDuration = time.Second * 60
 // SandboxPtr is a pointer to Sandbox
 var SandboxPtr *Sandbox
 
-func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
+func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
+	db := database.DBConn
+
 	boxID := s.Reserve()
 	defer s.Release(boxID)
+
+	database.DBConn.Model(&userQuestion).Updates(models.UserQuestionTable{
+		Score:   -1,
+		Message: "Judging...",
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutDuration)
 	defer cancel()
@@ -28,8 +37,11 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 	shellCommand = append(shellCommand, []byte("\nrm build -rf")...)
 	codeID, err := WriteToTempFile(shellCommand)
 	if err != nil {
-		log.Println("error saving code as file:", err)
-		return "Failed to save code as file"
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+		})
+		return
 	}
 	defer os.Remove(shellFilename(codeID))
 
@@ -55,8 +67,11 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 		os.Mkdir(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
 		copy := exec.CommandContext(ctx, "cp", "./sandbox/python/grp_parser.py", fmt.Sprintf("%v/%s", string(codePath), "utils"))
 		if err := copy.Run(); err != nil {
-			log.Printf("Failed to copy python code: %v", err)
-			return fmt.Sprintf("Failed to copy python code: %v", err)
+			db.Model(&userQuestion).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to copy python code: %v", err),
+			})
+			return
 		}
 	}
 
@@ -66,27 +81,68 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Failed to run command: %v", err)
-		return fmt.Sprintf("Failed to run command: %v", err)
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to run command: %v", err),
+		})
+		return
 	}
 
 	log.Printf("Command output: %s", string(out))
-	return string(out)
+
+	// read score from file
+	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
+	if err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to read score: %v", err),
+		})
+		return
+	}
+	// save score to database
+	scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
+	if err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to convert score to int: %v", err),
+		})
+		return
+	}
+
+	// read message from file
+	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
+	if err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to read message: %v", err),
+		})
+		return
+	}
+
+	if err := db.Model(&userQuestion).Updates(models.UserQuestionTable{
+		Score:   scoreFloat,
+		Message: strings.TrimSpace(string(message)),
+	}).Error; err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to update score: %v", err),
+		})
+		return
+	}
 }
 
-func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte) (string, error) {
+func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
 	var cmd models.QuestionTestScript
 	if err := db.Joins("Question").
 		Where("git_repo_url = ?", parentsRepo).Take(&cmd).Error; err != nil {
-		return "", fmt.Errorf("failed to find shell command for %v: %w", parentsRepo, err)
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to find shell command for %v: %v", parentsRepo, err),
+		})
+		return
 	}
 
-	output := s.RunShellCommand([]byte(cmd.TestScript), codePath)
-	if output == "" {
-		return "", fmt.Errorf("failed to execute shell command for %v", parentsRepo)
-	}
-
-	return output, nil
+	s.RunShellCommand([]byte(cmd.TestScript), codePath, userQuestion)
 }
