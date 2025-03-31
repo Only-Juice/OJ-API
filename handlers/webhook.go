@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
@@ -86,9 +84,9 @@ func PostGiteaHook(c *gin.Context) {
 
 	newScore := models.UserQuestionTable{
 		UQR:       existingUserQuestionRelation,
-		Score:     -1,
+		Score:     -3,
 		JudgeTime: time.Now().UTC(),
-		Message:   "Judging in progress",
+		Message:   "Waiting for judging...",
 	}
 	if err := db.Create(&newScore).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -104,7 +102,6 @@ func PostGiteaHook(c *gin.Context) {
 		Data:    payload,
 	})
 
-	// Process the hook in the background
 	go func() {
 		// Clone the given repository to the given directory
 		log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
@@ -120,7 +117,7 @@ func PostGiteaHook(c *gin.Context) {
 			})
 			return
 		}
-		os.Chmod(codePath, 0777)
+		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 		log.Printf("git show-ref --head HEAD")
 		ref, err := repo.Head()
 		if err != nil {
@@ -162,51 +159,6 @@ func PostGiteaHook(c *gin.Context) {
 
 		defer os.RemoveAll(codePath)
 
-		_, err = sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath))
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: err.Error(),
-			})
-			return
-		}
-
-		// read score from file
-		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to read score: %v", err),
-			})
-			return
-		}
-
-		// save score to database
-		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
-		if err != nil {
-			log.Printf("Failed to convert score to int: %v", err)
-			return
-		}
-
-		// read message from file
-		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to read message: %v", err),
-			})
-			return
-		}
-
-		if err := db.Model(&newScore).Updates(models.UserQuestionTable{
-			Score:   scoreFloat,
-			Message: strings.TrimSpace(string(message)),
-		}).Error; err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to update score: %v", err),
-			})
-			return
-		}
+		sandbox.SandboxPtr.RunShellCommandByRepo(payload.Repository.Parent.FullName, []byte(codePath), newScore)
 	}()
 }
