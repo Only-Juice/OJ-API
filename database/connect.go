@@ -29,6 +29,8 @@ func Connect() (err error) {
 	if err != nil {
 		return err
 	}
+	// Set the logger to log SQL queries
+	DBConn = DBConn.Debug()
 
 	sqlDB, err := DBConn.DB()
 	if err != nil {
