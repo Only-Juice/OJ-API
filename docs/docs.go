@@ -821,14 +821,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/score/rescore/{question_id}": {
+        "/api/score/question/{question_id}/rescore": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Re-score a question",
+                "description": "Re-score a specific question by question ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -838,7 +838,7 @@ const docTemplate = `{
                 "tags": [
                     "Score"
                 ],
-                "summary": "Re-score a question",
+                "summary": "Re-score a specific question",
                 "parameters": [
                     {
                         "type": "integer",
@@ -919,6 +919,55 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/score/user/rescore/{question_id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Re-score a specific user's question by question ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Score"
+                ],
+                "summary": "Re-score a specific user's question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "question ID",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
                     "400": {
