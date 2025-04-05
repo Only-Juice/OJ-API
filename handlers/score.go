@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-git/go-git/v5"
@@ -330,10 +331,10 @@ func GetScoreByQuestionID(c *gin.Context) {
 	})
 }
 
-// ReScore is a function to re-score a question
+// ReScoreUserQuestion is a function to re-score a specific user's question by question ID
 //
-//	@Summary		Re-score a question
-//	@Description	Re-score a question
+//	@Summary		Re-score a specific user's question
+//	@Description	Re-score a specific user's question by question ID
 //	@Tags			Score
 //	@Accept			json
 //	@Produce		json
@@ -343,9 +344,9 @@ func GetScoreByQuestionID(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/rescore/{question_id} [post]
+//	@Router			/api/score/user/rescore/{question_id} [post]
 //	@Security		BearerAuth
-func ReScore(c *gin.Context) {
+func ReScoreUserQuestion(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
 
@@ -502,4 +503,113 @@ func GetTopScore(c *gin.Context) {
 			ScoresCount: int(totalCount),
 		},
 	})
+}
+
+// ReScoreQuestion is a function to re-score a specific question by question ID
+//
+//	@Summary		Re-score a specific question
+//	@Description	Re-score a specific question by question ID	
+//	@Tags			Score
+//	@Accept			json
+//	@Produce		json
+//	@Param			question_id	path	int	true	"question ID"
+//	@Success		200		{object}	ResponseHTTP{}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
+//	@Router			/api/score/question/{question_id}/rescore [post]
+//	@Security		BearerAuth
+func ReScoreQuestion(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	questionID := c.Param("question_id")
+	if questionID == "" {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Question ID is required",
+		})
+		return
+	}
+
+	var question models.Question
+	if err := db.Where("id = ?", questionID).Limit(1).Find(&question).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	var uqr []models.UserQuestionRelation
+	if err := db.Model(&models.UserQuestionRelation{}).
+		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
+		Limit(1).Find(&uqr).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to re-score the question",
+		})
+		return
+	}
+
+	newScores := []models.UserQuestionTable{}
+	for _, u := range uqr {
+		newScores = append(newScores, models.UserQuestionTable{
+			UQR:       u,
+			Score:     -3,
+			JudgeTime: time.Now().UTC(),
+			Message:   "Waiting for judging...",
+		})
+	}
+	
+	if err := db.Create(&newScores).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to create new score entry",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Re-scoring the question",
+	})
+
+	go func() {
+		var wg sync.WaitGroup
+
+		for i, u := range uqr {
+			codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), u.GitUserRepoURL+"/"+uuid.New().String())
+			_, err := git.PlainClone(codePath, false, &git.CloneOptions{
+				URL:      "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL,
+				Progress: os.Stdout,
+			})
+			if err != nil {
+				db.Model(&newScores[i]).Updates(models.UserQuestionTable{
+					Score:   -2,
+					Message: "Failed to clone repository",
+				})
+				return
+			}
+			os.Chmod(codePath, 0777) // Need to confirm if this is necessary
+
+			defer os.RemoveAll(codePath)
+
+			wg.Add(1)
+			go func(i int, codePath string) {
+				defer wg.Done()
+				sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScores[i])
+			}(i, codePath)
+		}
+
+		wg.Wait()
+	}()
 }
