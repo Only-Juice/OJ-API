@@ -870,6 +870,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/score/top": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the top score of each question for user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Score"
+                ],
+                "summary": "Get the top score of each question for user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetTopScoreResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/score/{UQR_ID}": {
             "get": {
                 "security": [
@@ -1531,6 +1597,24 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.GetTopScoreResponseData": {
+            "type": "object",
+            "required": [
+                "scores",
+                "scores_count"
+            ],
+            "properties": {
+                "scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.TopScore"
+                    }
+                },
+                "scores_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "handlers.GetUserQuestionResponseData": {
             "type": "object",
             "required": [
@@ -1642,6 +1726,38 @@ const docTemplate = `{
                 },
                 "waiting_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "handlers.TopScore": {
+            "type": "object",
+            "required": [
+                "git_user_repo_url",
+                "judge_time",
+                "message",
+                "question_id",
+                "score"
+            ],
+            "properties": {
+                "git_user_repo_url": {
+                    "type": "string",
+                    "example": "owner/repo"
+                },
+                "judge_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Scored successfully"
+                },
+                "question_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "score": {
+                    "type": "number",
+                    "example": 100
                 }
             }
         },

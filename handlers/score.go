@@ -417,3 +417,89 @@ func ReScore(c *gin.Context) {
 		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScore)
 	}()
 }
+
+type TopScore struct {
+	QuestionID 		int			`json:"question_id" example:"1" validate:"required"`
+	GitUserRepoURL	string		`json:"git_user_repo_url" example:"owner/repo" validate:"required"`
+	Score      		float64		`json:"score" example:"100" validate:"required"`
+	Message    		string		`json:"message" example:"Scored successfully" validate:"required"`
+	JudgeTime  		time.Time	`json:"judge_time" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339" validate:"required"`
+}
+
+type GetTopScoreResponseData struct {
+	ScoresCount int			`json:"scores_count" validate:"required"`
+	Scores      []TopScore	`json:"scores" validate:"required"`
+}
+
+// Get the top score of each question for user
+//
+//	@Summary		Get the top score of each question for user
+//	@Description	Get the top score of each question for user
+//	@Tags			Score
+//	@Accept			json
+//	@Produce		json
+//	@Param			page	query	int	false	"page number of results to return (1-based)"
+//	@Param			limit	query	int	false	"page size of results. Default is 10."
+//	@Success		200	{object}	ResponseHTTP{data=GetTopScoreResponseData}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
+//	@Router			/api/score/top [get]
+//	@Security		BearerAuth
+func GetTopScore(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	var totalCount int64
+
+	subQuery := db.Model(&models.UserQuestionTable{}).
+		Select("DISTINCT question_id").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Where("UQR.user_id = ?", jwtClaims.UserID)
+
+	if err := db.Table("(?) AS sub", subQuery).
+		Count(&totalCount).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count scores",
+		})
+		return
+	}
+
+	var scores []TopScore
+	if err := db.Model(&models.UserQuestionTable{}).
+		Joins("UQR").
+		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
+		Where("user_id = ?", jwtClaims.UserID).
+		Order("question_id, judge_time DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&scores).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Score not found",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get top score",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Successfully retrieved top scores",
+		Data: GetTopScoreResponseData{
+			Scores:      scores,
+			ScoresCount: int(totalCount),
+		},
+	})
+}
