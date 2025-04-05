@@ -477,7 +477,8 @@ func GetTopScore(c *gin.Context) {
 		Joins("UQR").
 		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
 		Where("user_id = ?", jwtClaims.UserID).
-		Order("question_id, judge_time DESC").
+		Order("question_id, score DESC").
+		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&scores).Error; err != nil {
