@@ -1,81 +1,54 @@
 package main
 
 import (
-	"encoding/base64"
-	"fmt"
-	"log"
+	"io"
 	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
+	"path/filepath"
+	"test/sandbox"
 
-	"github.com/gin-gonic/gin"
-
-	"OJ-API/config"
-	"OJ-API/database"
-	"OJ-API/models"
-	"OJ-API/routes"
-	"OJ-API/sandbox"
+	"github.com/google/uuid"
 )
 
-// @title			OJ-PoC API
-// @version		1.0
-// @description	This is a simple OJ-PoC API server.
-// @BasePath		/
-// @SecurityDefinitions.apikey BearerAuth
-// @In header
-// @Name Authorization
 func main() {
-	decodedKey, err := base64.StdEncoding.DecodeString(config.Config("ENCRYPTION_KEY"))
-	if err != nil {
-		log.Panic("Invalid ENCRYPTION_KEY config:", err.Error())
-	}
-	if len(decodedKey) != 16 && len(decodedKey) != 24 && len(decodedKey) != 32 {
-		log.Panic("Invalid ENCRYPTION_KEY length:", len(decodedKey))
-	}
-
-	if err := database.Connect(); err != nil {
-		log.Panic("Can't connect database:", err.Error())
-	}
-	sandboxCount, err := strconv.Atoi(config.Config("SANDBOX_COUNT"))
-	if err != nil {
-		log.Panic("Invalid SANDBOX_COUNT config:", err.Error())
-	}
-	sandbox.SandboxPtr = sandbox.NewSandbox(sandboxCount)
+	sandbox.SandboxPtr = sandbox.NewSandbox(5)
 	defer sandbox.SandboxPtr.Cleanup()
+	var codePath = "/sandbox/repo/username/example/" + uuid.New().String() + "/"
+	copyDir("example", codePath)
+	os.Chmod(codePath, 0777)
+	defer os.RemoveAll(codePath)
+	sandbox.SandboxPtr.RunShellCommand([]byte("/usr/bin/cat text.txt"), []byte(codePath))
+}
 
-	// Signal handling
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		fmt.Println("Received interrupt signal, cleaning up...")
-		sandbox.SandboxPtr.Cleanup()
-		os.Exit(0)
-	}()
+// copyDir copies the contents of the source directory to the destination directory.
+func copyDir(src string, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-	// Database migrations
-	database.DBConn.AutoMigrate(
-		&models.User{},
-		&models.Announcement{},
-		&models.Exam{},
-		&models.ExamAndUser{},
-		&models.Question{},
-		&models.ExamQuestion{},
-		&models.QuestionTestScript{},
-		&models.Tag{},
-		&models.TagAndQuestion{},
-		&models.UserQuestionRelation{},
-		&models.UserQuestionTable{},
-	)
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
 
-	// Initialize Gin router
-	r := gin.Default()
-	routes.RegisterRoutes(r)
+		destPath := filepath.Join(dst, relPath)
+		if info.IsDir() {
+			return os.MkdirAll(destPath, info.Mode())
+		}
 
-	// Start the server
-	port := config.Config("API_PORT")
-	if err := r.Run(":" + port); err != nil {
-		log.Fatal("Failed to start server:", err)
-	}
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			return err
+		}
+		defer destFile.Close()
+
+		_, err = io.Copy(destFile, srcFile)
+		return err
+	})
 }
