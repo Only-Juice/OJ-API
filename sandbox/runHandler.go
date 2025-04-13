@@ -16,7 +16,7 @@ const execTimeoutDuration = time.Second * 60
 var SandboxPtr *Sandbox
 
 // codePath must be absolute path
-func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) {
+func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) string {
 	boxID := s.Reserve()
 	defer s.Release(boxID)
 
@@ -24,12 +24,13 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) {
 	defer cancel()
 
 	// saving code as file
+	shellCommand = append(shellCommand, []byte("\nrm build -rf")...)
 	codeID, err := WriteToTempFile(shellCommand)
 	if err != nil {
-		log.Printf("Error writing to temp file: %v", err)
-		return
+		log.Println("error saving code as file:", err)
+		return "Failed to save code as file"
 	}
-	// defer os.Remove(shellFilename(codeID))
+	defer os.Remove(shellFilename(codeID))
 
 	// running the code
 	cmdArgs := []string{
@@ -53,22 +54,22 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte) {
 		os.Mkdir(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
 		copy := exec.CommandContext(ctx, "cp", "./sandbox/python/grp_parser.py", fmt.Sprintf("%v/%s", string(codePath), "utils"))
 		if err := copy.Run(); err != nil {
-			log.Printf("Error copying file: %v", err)
-			return
+			log.Printf("Failed to copy python code: %v", err)
+			return fmt.Sprintf("Failed to copy python code: %v", err)
 		}
 	}
 
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/ls", shellFilename(codeID))
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellFilename(codeID))
 
 	log.Printf("Command: isolate %s", strings.Join(cmdArgs, " "))
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Error running command: %v", err)
-		return
+		log.Printf("Failed to run command: %v", err)
+		return fmt.Sprintf("Failed to run command: %v", err)
 	}
 
 	log.Printf("Command output: %s", string(out))
-
+	return string(out)
 }
