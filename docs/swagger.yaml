@@ -380,6 +380,18 @@ definitions:
           type: string
         type: array
     type: object
+  handlers.GetLeaderboardResponseData:
+    properties:
+      count:
+        type: integer
+      scores:
+        items:
+          $ref: '#/definitions/handlers.LeaderboardScore'
+        type: array
+    required:
+    - count
+    - scores
+    type: object
   handlers.GetQuestionListResponseData:
     properties:
       question_count:
@@ -468,6 +480,18 @@ definitions:
     required:
     - question
     - question_count
+    type: object
+  handlers.LeaderboardScore:
+    properties:
+      score:
+        example: 100
+        type: number
+      user_name:
+        example: owner
+        type: string
+    required:
+    - score
+    - user_name
     type: object
   handlers.ResponseHTTP:
     properties:
@@ -1117,6 +1141,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Get all scores for the user
+      tags:
+      - Score
+  /api/score/leaderboard:
+    get:
+      consumes:
+      - application/json
+      description: Get the leaderboard
+      parameters:
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetLeaderboardResponseData'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      summary: Get the leaderboard
       tags:
       - Score
   /api/score/question/{question_id}:

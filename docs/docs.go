@@ -814,6 +814,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/score/leaderboard": {
+            "get": {
+                "description": "Get the leaderboard",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Score"
+                ],
+                "summary": "Get the leaderboard",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetLeaderboardResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/score/question/{question_id}": {
             "get": {
                 "security": [
@@ -1649,6 +1710,24 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.GetLeaderboardResponseData": {
+            "type": "object",
+            "required": [
+                "count",
+                "scores"
+            ],
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.LeaderboardScore"
+                    }
+                }
+            }
+        },
         "handlers.GetQuestionListResponseData": {
             "type": "object",
             "required": [
@@ -1776,6 +1855,23 @@ const docTemplate = `{
                 },
                 "question_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "handlers.LeaderboardScore": {
+            "type": "object",
+            "required": [
+                "score",
+                "user_name"
+            ],
+            "properties": {
+                "score": {
+                    "type": "number",
+                    "example": 100
+                },
+                "user_name": {
+                    "type": "string",
+                    "example": "owner"
                 }
             }
         },

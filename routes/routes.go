@@ -98,5 +98,6 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/score/top", AuthMiddleware(), handlers.GetTopScore)
 		api.POST("/score/question/:question_id/rescore", AuthMiddleware(), handlers.ReScoreQuestion)
 		api.GET("/score/all", AuthMiddleware(), handlers.GetAllScore)
+		api.GET("/score/leaderboard", handlers.GetLeaderboard)
 	}
 }

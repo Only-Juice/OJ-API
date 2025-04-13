@@ -702,3 +702,91 @@ func GetAllScore(c *gin.Context) {
 		},
 	})
 }
+
+type LeaderboardScore struct {
+	UserName string  `json:"user_name" example:"owner" validate:"required"`
+	Score    float64 `json:"score" example:"100" validate:"required"`
+}
+
+type GetLeaderboardResponseData struct {
+	Count  int                `json:"count" validate:"required"`
+	Scores []LeaderboardScore `json:"scores" validate:"required"`
+}
+
+// GetLeaderboard is a function to get the leaderboard
+//
+//	@Summary		Get the leaderboard
+//	@Description	Get the leaderboard
+//	@Tags			Score
+//	@Accept			json
+//	@Produce		json
+//	@Param			page	query	int	false	"page number of results to return (1-based)"
+//	@Param			limit	query	int	false	"page size of results. Default is 10."
+//	@Success		200	{object}	ResponseHTTP{data=GetLeaderboardResponseData}
+//	@Failure		400
+//	@Failure		401
+//	@Failure		404
+//	@Failure		503
+//	@Router			/api/score/leaderboard [get]
+func GetLeaderboard(c *gin.Context) {
+	db := database.DBConn
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	var totalCount int64
+	if err := db.Table("(SELECT UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id " +
+		"FROM user_question_tables " +
+		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
+		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
+		Select("user_id, SUM(max_score) AS score").
+		Group("user_id").
+		Count(&totalCount).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count scores",
+		})
+		return
+	}
+	var scores []LeaderboardScore
+	if err := db.Table("(SELECT UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id " +
+		"FROM user_question_tables " +
+		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
+		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
+		Joins("JOIN users ON users.id = subquery.user_id").
+		Select("CASE WHEN users.is_public THEN users.user_name ELSE CONCAT('User_', users.id) END AS user_name, SUM(max_score) AS score").
+		Group("users.user_name, users.is_public, users.id").
+		Order("score DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&scores).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Score not found",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get leaderboard",
+		})
+		return
+	}
+	if len(scores) == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "No scores found",
+		})
+		return
+	}
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Successfully retrieved leaderboard",
+		Data: GetLeaderboardResponseData{
+			Count:  int(totalCount),
+			Scores: scores,
+		},
+	})
+}
