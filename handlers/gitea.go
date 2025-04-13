@@ -296,16 +296,8 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	parentRepoUsername := parentRepoURLParts[0]
 	parentRepoName := parentRepoURLParts[1]
 
-	repo, _, err := client.GetRepo(parentRepoUsername, parentRepoName)
+	repo, _, err := client.GetRepo(jwtClaims.Username, parentRepoName)
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	if repo == nil {
 		if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
 			Name: &parentRepoName,
 		}); err != nil {
@@ -315,7 +307,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 			})
 			return
 		}
-
+		repo = nil
 	}
 
 	hooks, _, err := client.ListRepoHooks(jwtClaims.Username, parentRepoName, gitea.ListHooksOptions{})
@@ -357,7 +349,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	if err := db.Where(&models.UserQuestionRelation{
 		UserID:     jwtClaims.UserID,
 		QuestionID: uint(questionID),
-	}).Limit(1).Find(&userQuestionRelation).Error; err != nil {
+	}).Limit(1).Find(&userQuestionRelation).Error; err != nil || (userQuestionRelation == models.UserQuestionRelation{}) {
 		db.Create(&models.UserQuestionRelation{
 			UserID:         jwtClaims.UserID,
 			QuestionID:     uint(questionID),
