@@ -481,6 +481,11 @@ definitions:
     - question
     - question_count
     type: object
+  handlers.IsPublicRequest:
+    properties:
+      is_public:
+        type: boolean
+    type: object
   handlers.LeaderboardScore:
     properties:
       score:
@@ -612,6 +617,21 @@ definitions:
       question_id:
         type: integer
       test_script:
+        type: string
+    type: object
+  models.User:
+    properties:
+      email:
+        type: string
+      enable:
+        type: boolean
+      gitea_token:
+        type: string
+      id:
+        type: integer
+      is_public:
+        type: boolean
+      user_name:
         type: string
     type: object
 info:
@@ -1325,6 +1345,51 @@ paths:
       summary: Re-score a specific user's question
       tags:
       - Score
+  /api/user/is_public:
+    post:
+      consumes:
+      - application/json
+      description: Update the user's is_public setting
+      parameters:
+      - description: is_public
+        in: body
+        name: is_public
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.IsPublicRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
+      summary: Set user is_public
+      tags:
+      - User
 securityDefinitions:
   BearerAuth:
     in: header
