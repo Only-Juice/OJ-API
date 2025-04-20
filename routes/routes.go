@@ -100,5 +100,12 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/score/all", AuthMiddleware(), handlers.GetAllScore)
 		api.GET("/score/leaderboard", handlers.GetLeaderboard)
 		api.POST("/user/is_public", AuthMiddleware(), handlers.PostUserIsPublic)
+
+		// Exam routes
+		api.POST("/exams", AuthMiddleware(), handlers.CreateExam)
+		api.GET("/exams/:id", AuthMiddleware(), handlers.GetExam)
+		api.PUT("/exams/:id", AuthMiddleware(), handlers.UpdateExam)
+		api.DELETE("/exams/:id", AuthMiddleware(), handlers.DeleteExam)
+
 	}
 }
