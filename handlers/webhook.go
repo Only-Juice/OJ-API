@@ -52,14 +52,14 @@ func PostGiteaHook(c *gin.Context) {
 	log.Printf("Received hook: %+v", payload)
 
 	var existingQuestion models.Question
-	if err := db.Where(&models.Question{GitRepoURL: payload.Repository.Parent.FullName}).Limit(1).Find(&existingQuestion).Error; err != nil {
+	if err := db.Where(&models.Question{GitRepoURL: payload.Repository.Parent.FullName}).First(&existingQuestion).Error; err != nil {
 		existingQuestion = models.Question{
 			GitRepoURL: payload.Repository.Parent.FullName,
 		}
 		db.Create(&existingQuestion)
 	}
 	var existingUser models.User
-	if err := db.Where(&models.User{UserName: payload.Pusher.UserName}).Limit(1).Find(&existingUser).Error; err != nil {
+	if err := db.Where(&models.User{UserName: payload.Pusher.UserName}).First(&existingUser).Error; err != nil {
 		existingUser = models.User{
 			UserName: payload.Pusher.UserName,
 			Email:    payload.Pusher.Email,
@@ -71,7 +71,7 @@ func PostGiteaHook(c *gin.Context) {
 	if err := db.Where(&models.UserQuestionRelation{
 		UserID:     existingUser.ID,
 		QuestionID: existingQuestion.ID,
-	}).Limit(1).Find(&existingUserQuestionRelation).Error; err != nil {
+	}).First(&existingUserQuestionRelation).Error; err != nil {
 		// If the relation does not exist, create a new one
 		existingUserQuestionRelation = models.UserQuestionRelation{
 			User:           existingUser,

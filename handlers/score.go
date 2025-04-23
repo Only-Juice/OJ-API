@@ -163,7 +163,7 @@ func GetScoreByUQRID(c *gin.Context) {
 	}
 
 	UQR := models.UserQuestionRelation{}
-	if err := db.Where("id = ?", UQRID).Limit(1).Find(&UQR).Error; err != nil {
+	if err := db.Where("id = ?", UQRID).First(&UQR).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(404, ResponseHTTP{
 				Success: false,
@@ -360,7 +360,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 	}
 
 	var question models.Question
-	if err := db.Where("id = ?", questionID).Limit(1).Find(&question).Error; err != nil {
+	if err := db.Where("id = ?", questionID).First(&question).Error; err != nil {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -371,7 +371,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 	var uqr models.UserQuestionRelation
 	if err := db.Model(&models.UserQuestionRelation{}).
 		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
-		Limit(1).Find(&uqr).Error; err != nil {
+		First(&uqr).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to re-score the question",
@@ -550,7 +550,7 @@ func ReScoreQuestion(c *gin.Context) {
 	}
 
 	var question models.Question
-	if err := db.Where("id = ?", questionID).Limit(1).Find(&question).Error; err != nil {
+	if err := db.Where("id = ?", questionID).First(&question).Error; err != nil {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -561,7 +561,7 @@ func ReScoreQuestion(c *gin.Context) {
 	var uqr []models.UserQuestionRelation
 	if err := db.Model(&models.UserQuestionRelation{}).
 		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
-		Limit(1).Find(&uqr).Error; err != nil {
+		First(&uqr).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to re-score the question",

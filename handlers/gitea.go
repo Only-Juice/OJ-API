@@ -59,7 +59,7 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 	}
 
 	var existingUser models.User
-	if err := db.Where(&models.User{UserName: giteaUser.UserName}).Limit(1).Find(&existingUser).Error; err != nil {
+	if err := db.Where(&models.User{UserName: giteaUser.UserName}).First(&existingUser).Error; err != nil {
 		existingUser = models.User{
 			UserName: giteaUser.UserName,
 			Email:    giteaUser.Email,
@@ -284,7 +284,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	}
 
 	var existingQuestion models.Question
-	if err := db.Where(&models.Question{ID: uint(questionID)}).Limit(1).Find(&existingQuestion).Error; err != nil {
+	if err := db.Where(&models.Question{ID: uint(questionID)}).First(&existingQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -349,7 +349,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	if err := db.Where(&models.UserQuestionRelation{
 		UserID:     jwtClaims.UserID,
 		QuestionID: uint(questionID),
-	}).Limit(1).Find(&userQuestionRelation).Error; err != nil || (userQuestionRelation == models.UserQuestionRelation{}) {
+	}).First(&userQuestionRelation).Error; err != nil || (userQuestionRelation == models.UserQuestionRelation{}) {
 		db.Create(&models.UserQuestionRelation{
 			UserID:         jwtClaims.UserID,
 			QuestionID:     uint(questionID),

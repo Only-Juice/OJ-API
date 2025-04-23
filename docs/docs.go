@@ -80,6 +80,11 @@ const docTemplate = `{
         },
         "/api/exams/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve an exam's details using its ID",
                 "produces": [
                     "application/json"
@@ -125,6 +130,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update the details of an existing exam by ID",
                 "consumes": [
                     "application/json"
@@ -194,6 +204,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete an exam using its ID",
                 "produces": [
                     "application/json"

@@ -735,6 +735,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
       summary: Delete an exam by ID
       tags:
       - Exam
@@ -762,6 +764,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
       summary: Get an exam by ID
       tags:
       - Exam
@@ -805,6 +809,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
       summary: Update an existing exam
       tags:
       - Exam
