@@ -59,7 +59,6 @@ func main() {
 		&models.User{},
 		&models.Announcement{},
 		&models.Exam{},
-		&models.ExamAndUser{},
 		&models.Question{},
 		&models.ExamQuestion{},
 		&models.QuestionTestScript{},

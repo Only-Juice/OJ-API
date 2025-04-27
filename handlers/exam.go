@@ -224,3 +224,48 @@ func DeleteExam(c *gin.Context) {
 		Message: "Exam deleted successfully",
 	})
 }
+
+type ExamListData struct {
+	ID          uint      `json:"id"`
+	Title       string    `json:"title" binding:"required"`
+	Description string    `json:"description"`
+	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+}
+
+// ListExams retrieves all exams
+// @Summary      List all exams
+// @Description  Retrieve a list of all exams
+// @Tags         Exam
+// @Produce      json
+// @Success      200 {object} ResponseHTTP{data=[]ExamListData}
+// @Failure      500 {object} ResponseHTTP{}
+// @Router       /api/exams [get]
+func ListExams(c *gin.Context) {
+	var exams []models.Exam
+
+	db := database.DBConn
+	if err := db.Find(&exams).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve exams",
+		})
+		return
+	}
+
+	examListData := make([]ExamListData, len(exams))
+	for i, exam := range exams {
+		examListData[i] = ExamListData{
+			ID:          exam.ID,
+			Title:       exam.Title,
+			Description: exam.Description,
+			StartTime:   exam.StartTime,
+			EndTime:     exam.EndTime,
+		}
+	}
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Data:    examListData,
+	})
+}

@@ -74,3 +74,52 @@ func PostUserIsPublic(c *gin.Context) {
 		},
 	})
 }
+
+type GetUserData struct {
+	ID       uint   `json:"id"`
+	UserName string `json:"user_name"`
+	Enable   bool   `json:"enable"`
+	Email    string `json:"email"`
+	IsPublic bool   `json:"is_public"`
+}
+
+// Get User Info
+// @Summary Get user info
+// @Description Get user info by ID
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {object} ResponseHTTP{data=GetUserData}
+// @Failure 400 {object} ResponseHTTP{}
+// @Failure 401 {object} ResponseHTTP{}
+// @Failure 404 {object} ResponseHTTP{}
+// @Failure 503 {object} ResponseHTTP{}
+// @Router /api/user [get]
+// @Security BearerAuth
+func GetUser(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+
+	// Find the user by ID
+	var user models.User
+	if err := db.First(&user, jwtClaims.UserID).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	// Respond with user info
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Message: "User info retrieved successfully",
+		Data: GetUserData{
+			ID:       user.ID,
+			UserName: user.UserName,
+			Enable:   user.Enable,
+			Email:    user.Email,
+			IsPublic: user.IsPublic,
+		},
+	})
+}

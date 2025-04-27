@@ -420,3 +420,71 @@ func GetUserProfileGitea(c *gin.Context) {
 		Message: "User profile retrieved",
 	})
 }
+
+type CreatePublicKey struct {
+	Title    string `json:"title" validate:"required" example:"Public Key"`
+	Key      string `json:"key" validate:"required" example:"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3..."`
+	ReadOnly bool   `json:"read_only" validate:"required" example:"true"`
+}
+
+// Create a public key in Gitea
+// @Summary	Create a public key in Gitea
+// @Description Create a public key in Gitea
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			CreatePublicKey	body		CreatePublicKey	true	"Public Key"
+// @Success		200		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/user/keys [post]
+func PostCreatePublicKeyGitea(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	publicKey := new(CreatePublicKey)
+	if err := c.ShouldBindJSON(publicKey); err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to parse public key",
+		})
+		return
+	}
+
+	if _, _, err := client.CreatePublicKey(gitea.CreateKeyOption{
+		Key:      publicKey.Key,
+		ReadOnly: publicKey.ReadOnly,
+		Title:    publicKey.Title,
+	}); err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Public key created successfully",
+	})
+}

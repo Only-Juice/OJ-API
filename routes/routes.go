@@ -79,33 +79,44 @@ func RegisterRoutes(r *gin.Engine) {
 	// Routes
 	api := r.Group("/api")
 	{
-		api.POST("/sandbox", AuthMiddleware(), handlers.PostSandboxCmd)
-		api.GET("/sandbox/status", handlers.GetSandboxStatus)
-		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
-		api.POST("/gitea", handlers.PostGiteaHook)
-		api.POST("/gitea/auth", handlers.PostBasicAuthenticationGitea)
-		api.POST("/gitea/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
-		api.POST("/gitea/question/:question_id", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
-		api.GET("/question", handlers.GetQuestionList)
-		api.GET("/question/user", AuthMiddleware(), handlers.GetUsersQuestions)
-		api.GET("/question/:UQR_ID", AuthMiddleware(), handlers.GetQuestion)
-		api.GET("/question/id/:ID", handlers.GetQuestionByID)
-		api.GET("/question/user/id/:ID", AuthMiddleware(), handlers.GetUserQuestionByID)
-		api.GET("/score/:UQR_ID", AuthMiddleware(), handlers.GetScoreByUQRID)
-		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
-		api.GET("/score/question/:question_id", AuthMiddleware(), handlers.GetScoreByQuestionID)
-		api.POST("/score/user/rescore/:question_id", AuthMiddleware(), handlers.ReScoreUserQuestion)
-		api.GET("/score/top", AuthMiddleware(), handlers.GetTopScore)
-		api.POST("/score/question/:question_id/rescore", AuthMiddleware(), handlers.ReScoreQuestion)
-		api.GET("/score/all", AuthMiddleware(), handlers.GetAllScore)
-		api.GET("/score/leaderboard", handlers.GetLeaderboard)
-		api.POST("/user/is_public", AuthMiddleware(), handlers.PostUserIsPublic)
-
 		// Exam routes
 		api.POST("/exams", AuthMiddleware(), handlers.CreateExam)
 		api.GET("/exams/:id", AuthMiddleware(), handlers.GetExam)
 		api.PUT("/exams/:id", AuthMiddleware(), handlers.UpdateExam)
 		api.DELETE("/exams/:id", AuthMiddleware(), handlers.DeleteExam)
+		api.GET("/exams", handlers.ListExams)
 
+		// Sandbox routes
+		api.POST("/sandbox", AuthMiddleware(), handlers.PostSandboxCmd)
+		api.GET("/sandbox/status", handlers.GetSandboxStatus)
+
+		// Gitea routes
+		api.POST("/gitea", handlers.PostGiteaHook)
+		api.POST("/gitea/auth", handlers.PostBasicAuthenticationGitea)
+		api.POST("/gitea/question/:question_id", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
+		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
+		api.POST("/gitea/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
+		api.POST("/gitea/user/keys", AuthMiddleware(), handlers.PostCreatePublicKeyGitea)
+
+		// Question routes
+		api.GET("/question", handlers.GetQuestionList)
+		api.GET("/question/id/:ID", handlers.GetQuestionByID)
+		api.GET("/question/user", AuthMiddleware(), handlers.GetUsersQuestions)
+		api.GET("/question/user/id/:ID", AuthMiddleware(), handlers.GetUserQuestionByID)
+		api.GET("/question/:UQR_ID", AuthMiddleware(), handlers.GetQuestion)
+
+		// Score routes
+		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
+		api.GET("/score/all", AuthMiddleware(), handlers.GetAllScore)
+		api.GET("/score/leaderboard", handlers.GetLeaderboard)
+		api.GET("/score/question/:question_id", AuthMiddleware(), handlers.GetScoreByQuestionID)
+		api.POST("/score/question/:question_id/rescore", AuthMiddleware(), handlers.ReScoreQuestion)
+		api.GET("/score/top", AuthMiddleware(), handlers.GetTopScore)
+		api.POST("/score/user/rescore/:question_id", AuthMiddleware(), handlers.ReScoreUserQuestion)
+		api.GET("/score/:UQR_ID", AuthMiddleware(), handlers.GetScoreByUQRID)
+
+		// User routes
+		api.GET("/user", AuthMiddleware(), handlers.GetUser)
+		api.POST("/user/is_public", AuthMiddleware(), handlers.PostUserIsPublic)
 	}
 }
