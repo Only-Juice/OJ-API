@@ -40,9 +40,12 @@ func GetQuestionList(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	var totalQuestions int64
-	db.Model(&models.Question{}).Count(&totalQuestions)
+	db.Model(&models.Question{}).
+		Where("id NOT IN (SELECT question_id FROM exam_questions)").
+		Count(&totalQuestions)
 	var questions []models.Question
-	db.Offset(offset).Limit(limit).Find(&questions)
+	db.Where("id NOT IN (SELECT question_id FROM exam_questions)").
+		Offset(offset).Limit(limit).Find(&questions)
 	if len(questions) == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: true,
