@@ -461,6 +461,7 @@ func GetTopScore(c *gin.Context) {
 	subQuery := db.Model(&models.UserQuestionTable{}).
 		Select("DISTINCT question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Where("UQR.user_id = ?", jwtClaims.UserID)
 
 	if err := db.Table("(?) AS sub", subQuery).
@@ -476,6 +477,7 @@ func GetTopScore(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Where("user_id = ?", jwtClaims.UserID).
 		Order("question_id, score DESC").
 		Order("judge_time DESC").

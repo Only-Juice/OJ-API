@@ -88,6 +88,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/exams/:id/questions", handlers.GetExamQuestions)
 		api.POST("/exams/:id/questions/:question_id", AuthMiddleware(), handlers.AddQuestionToExam)
 		api.DELETE("/exams/:id/questions/:question_id", AuthMiddleware(), handlers.RemoveQuestionFromExam)
+		api.GET("/exams/:id/score/top", AuthMiddleware(), handlers.GetTopExamScore)
 
 		// Sandbox routes
 		api.POST("/sandbox", AuthMiddleware(), handlers.PostSandboxCmd)

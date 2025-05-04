@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"OJ-API/database"
 	"OJ-API/models"
@@ -471,5 +473,90 @@ func RemoveQuestionFromExam(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Question removed from exam successfully",
+	})
+}
+
+// Get the top scores of each question in the exam for a specific user
+// @Summary      Get top scores for each question in an exam
+// @Description  Retrieve the top scores for each question in a specific exam for a user
+// @Tags         Exam
+// @Produce      json
+// @Param        id path string true "Exam ID"
+// @Param			page	query	int	false	"page number of results to return (1-based)"
+// @Param			limit	query	int	false	"page size of results. Default is 10."
+// @Success		200	{object}	ResponseHTTP{data=GetTopScoreResponseData}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Router			/api/exams/{id}/score/top [get]
+// @Security		BearerAuth
+func GetTopExamScore(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+
+	id := c.Param("id")
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	var totalCount int64
+
+	subQuery := db.Model(&models.UserQuestionTable{}).
+		Select("DISTINCT question_id").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Where("question_id IN (SELECT question_id FROM exam_questions WHERE exam_id = ?)", id).
+		Where("UQR.user_id = ?", jwtClaims.UserID)
+
+	if err := db.Table("(?) AS sub", subQuery).
+		Count(&totalCount).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count scores",
+		})
+		return
+	}
+
+	var scores []TopScore
+	if err := db.Model(&models.UserQuestionTable{}).
+		Joins("UQR").
+		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
+		Where("question_id IN (SELECT question_id FROM exam_questions WHERE exam_id = ?)", id).
+		Where("user_id = ?", jwtClaims.UserID).
+		Order("question_id, score DESC").
+		Order("judge_time DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&scores).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Score not found",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get top score",
+		})
+		return
+	}
+
+	if len(scores) == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "No scores found",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Successfully retrieved top scores",
+		Data: GetTopScoreResponseData{
+			Scores:      scores,
+			ScoresCount: int(totalCount),
+		},
 	})
 }

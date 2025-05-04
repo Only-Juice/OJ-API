@@ -999,6 +999,49 @@ paths:
       summary: Add a question to an exam
       tags:
       - Exam
+  /api/exams/{id}/score/top:
+    get:
+      description: Retrieve the top scores for each question in a specific exam for
+        a user
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetTopScoreResponseData'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get top scores for each question in an exam
+      tags:
+      - Exam
   /api/gitea:
     post:
       consumes:
