@@ -742,6 +742,7 @@ func GetLeaderboard(c *gin.Context) {
 		"FROM user_question_tables " +
 		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
 		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Select("user_id, SUM(max_score) AS score").
 		Group("user_id").
 		Count(&totalCount).Error; err != nil {
@@ -756,6 +757,7 @@ func GetLeaderboard(c *gin.Context) {
 		"FROM user_question_tables " +
 		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
 		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("CASE WHEN users.is_public THEN users.user_name ELSE CONCAT('User_', users.id) END AS user_name, SUM(max_score) AS score").
 		Group("users.user_name, users.is_public, users.id").
