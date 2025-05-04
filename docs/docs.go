@@ -287,6 +287,74 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/exams/{id}/leaderboard": {
+            "get": {
+                "description": "Retrieve the leaderboard for a specific exam",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Exam"
+                ],
+                "summary": "Get the leaderboard for an exam",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exam ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetLeaderboardResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/exams/{id}/questions": {
             "get": {
                 "description": "Retrieve all questions associated with a specific exam",
@@ -507,7 +575,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handlers.GetTopScoreResponseData"
+                                            "$ref": "#/definitions/handlers.GetTopExamScoreResponseData"
                                         }
                                     }
                                 }
@@ -2564,6 +2632,24 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.GetTopExamScoreResponseData": {
+            "type": "object",
+            "required": [
+                "scores",
+                "scores_count"
+            ],
+            "properties": {
+                "scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.TopExamScore"
+                    }
+                },
+                "scores_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "handlers.GetTopScoreResponseData": {
             "type": "object",
             "required": [
@@ -2738,6 +2824,43 @@ const docTemplate = `{
                 },
                 "waiting_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "handlers.TopExamScore": {
+            "type": "object",
+            "required": [
+                "git_user_repo_url",
+                "judge_time",
+                "message",
+                "point",
+                "question_id",
+                "score"
+            ],
+            "properties": {
+                "git_user_repo_url": {
+                    "type": "string",
+                    "example": "owner/repo"
+                },
+                "judge_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Scored successfully"
+                },
+                "point": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "question_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "score": {
+                    "type": "number",
+                    "example": 100
                 }
             }
         },

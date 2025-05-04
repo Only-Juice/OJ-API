@@ -476,6 +476,20 @@ func RemoveQuestionFromExam(c *gin.Context) {
 	})
 }
 
+type TopExamScore struct {
+	QuestionID     int       `json:"question_id" example:"1" validate:"required"`
+	GitUserRepoURL string    `json:"git_user_repo_url" example:"owner/repo" validate:"required"`
+	Score          float64   `json:"score" example:"100" validate:"required"`
+	Point          int       `json:"point" example:"100" validate:"required"`
+	Message        string    `json:"message" example:"Scored successfully" validate:"required"`
+	JudgeTime      time.Time `json:"judge_time" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339" validate:"required"`
+}
+
+type GetTopExamScoreResponseData struct {
+	ScoresCount int            `json:"scores_count" validate:"required"`
+	Scores      []TopExamScore `json:"scores" validate:"required"`
+}
+
 // Get the top scores of each question in the exam for a specific user
 // @Summary      Get top scores for each question in an exam
 // @Description  Retrieve the top scores for each question in a specific exam for a user
@@ -484,7 +498,7 @@ func RemoveQuestionFromExam(c *gin.Context) {
 // @Param        id path string true "Exam ID"
 // @Param			page	query	int	false	"page number of results to return (1-based)"
 // @Param			limit	query	int	false	"page size of results. Default is 10."
-// @Success		200	{object}	ResponseHTTP{data=GetTopScoreResponseData}
+// @Success		200	{object}	ResponseHTTP{data=GetTopExamScoreResponseData}
 // @Failure		400
 // @Failure		401
 // @Failure		404
@@ -496,7 +510,6 @@ func GetTopExamScore(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
 
 	id := c.Param("id")
-
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset := (page - 1) * limit
@@ -518,13 +531,13 @@ func GetTopExamScore(c *gin.Context) {
 		return
 	}
 
-	var scores []TopScore
+	var scores []TopExamScore
 	if err := db.Model(&models.UserQuestionTable{}).
-		Joins("UQR").
-		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
-		Where("question_id IN (SELECT question_id FROM exam_questions WHERE exam_id = ?)", id).
-		Where("user_id = ?", jwtClaims.UserID).
-		Order("question_id, score DESC").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN exam_questions EQ ON UQR.question_id = EQ.question_id").
+		Select("DISTINCT ON (UQR.question_id) UQR.question_id, git_user_repo_url, score, message, judge_time, EQ.point").
+		Where("UQR.user_id = ?", jwtClaims.UserID).
+		Order("UQR.question_id, score DESC").
 		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
@@ -554,9 +567,100 @@ func GetTopExamScore(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Successfully retrieved top scores",
-		Data: GetTopScoreResponseData{
+		Data: GetTopExamScoreResponseData{
 			Scores:      scores,
 			ScoresCount: int(totalCount),
+		},
+	})
+}
+
+// GetExamLeaderboard retrieves the leaderboard for an exam
+// @Summary      	Get the leaderboard for an exam
+// @Description  	Retrieve the leaderboard for a specific exam
+// @Tags         	Exam
+// @Accept			json
+// @Produce		json
+// @Param        	id path string true "Exam ID"
+// @Param        	page query int false "Page number of results to return (1-based)"
+// @Param        	limit query int false "Page size of results. Default is 10."
+// @Success		200	{object}	ResponseHTTP{data=GetLeaderboardResponseData}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Router			/api/exams/{id}/leaderboard [get]
+func GetExamLeaderboard(c *gin.Context) {
+	db := database.DBConn
+
+	id := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	var totalCount int64
+	if err := db.Table(`(
+			SELECT 
+				UQR.user_id AS user_id, 
+				MAX(user_question_tables.score) AS max_score, 
+				UQR.question_id
+			FROM user_question_tables
+			JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
+			JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
+			WHERE EQ.exam_id = ?
+			GROUP BY UQR.user_id, UQR.question_id, EQ.point
+		) AS subquery`, id).
+		Count(&totalCount).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count scores",
+		})
+		return
+	}
+	var scores []LeaderboardScore
+	if err := db.Table(`(
+			SELECT 
+				UQR.user_id AS user_id, 
+				MAX(user_question_tables.score) / 100 * EQ.point AS max_score, 
+				UQR.question_id
+			FROM user_question_tables
+			JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
+			JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
+			WHERE EQ.exam_id = ?
+			GROUP BY UQR.user_id, UQR.question_id, EQ.point
+		) AS subquery`, id).
+		Joins("JOIN users ON users.id = subquery.user_id").
+		Select("CASE WHEN users.is_public THEN users.user_name ELSE CONCAT('User_', users.id) END AS user_name, SUM(max_score) AS score").
+		Group("users.user_name, users.is_public, users.id").
+		Order("score DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&scores).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Score not found",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get leaderboard",
+		})
+		return
+	}
+	if len(scores) == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "No scores found",
+		})
+		return
+	}
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Successfully retrieved leaderboard",
+		Data: GetLeaderboardResponseData{
+			Count:  int(totalCount),
+			Scores: scores,
 		},
 	})
 }

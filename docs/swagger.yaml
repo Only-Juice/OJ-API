@@ -483,6 +483,18 @@ definitions:
     - scores
     - scores_count
     type: object
+  handlers.GetTopExamScoreResponseData:
+    properties:
+      scores:
+        items:
+          $ref: '#/definitions/handlers.TopExamScore'
+        type: array
+      scores_count:
+        type: integer
+    required:
+    - scores
+    - scores_count
+    type: object
   handlers.GetTopScoreResponseData:
     properties:
       scores:
@@ -606,6 +618,34 @@ definitions:
         type: integer
       waiting_count:
         type: integer
+    type: object
+  handlers.TopExamScore:
+    properties:
+      git_user_repo_url:
+        example: owner/repo
+        type: string
+      judge_time:
+        example: 2006-01-02T15:04:05Z07:00
+        type: string
+      message:
+        example: Scored successfully
+        type: string
+      point:
+        example: 100
+        type: integer
+      question_id:
+        example: 1
+        type: integer
+      score:
+        example: 100
+        type: number
+    required:
+    - git_user_repo_url
+    - judge_time
+    - message
+    - point
+    - question_id
+    - score
     type: object
   handlers.TopScore:
     properties:
@@ -890,6 +930,48 @@ paths:
       summary: Update an existing exam
       tags:
       - Exam
+  /api/exams/{id}/leaderboard:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the leaderboard for a specific exam
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: Page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetLeaderboardResponseData'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      summary: Get the leaderboard for an exam
+      tags:
+      - Exam
   /api/exams/{id}/questions:
     get:
       description: Retrieve all questions associated with a specific exam
@@ -1027,7 +1109,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/handlers.GetTopScoreResponseData'
+                  $ref: '#/definitions/handlers.GetTopExamScoreResponseData'
               type: object
         "400":
           description: Bad Request
