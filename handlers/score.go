@@ -705,9 +705,17 @@ func GetAllScore(c *gin.Context) {
 	})
 }
 
+type QuestionScore struct {
+	QuestionID     int     `json:"question_id" example:"1" validate:"required"`
+	QuestionTitle  string  `json:"question_title" example:"Two Sum" validate:"required"`
+	GitUserRepoURL string  `json:"git_user_repo_url" example:"owner/repo" validate:"required"`
+	Score          float64 `json:"score" example:"100" validate:"required"`
+}
+
 type LeaderboardScore struct {
-	UserName string  `json:"user_name" example:"owner" validate:"required"`
-	Score    float64 `json:"score" example:"100" validate:"required"`
+	UserName       string          `json:"user_name" example:"owner" validate:"required"`
+	TotalScore     float64         `json:"total_score" example:"200" validate:"required"`
+	QuestionScores []QuestionScore `json:"question_scores" validate:"required"`
 }
 
 type GetLeaderboardResponseData struct {
@@ -737,60 +745,121 @@ func GetLeaderboard(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset := (page - 1) * limit
 
+	// Get total count of users who have scores
 	var totalCount int64
-	if err := db.Table("(SELECT UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id " +
-		"FROM user_question_tables " +
-		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
-		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
-		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
-		Select("user_id, SUM(max_score) AS score").
-		Group("user_id").
+	if err := db.Table("(SELECT DISTINCT user_id FROM user_question_relations " +
+		"JOIN user_question_tables ON user_question_relations.id = user_question_tables.uqr_id " +
+		"WHERE question_id NOT IN (SELECT question_id FROM exam_questions)) AS t").
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
-			Message: "Failed to count scores",
+			Message: "Failed to count users with scores",
 		})
 		return
 	}
-	var scores []LeaderboardScore
+
+	// Get users with their total scores
+	type UserWithTotalScore struct {
+		UserID     uint    `json:"user_id"`
+		UserName   string  `json:"user_name"`
+		IsPublic   bool    `json:"is_public"`
+		TotalScore float64 `json:"total_score"`
+	}
+
+	var usersWithScores []UserWithTotalScore
 	if err := db.Table("(SELECT UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id " +
 		"FROM user_question_tables " +
 		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
+		"WHERE question_id NOT IN (SELECT question_id FROM exam_questions) " +
 		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
-		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Joins("JOIN users ON users.id = subquery.user_id").
-		Select("CASE WHEN users.is_public THEN users.user_name ELSE CONCAT('User_', users.id) END AS user_name, SUM(max_score) AS score").
-		Group("users.user_name, users.is_public, users.id").
-		Order("score DESC").
+		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
+		Group("users.id, users.user_name, users.is_public").
+		Order("total_score DESC").
 		Offset(offset).
 		Limit(limit).
-		Find(&scores).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, ResponseHTTP{
-				Success: false,
-				Message: "Score not found",
-			})
-			return
-		}
+		Find(&usersWithScores).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
-			Message: "Failed to get leaderboard",
+			Message: "Failed to get leaderboard users",
 		})
 		return
 	}
-	if len(scores) == 0 {
+
+	if len(usersWithScores) == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "No scores found",
 		})
 		return
 	}
+
+	// Get all user IDs to fetch their question scores
+	var userIDs []uint
+	for _, u := range usersWithScores {
+		userIDs = append(userIDs, u.UserID)
+	}
+
+	// Query for individual question scores for these users
+	type QuestionScoreDetail struct {
+		UserID         uint    `json:"user_id"`
+		QuestionID     int     `json:"question_id"`
+		QuestionTitle  string  `json:"question_title"`
+		GitUserRepoURL string  `json:"git_user_repo_url"`
+		Score          float64 `json:"score"`
+	}
+
+	var questionScores []QuestionScoreDetail
+	subquery := db.Model(&models.UserQuestionTable{}).
+		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, UQR.git_user_repo_url").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Where("UQR.user_id IN ?", userIDs).
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
+		Group("UQR.user_id, UQR.question_id, UQR.git_user_repo_url")
+
+	if err := db.Table("(?) AS sq", subquery).
+		Joins("JOIN questions ON questions.id = sq.question_id").
+		Select("sq.user_id, sq.question_id, questions.title AS question_title, sq.git_user_repo_url AS git_user_repo_url, sq.score").
+		Find(&questionScores).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get question scores",
+		})
+		return
+	}
+
+	// Map to organize question scores by user
+	userQuestionScores := make(map[uint][]QuestionScore)
+	for _, qs := range questionScores {
+		userQuestionScores[qs.UserID] = append(userQuestionScores[qs.UserID], QuestionScore{
+			QuestionID:     qs.QuestionID,
+			QuestionTitle:  qs.QuestionTitle,
+			GitUserRepoURL: qs.GitUserRepoURL,
+			Score:          qs.Score,
+		})
+	}
+
+	// Assemble the final leaderboard response
+	var leaderboardScores []LeaderboardScore
+	for _, user := range usersWithScores {
+		userName := user.UserName
+		if !user.IsPublic {
+			userName = fmt.Sprintf("User_%d", user.UserID)
+		}
+
+		leaderboardScores = append(leaderboardScores, LeaderboardScore{
+			UserName:       userName,
+			TotalScore:     user.TotalScore,
+			QuestionScores: userQuestionScores[user.UserID],
+		})
+	}
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Successfully retrieved leaderboard",
 		Data: GetLeaderboardResponseData{
 			Count:  int(totalCount),
-			Scores: scores,
+			Scores: leaderboardScores,
 		},
 	})
 }

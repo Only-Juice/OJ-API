@@ -571,15 +571,40 @@ definitions:
     type: object
   handlers.LeaderboardScore:
     properties:
-      score:
-        example: 100
+      question_scores:
+        items:
+          $ref: '#/definitions/handlers.QuestionScore'
+        type: array
+      total_score:
+        example: 200
         type: number
       user_name:
         example: owner
         type: string
     required:
-    - score
+    - question_scores
+    - total_score
     - user_name
+    type: object
+  handlers.QuestionScore:
+    properties:
+      git_user_repo_url:
+        example: owner/repo
+        type: string
+      question_id:
+        example: 1
+        type: integer
+      question_title:
+        example: Two Sum
+        type: string
+      score:
+        example: 100
+        type: number
+    required:
+    - git_user_repo_url
+    - question_id
+    - question_title
+    - score
     type: object
   handlers.ResetUserPasswordDTO:
     properties:

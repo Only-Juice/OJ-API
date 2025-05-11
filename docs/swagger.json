@@ -3065,17 +3065,51 @@
         "handlers.LeaderboardScore": {
             "type": "object",
             "required": [
-                "score",
+                "question_scores",
+                "total_score",
                 "user_name"
             ],
             "properties": {
-                "score": {
+                "question_scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.QuestionScore"
+                    }
+                },
+                "total_score": {
                     "type": "number",
-                    "example": 100
+                    "example": 200
                 },
                 "user_name": {
                     "type": "string",
                     "example": "owner"
+                }
+            }
+        },
+        "handlers.QuestionScore": {
+            "type": "object",
+            "required": [
+                "git_user_repo_url",
+                "question_id",
+                "question_title",
+                "score"
+            ],
+            "properties": {
+                "git_user_repo_url": {
+                    "type": "string",
+                    "example": "owner/repo"
+                },
+                "question_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "question_title": {
+                    "type": "string",
+                    "example": "Two Sum"
+                },
+                "score": {
+                    "type": "number",
+                    "example": 100
                 }
             }
         },

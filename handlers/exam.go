@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -597,70 +598,141 @@ func GetExamLeaderboard(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset := (page - 1) * limit
 
+	// Check if exam exists
+	var exam models.Exam
+	if err := db.First(&exam, id).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Exam not found",
+		})
+		return
+	}
+
+	// Get total count of users who have scores for this exam
 	var totalCount int64
-	if err := db.Table(`(
-			SELECT 
-				UQR.user_id AS user_id, 
-				MAX(user_question_tables.score) AS max_score, 
-				UQR.question_id
-			FROM user_question_tables
-			JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
-			JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
-			WHERE EQ.exam_id = ?
-			GROUP BY UQR.user_id, UQR.question_id, EQ.point
-		) AS subquery`, id).
+	if err := db.Table("(SELECT DISTINCT user_id FROM user_question_relations "+
+		"JOIN user_question_tables ON user_question_relations.id = user_question_tables.uqr_id "+
+		"JOIN exam_questions ON user_question_relations.question_id = exam_questions.question_id "+
+		"WHERE exam_questions.exam_id = ?) AS t", id).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
-			Message: "Failed to count scores",
+			Message: "Failed to count users with scores",
 		})
 		return
 	}
-	var scores []LeaderboardScore
+
+	// Get users with their total scores for this exam
+	type UserWithTotalScore struct {
+		UserID     uint    `json:"user_id"`
+		UserName   string  `json:"user_name"`
+		IsPublic   bool    `json:"is_public"`
+		TotalScore float64 `json:"total_score"`
+	}
+
+	var usersWithScores []UserWithTotalScore
 	if err := db.Table(`(
-			SELECT 
-				UQR.user_id AS user_id, 
-				MAX(user_question_tables.score) / 100 * EQ.point AS max_score, 
-				UQR.question_id
-			FROM user_question_tables
-			JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
-			JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
-			WHERE EQ.exam_id = ?
-			GROUP BY UQR.user_id, UQR.question_id, EQ.point
-		) AS subquery`, id).
+        SELECT 
+            UQR.user_id AS user_id, 
+            MAX(user_question_tables.score) / 100 * EQ.point AS max_score, 
+            UQR.question_id
+        FROM user_question_tables
+        JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
+        JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
+        WHERE EQ.exam_id = ?
+        GROUP BY UQR.user_id, UQR.question_id, EQ.point
+    ) AS subquery`, id).
 		Joins("JOIN users ON users.id = subquery.user_id").
-		Select("CASE WHEN users.is_public THEN users.user_name ELSE CONCAT('User_', users.id) END AS user_name, SUM(max_score) AS score").
-		Group("users.user_name, users.is_public, users.id").
-		Order("score DESC").
+		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
+		Group("users.id, users.user_name, users.is_public").
+		Order("total_score DESC").
 		Offset(offset).
 		Limit(limit).
-		Find(&scores).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, ResponseHTTP{
-				Success: false,
-				Message: "Score not found",
-			})
-			return
-		}
+		Find(&usersWithScores).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
-			Message: "Failed to get leaderboard",
+			Message: "Failed to get exam leaderboard users",
 		})
 		return
 	}
-	if len(scores) == 0 {
+
+	if len(usersWithScores) == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
-			Message: "No scores found",
+			Message: "No scores found for this exam",
 		})
 		return
 	}
+
+	// Get all user IDs to fetch their question scores
+	var userIDs []uint
+	for _, u := range usersWithScores {
+		userIDs = append(userIDs, u.UserID)
+	}
+
+	// Query for individual question scores for these users
+	type QuestionScoreDetail struct {
+		UserID         uint    `json:"user_id"`
+		QuestionID     int     `json:"question_id"`
+		QuestionTitle  string  `json:"question_title"`
+		GitUserRepoURL string  `json:"git_user_repo_url"`
+		Score          float64 `json:"score"`
+		Point          int     `json:"point"`
+		WeightedScore  float64 `json:"weighted_score"`
+	}
+
+	var questionScores []QuestionScoreDetail
+	subquery := db.Model(&models.UserQuestionTable{}).
+		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, UQR.git_user_repo_url, EQ.point").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN exam_questions EQ ON UQR.question_id = EQ.question_id").
+		Where("UQR.user_id IN ?", userIDs).
+		Where("EQ.exam_id = ?", id).
+		Group("UQR.user_id, UQR.question_id, UQR.git_user_repo_url, EQ.point")
+
+	if err := db.Table("(?) AS sq", subquery).
+		Joins("JOIN questions ON questions.id = sq.question_id").
+		Select("sq.user_id, sq.question_id, questions.title AS question_title, sq.git_user_repo_url, sq.score, sq.point, (sq.score / 100 * sq.point) AS weighted_score").
+		Find(&questionScores).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get question scores",
+		})
+		return
+	}
+
+	// Map to organize question scores by user
+	userQuestionScores := make(map[uint][]QuestionScore)
+	for _, qs := range questionScores {
+		userQuestionScores[qs.UserID] = append(userQuestionScores[qs.UserID], QuestionScore{
+			QuestionID:     qs.QuestionID,
+			QuestionTitle:  qs.QuestionTitle,
+			GitUserRepoURL: qs.GitUserRepoURL,
+			Score:          qs.WeightedScore,
+		})
+	}
+
+	// Assemble the final leaderboard response
+	var leaderboardScores []LeaderboardScore
+	for _, user := range usersWithScores {
+		userName := user.UserName
+		if !user.IsPublic {
+			userName = fmt.Sprintf("User_%d", user.UserID)
+		}
+
+		leaderboardScores = append(leaderboardScores, LeaderboardScore{
+			UserName:       userName,
+			TotalScore:     user.TotalScore,
+			QuestionScores: userQuestionScores[user.UserID],
+		})
+	}
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
-		Message: "Successfully retrieved leaderboard",
+		Message: "Successfully retrieved exam leaderboard",
 		Data: GetLeaderboardResponseData{
 			Count:  int(totalCount),
-			Scores: scores,
+			Scores: leaderboardScores,
 		},
 	})
 }
