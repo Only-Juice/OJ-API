@@ -79,6 +79,9 @@ func RegisterRoutes(r *gin.Engine) {
 	// Routes
 	api := r.Group("/api")
 	{
+		// Admin routes
+		api.POST("/admin/user/:id/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
+
 		// Exam routes
 		api.POST("/exams", AuthMiddleware(), handlers.CreateExam)
 		api.GET("/exams/:id", AuthMiddleware(), handlers.GetExam)
@@ -123,5 +126,6 @@ func RegisterRoutes(r *gin.Engine) {
 		// User routes
 		api.GET("/user", AuthMiddleware(), handlers.GetUser)
 		api.POST("/user/is_public", AuthMiddleware(), handlers.PostUserIsPublic)
+		api.POST("/user/change_password", AuthMiddleware(), handlers.ChangeUserPassword)
 	}
 }

@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/utils"
 	"net/http"
 
+	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
 )
 
@@ -121,5 +123,104 @@ func GetUser(c *gin.Context) {
 			Email:    user.Email,
 			IsPublic: user.IsPublic,
 		},
+	})
+}
+
+type ChangeUserPasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
+// Change User Password
+// @Summary Change user password
+// @Description Change user password
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param request body ChangeUserPasswordRequest true "ChangeUserPasswordRequest"
+// @Success 200 {object} ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/user/change_password [post]
+func ChangeUserPassword(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+
+	request := ChangeUserPasswordRequest{}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	client_check, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetBasicAuth(jwtClaims.Username, request.OldPassword),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	_, _, err = client_check.GetMyUserInfo()
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to authenticate with Gitea",
+		})
+		return
+	}
+
+	// Find Admin user
+	var adminUser models.User
+	if err := db.First(&adminUser, models.User{
+		IsAdmin: true,
+	}).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+	// Update password
+	token, err := utils.GetToken(adminUser.ID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	_, err = client.AdminEditUser(jwtClaims.Username, gitea.EditUserOption{
+		LoginName: jwtClaims.Username,
+		Password:  request.NewPassword,
+	})
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Message: "Password changed successfully",
 	})
 }

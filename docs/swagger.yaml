@@ -380,6 +380,16 @@ definitions:
           type: string
         type: array
     type: object
+  handlers.ChangeUserPasswordRequest:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
   handlers.CreatePublicKey:
     properties:
       key:
@@ -571,6 +581,13 @@ definitions:
     - score
     - user_name
     type: object
+  handlers.ResetUserPasswordDTO:
+    properties:
+      password:
+        type: string
+    required:
+    - password
+    type: object
   handlers.ResponseHTTP:
     properties:
       data: {}
@@ -756,6 +773,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_admin:
+        type: boolean
       is_public:
         type: boolean
       user_name:
@@ -767,6 +786,42 @@ info:
   title: OJ-PoC API
   version: "1.0"
 paths:
+  /api/admin/user/{id}/reset_password:
+    post:
+      consumes:
+      - application/json
+      description: Reset the password of a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.ResetUserPasswordDTO'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Reset user password
+      tags:
+      - admin
   /api/exams:
     get:
       description: Retrieve a list of all exams
@@ -1897,6 +1952,38 @@ paths:
       security:
       - BearerAuth: []
       summary: Get user info
+      tags:
+      - User
+  /api/user/change_password:
+    post:
+      consumes:
+      - application/json
+      description: Change user password
+      parameters:
+      - description: ChangeUserPasswordRequest
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangeUserPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Change user password
       tags:
       - User
   /api/user/is_public:

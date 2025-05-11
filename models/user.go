@@ -7,4 +7,5 @@ type User struct {
 	Email      string `gorm:"size:450;not null" json:"email"`
 	IsPublic   bool   `gorm:"default:true;not null" json:"is_public"`
 	GiteaToken string `gorm:"size:450" json:"gitea_token"`
+	IsAdmin    bool   `gorm:"default:false;not null" json:"is_admin"`
 }

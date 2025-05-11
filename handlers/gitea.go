@@ -137,6 +137,9 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 		})
 		return
 	}
+	db.Model(&existingUser).Updates(models.User{
+		IsAdmin: giteaUser.IsAdmin,
+	})
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
