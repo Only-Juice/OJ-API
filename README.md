@@ -1,5 +1,7 @@
 # OJ-API
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Only-Juice/OJ-API)
+
 ## Introduction
 OJ-API is a powerful and flexible API designed to handle various operations. This README will guide you through the process of building and running the OJ-API using Docker.
 
