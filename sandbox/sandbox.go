@@ -66,17 +66,12 @@ func (s *Sandbox) ProcessingCount() int {
 }
 
 func (s *Sandbox) Cleanup() {
-	for {
-		item := s.AvailableBoxIDs.Dequeue()
-		if item == nil {
-			break
-		}
-		boxID := item.(int)
-		cmd := exec.Command("isolate", "--cleanup", fmt.Sprintf("-b %v", boxID))
-		fmt.Printf("Cleaning up box %v\n", boxID)
+	for i := 0; i < s.sandboxCount; i++ {
+		cmd := exec.Command("isolate", "-b", fmt.Sprintf("%v", i), "--cleanup")
+		fmt.Printf("Cleaning up box %v\n", i)
 		err := cmd.Run()
 		if err != nil {
-			fmt.Printf("Error cleaning up box %v: %v\n", boxID, err)
+			fmt.Printf("Error cleaning up box %v: %v\n", i, err)
 		}
 	}
 }

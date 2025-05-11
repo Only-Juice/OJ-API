@@ -55,6 +55,12 @@ Navigate to the project directory and run the application:
 go run main.go
 ```
 
+```
+export GO111MODULE=on
+go mod tidy
+go build -o main main.go
+```
+
 ## Notes
 
 - Ensure all dependencies are installed correctly before running the application.

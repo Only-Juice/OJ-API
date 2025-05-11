@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"test/sandbox"
-
+	"fmt"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +16,13 @@ func main() {
 	copyDir("example", codePath)
 	os.Chmod(codePath, 0777)
 	defer os.RemoveAll(codePath)
-	sandbox.SandboxPtr.RunShellCommand([]byte("/usr/bin/cat text.txt"), []byte(codePath))
+
+	compile_bash := `#!/bin/bash
+	g++ outtest.cpp -o outtest`
+	execute_bash := `#!/bin/bash
+	./outtest`
+
+	fmt.Println(sandbox.SandboxPtr.RunShellCommand([]byte(compile_bash),[]byte(execute_bash), []byte(codePath)))
 }
 
 // copyDir copies the contents of the source directory to the destination directory.
