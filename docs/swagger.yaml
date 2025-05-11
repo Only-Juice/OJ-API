@@ -406,6 +406,39 @@ definitions:
     - read_only
     - title
     type: object
+  handlers.EnhancedGetLeaderboardResponseData:
+    properties:
+      count:
+        type: integer
+      scores:
+        items:
+          $ref: '#/definitions/handlers.EnhancedLeaderboardScore'
+        type: array
+    type: object
+  handlers.EnhancedLeaderboardScore:
+    properties:
+      question_scores:
+        items:
+          $ref: '#/definitions/handlers.EnhancedQuestionScore'
+        type: array
+      total_score:
+        type: number
+      user_name:
+        type: string
+    type: object
+  handlers.EnhancedQuestionScore:
+    properties:
+      git_user_repo_url:
+        type: string
+      question_id:
+        type: integer
+      question_title:
+        type: string
+      score:
+        type: number
+      weighted_score:
+        type: number
+    type: object
   handlers.ExamListData:
     properties:
       description:
@@ -1163,7 +1196,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/handlers.GetLeaderboardResponseData'
+                  $ref: '#/definitions/handlers.EnhancedGetLeaderboardResponseData'
               type: object
         "400":
           description: Bad Request

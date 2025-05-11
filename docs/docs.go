@@ -591,7 +591,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handlers.GetLeaderboardResponseData"
+                                            "$ref": "#/definitions/handlers.EnhancedGetLeaderboardResponseData"
                                         }
                                     }
                                 }
@@ -2825,6 +2825,57 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "Public Key"
+                }
+            }
+        },
+        "handlers.EnhancedGetLeaderboardResponseData": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.EnhancedLeaderboardScore"
+                    }
+                }
+            }
+        },
+        "handlers.EnhancedLeaderboardScore": {
+            "type": "object",
+            "properties": {
+                "question_scores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.EnhancedQuestionScore"
+                    }
+                },
+                "total_score": {
+                    "type": "number"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.EnhancedQuestionScore": {
+            "type": "object",
+            "properties": {
+                "git_user_repo_url": {
+                    "type": "string"
+                },
+                "question_id": {
+                    "type": "integer"
+                },
+                "question_title": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
+                },
+                "weighted_score": {
+                    "type": "number"
                 }
             }
         },

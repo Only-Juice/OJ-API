@@ -575,6 +575,25 @@ func GetTopExamScore(c *gin.Context) {
 	})
 }
 
+type EnhancedQuestionScore struct {
+	QuestionID     int     `json:"question_id"`
+	QuestionTitle  string  `json:"question_title"`
+	GitUserRepoURL string  `json:"git_user_repo_url"`
+	Score          float64 `json:"score"`
+	WeightedScore  float64 `json:"weighted_score"`
+}
+
+type EnhancedLeaderboardScore struct {
+	UserName       string                  `json:"user_name"`
+	TotalScore     float64                 `json:"total_score"`
+	QuestionScores []EnhancedQuestionScore `json:"question_scores"`
+}
+
+type EnhancedGetLeaderboardResponseData struct {
+	Count  int                        `json:"count"`
+	Scores []EnhancedLeaderboardScore `json:"scores"`
+}
+
 // GetExamLeaderboard retrieves the leaderboard for an exam
 // @Summary      	Get the leaderboard for an exam
 // @Description  	Retrieve the leaderboard for a specific exam
@@ -584,7 +603,7 @@ func GetTopExamScore(c *gin.Context) {
 // @Param        	id path string true "Exam ID"
 // @Param        	page query int false "Page number of results to return (1-based)"
 // @Param        	limit query int false "Page size of results. Default is 10."
-// @Success		200	{object}	ResponseHTTP{data=GetLeaderboardResponseData}
+// @Success		200	{object}	ResponseHTTP{data=EnhancedGetLeaderboardResponseData}
 // @Failure		400
 // @Failure		401
 // @Failure		404
@@ -702,25 +721,26 @@ func GetExamLeaderboard(c *gin.Context) {
 	}
 
 	// Map to organize question scores by user
-	userQuestionScores := make(map[uint][]QuestionScore)
+	userQuestionScores := make(map[uint][]EnhancedQuestionScore)
 	for _, qs := range questionScores {
-		userQuestionScores[qs.UserID] = append(userQuestionScores[qs.UserID], QuestionScore{
+		userQuestionScores[qs.UserID] = append(userQuestionScores[qs.UserID], EnhancedQuestionScore{
 			QuestionID:     qs.QuestionID,
 			QuestionTitle:  qs.QuestionTitle,
 			GitUserRepoURL: qs.GitUserRepoURL,
-			Score:          qs.WeightedScore,
+			Score:          qs.Score,
+			WeightedScore:  qs.WeightedScore,
 		})
 	}
 
-	// Assemble the final leaderboard response
-	var leaderboardScores []LeaderboardScore
+	// Assemble the final leaderboard response with the enhanced structure
+	var leaderboardScores []EnhancedLeaderboardScore
 	for _, user := range usersWithScores {
 		userName := user.UserName
 		if !user.IsPublic {
 			userName = fmt.Sprintf("User_%d", user.UserID)
 		}
 
-		leaderboardScores = append(leaderboardScores, LeaderboardScore{
+		leaderboardScores = append(leaderboardScores, EnhancedLeaderboardScore{
 			UserName:       userName,
 			TotalScore:     user.TotalScore,
 			QuestionScores: userQuestionScores[user.UserID],
@@ -730,7 +750,7 @@ func GetExamLeaderboard(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Successfully retrieved exam leaderboard",
-		Data: GetLeaderboardResponseData{
+		Data: EnhancedGetLeaderboardResponseData{
 			Count:  int(totalCount),
 			Scores: leaderboardScores,
 		},
