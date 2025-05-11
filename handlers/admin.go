@@ -197,3 +197,82 @@ func GetAllUserInfo(c *gin.Context) {
 		Message: "User info retrieved successfully",
 	})
 }
+
+type UpdateUserInfoDTO struct {
+	Enable   bool `json:"enable"`
+	IsPublic bool `json:"is_public"`
+}
+
+// UpdateUserInfo updates the user information
+// @Summary Update user information
+// @Description Update the user information (partially or fully)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param user body UpdateUserInfoDTO false "User information"
+// @Success      200 {object} ResponseHTTP{data=models.User}
+// @Failure      400
+// @Failure      401
+// @Failure      403
+// @Failure      500
+// @Router /api/admin/user/{id} [patch]
+// @Security BearerAuth
+func UpdateUserInfo(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	db := database.DBConn
+	id := c.Param("id")
+	var user models.User
+	if err := db.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	var updateUserInfoDTO map[string]interface{}
+	if err := c.ShouldBindJSON(&updateUserInfoDTO); err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	// Only update fields that are present in the request
+	if enable, ok := updateUserInfoDTO["enable"]; ok {
+		if enableBool, ok := enable.(bool); ok {
+			user.Enable = enableBool
+		}
+	}
+
+	if isPublic, ok := updateUserInfoDTO["is_public"]; ok {
+		if isPublicBool, ok := isPublic.(bool); ok {
+			user.IsPublic = isPublicBool
+		}
+	}
+
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user info",
+		})
+		return
+	}
+
+	user.GiteaToken = "" // Remove sensitive gitea_token field
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Data:    user,
+		Message: "User info updated successfully",
+	})
+}

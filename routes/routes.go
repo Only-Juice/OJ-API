@@ -83,6 +83,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/admin/user/:id/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
 		api.GET("/admin/user", AuthMiddleware(), handlers.GetAllUserInfo)
 		api.GET("/admin/user/:id", AuthMiddleware(), handlers.GetUserInfo)
+		api.PATCH("/admin/user/:id", AuthMiddleware(), handlers.UpdateUserInfo)
 
 		// Exam routes
 		api.POST("/exams", AuthMiddleware(), handlers.CreateExam)
