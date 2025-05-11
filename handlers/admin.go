@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
@@ -99,5 +100,100 @@ func ResetUserPassword(c *gin.Context) {
 			Password: passwordHash,
 		},
 		Message: "Password reset successfully",
+	})
+}
+
+// GetUserInfo shows the user information
+// @Summary Get user information
+// @Description Get the user information
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success      200 {object} ResponseHTTP{data=models.User}
+// @Failure      400
+// @Failure      401
+// @Failure      403
+// @Failure      500
+// @Router /api/admin/user/{id} [get]
+// @Security BearerAuth
+func GetUserInfo(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	db := database.DBConn
+	id := c.Param("id")
+	var user models.User
+	if err := db.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	// Remove sensitive gitea_token field
+	user.GiteaToken = ""
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Data:    user,
+		Message: "User info retrieved successfully",
+	})
+}
+
+// GetAllUserInfo shows all user information
+// @Summary Get all user information
+// @Description Get all user information
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param			page	query	int		false	"page number of results to return (1-based)"
+// @Param			limit	query	int		false	"page size of results. Default is 10."
+// @Success      200 {object} ResponseHTTP{data=[]models.User}
+// @Failure      400
+// @Failure      401
+// @Failure      403
+// @Failure      500
+// @Router /api/admin/user [get]
+// @Security BearerAuth
+func GetAllUserInfo(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	db := database.DBConn
+	var users []models.User
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	offset := (page - 1) * limit
+
+	if err := db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	// Remove sensitive gitea_token field from all users
+	for i := range users {
+		users[i].GiteaToken = ""
+	}
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Data:    users,
+		Message: "User info retrieved successfully",
 	})
 }
