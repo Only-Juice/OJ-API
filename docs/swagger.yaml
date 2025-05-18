@@ -333,6 +333,28 @@ definitions:
     - title
     - uqr_id
     type: object
+  handlers.AddQuestionRequest:
+    properties:
+      description:
+        example: Question Description
+        type: string
+      end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      git_repo_url:
+        example: user_name/repo_name
+        type: string
+      start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      title:
+        example: Question Title
+        type: string
+    required:
+    - description
+    - git_repo_url
+    - title
+    type: object
   handlers.BasicAuthentication:
     properties:
       password:
@@ -1581,6 +1603,42 @@ paths:
       summary: Get a list of questions
       tags:
       - Question
+    post:
+      consumes:
+      - application/json
+      description: Add a question
+      parameters:
+      - description: Question object
+        in: body
+        name: question
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddQuestionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Question'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Add a question
+      tags:
+      - Question
   /api/question/{UQR_ID}:
     get:
       consumes:
@@ -1618,6 +1676,41 @@ paths:
       tags:
       - Question
   /api/question/id/{ID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a question
+      parameters:
+      - description: ID of the Question to delete
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Question'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Delete a question
+      tags:
+      - Question
     get:
       consumes:
       - application/json
@@ -1645,6 +1738,83 @@ paths:
         "503":
           description: Service Unavailable
       summary: Get a question by ID
+      tags:
+      - Question
+    patch:
+      consumes:
+      - application/json
+      description: Update a question
+      parameters:
+      - description: Question object
+        in: body
+        name: question
+        required: true
+        schema:
+          $ref: '#/definitions/models.Question'
+      - description: ID of the Question to update
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Question'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Update a question
+      tags:
+      - Question
+  /api/question/testscript/{ID}:
+    get:
+      consumes:
+      - application/json
+      description: Get the test script for a question
+      parameters:
+      - description: ID of the Question to get the test script for
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.QuestionTestScript'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get the test script for a question
       tags:
       - Question
   /api/question/user:

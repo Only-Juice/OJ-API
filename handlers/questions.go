@@ -7,6 +7,7 @@ import (
 	"OJ-API/utils"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -393,5 +394,246 @@ func GetUserQuestionByID(c *gin.Context) {
 			},
 			UQR_ID: uqr.ID,
 		},
+	})
+}
+
+type AddQuestionRequest struct {
+	Title       string    `json:"title" validate:"required" example:"Question Title"`
+	Description string    `json:"description" validate:"required" example:"Question Description"`
+	GitRepoURL  string    `json:"git_repo_url" validate:"required" example:"user_name/repo_name"`
+	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+}
+
+// AddQuestion is a function to add a question
+// @Summary		Add a question
+// @Description	Add a question
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			question	body		AddQuestionRequest	true	"Question object"
+// @Success		200		{object}	ResponseHTTP{data=models.Question}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Router			/api/question [post]
+// @Security		BearerAuth
+func AddQuestion(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	var question AddQuestionRequest
+	if err := c.ShouldBindJSON(&question); err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to parse question",
+		})
+		return
+	}
+
+	if err := db.Create(&models.Question{
+		Title:       question.Title,
+		Description: question.Description,
+		GitRepoURL:  question.GitRepoURL,
+		StartTime:   question.StartTime,
+		EndTime:     question.EndTime,
+	}).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to create question",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question created successfully",
+		Data:    question,
+	})
+}
+
+// PatchQuestion is a function to update a question
+// @Summary		Update a question
+// @Description	Update a question
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			question	body		models.Question	true	"Question object"
+// @Param			ID		path		int				true	"ID of the Question to update"
+// @Success		200		{object}	ResponseHTTP{data=models.Question}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Router			/api/question/id/{ID} [patch]
+// @Security		BearerAuth
+func PatchQuestion(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	IDstr := c.Param("ID")
+	ID, err := strconv.Atoi(IDstr)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	var question models.Question
+	if err := db.Where("id = ?", ID).First(&question).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&question); err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to parse question",
+		})
+		return
+	}
+
+	if err := db.Save(&question).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update question",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question updated successfully",
+		Data:    question,
+	})
+}
+
+// DeleteQuestion is a function to delete a question
+// @Summary		Delete a question
+// @Description	Delete a question
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			ID	path	int	true	"ID of the Question to delete"
+// @Success		200		{object}	ResponseHTTP{data=models.Question}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Router			/api/question/id/{ID} [delete]
+// @Security		BearerAuth
+func DeleteQuestion(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	IDstr := c.Param("ID")
+	ID, err := strconv.Atoi(IDstr)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	var question models.Question
+	if err := db.Where("id = ?", ID).First(&question).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	if err := db.Delete(&question).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to delete question",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question deleted successfully",
+		Data:    question,
+	})
+}
+
+// GetQuestionTestScript is a function to get the test script for a question
+// @Summary		Get the test script for a question
+// @Description	Get the test script for a question
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			ID	path	int	true	"ID of the Question to get the test script for"
+// @Success		200		{object}	ResponseHTTP{data=models.QuestionTestScript}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Router			/api/question/testscript/{ID} [get]
+// @Security		BearerAuth
+func GetQuestionTestScript(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	IDstr := c.Param("ID")
+	ID, err := strconv.Atoi(IDstr)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	var questionTestScript models.QuestionTestScript
+	if err := db.Where("question_id = ?", ID).First(&questionTestScript).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question test script not found",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question test script fetched successfully",
+		Data:    questionTestScript,
 	})
 }
