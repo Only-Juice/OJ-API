@@ -661,6 +661,13 @@ definitions:
     - question_title
     - score
     type: object
+  handlers.QuestionTestScript:
+    properties:
+      test_script:
+        type: string
+    required:
+    - test_script
+    type: object
   handlers.ResetUserPasswordDTO:
     properties:
       password:
@@ -1781,7 +1788,7 @@ paths:
       summary: Update a question
       tags:
       - Question
-  /api/question/testscript/{ID}:
+  /api/question/test_script/{ID}:
     get:
       consumes:
       - application/json
@@ -1802,7 +1809,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/models.QuestionTestScript'
+                  $ref: '#/definitions/handlers.QuestionTestScript'
               type: object
         "400":
           description: Bad Request

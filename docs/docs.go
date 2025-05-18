@@ -1455,7 +1455,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question/testscript/{ID}": {
+        "/api/question/test_script/{ID}": {
             "get": {
                 "security": [
                     {
@@ -1494,7 +1494,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.QuestionTestScript"
+                                            "$ref": "#/definitions/handlers.QuestionTestScript"
                                         }
                                     }
                                 }
@@ -3447,6 +3447,17 @@ const docTemplate = `{
                 "score": {
                     "type": "number",
                     "example": 100
+                }
+            }
+        },
+        "handlers.QuestionTestScript": {
+            "type": "object",
+            "required": [
+                "test_script"
+            ],
+            "properties": {
+                "test_script": {
+                    "type": "string"
                 }
             }
         },

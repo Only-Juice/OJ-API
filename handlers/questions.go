@@ -612,6 +612,10 @@ func DeleteQuestion(c *gin.Context) {
 	})
 }
 
+type QuestionTestScript struct {
+	TestScript string `json:"test_script" validate:"required"`
+}
+
 // GetQuestionTestScript is a function to get the test script for a question
 // @Summary		Get the test script for a question
 // @Description	Get the test script for a question
@@ -619,12 +623,12 @@ func DeleteQuestion(c *gin.Context) {
 // @Accept			json
 // @Produce		json
 // @Param			ID	path	int	true	"ID of the Question to get the test script for"
-// @Success		200		{object}	ResponseHTTP{data=models.QuestionTestScript}
+// @Success		200		{object}	ResponseHTTP{data=QuestionTestScript}
 // @Failure		400
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/testscript/{ID} [get]
+// @Router			/api/question/test_script/{ID} [get]
 // @Security		BearerAuth
 func GetQuestionTestScript(c *gin.Context) {
 	db := database.DBConn
@@ -659,6 +663,8 @@ func GetQuestionTestScript(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question test script fetched successfully",
-		Data:    questionTestScript,
+		Data: QuestionTestScript{
+			TestScript: questionTestScript.TestScript,
+		},
 	})
 }
