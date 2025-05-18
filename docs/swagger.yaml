@@ -1750,7 +1750,7 @@ paths:
         name: question
         required: true
         schema:
-          $ref: '#/definitions/models.Question'
+          $ref: '#/definitions/handlers.AddQuestionRequest'
       - description: ID of the Question to update
         in: path
         name: ID

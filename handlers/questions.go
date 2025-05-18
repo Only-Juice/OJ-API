@@ -460,13 +460,21 @@ func AddQuestion(c *gin.Context) {
 	})
 }
 
+type PatchQuestionRequest struct {
+	Title       string    `json:"title" example:"Question Title"`
+	Description string    `json:"description" example:"Question Description"`
+	GitRepoURL  string    `json:"git_repo_url" example:"user_name/repo_name"`
+	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+}
+
 // PatchQuestion is a function to update a question
 // @Summary		Update a question
 // @Description	Update a question
 // @Tags			Question
 // @Accept			json
 // @Produce		json
-// @Param			question	body		models.Question	true	"Question object"
+// @Param			question	body		AddQuestionRequest	true	"Question object"
 // @Param			ID		path		int				true	"ID of the Question to update"
 // @Success		200		{object}	ResponseHTTP{data=models.Question}
 // @Failure		400
@@ -505,12 +513,29 @@ func PatchQuestion(c *gin.Context) {
 		return
 	}
 
-	if err := c.ShouldBindJSON(&question); err != nil {
+	var updateQuestion PatchQuestionRequest
+	if err := c.ShouldBindJSON(&updateQuestion); err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to parse question",
 		})
 		return
+	}
+
+	if updateQuestion.Title != "" {
+		question.Title = updateQuestion.Title
+	}
+	if updateQuestion.Description != "" {
+		question.Description = updateQuestion.Description
+	}
+	if updateQuestion.GitRepoURL != "" {
+		question.GitRepoURL = updateQuestion.GitRepoURL
+	}
+	if !updateQuestion.StartTime.IsZero() {
+		question.StartTime = updateQuestion.StartTime
+	}
+	if !updateQuestion.EndTime.IsZero() {
+		question.EndTime = updateQuestion.EndTime
 	}
 
 	if err := db.Save(&question).Error; err != nil {
