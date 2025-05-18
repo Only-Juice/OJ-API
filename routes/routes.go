@@ -74,7 +74,20 @@ func RegisterRoutes(r *gin.Engine) {
 	r.Use(gin.Recovery())
 
 	// Swagger documentation
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.DefaultModelsExpandDepth(0)))
+	// Place specific routes before the catch-all route to avoid conflicts
+	// Redirect /swagger and /swagger/ to the Swagger documentation index
+	r.GET("/swagger", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
+	// Catch-all route for Swagger endpoints
+	r.GET("/swagger/*any", func(c *gin.Context) {
+		// Skip processing if the path is exactly "/swagger/"
+		if c.Param("any") == "" || c.Param("any") == "/" {
+			c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+			return
+		}
+		ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.DefaultModelsExpandDepth(0))(c)
+	})
 
 	// Routes
 	api := r.Group("/api")
