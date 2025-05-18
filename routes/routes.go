@@ -70,6 +70,17 @@ func RegisterRoutes(r *gin.Engine) {
 		c.Next()
 	})
 
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, handlers.ResponseHTTP{
+			Success: true,
+			Message: "Welcome to the OJ API. Swagger documentation is available at /swagger/index.html",
+			Data: map[string]string{
+				"swagger_url": "/swagger",
+				"api_url":     "/api",
+			},
+		})
+	})
+
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
