@@ -3334,6 +3334,9 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_admin": {
+                    "type": "boolean"
+                },
                 "is_public": {
                     "type": "boolean"
                 },

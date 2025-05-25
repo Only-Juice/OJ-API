@@ -83,6 +83,7 @@ type GetUserData struct {
 	Enable   bool   `json:"enable"`
 	Email    string `json:"email"`
 	IsPublic bool   `json:"is_public"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 // Get User Info
@@ -122,6 +123,7 @@ func GetUser(c *gin.Context) {
 			Enable:   user.Enable,
 			Email:    user.Email,
 			IsPublic: user.IsPublic,
+			IsAdmin:  user.IsAdmin,
 		},
 	})
 }
