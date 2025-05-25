@@ -54,10 +54,20 @@ func PostSandboxCmd(c *gin.Context) {
 	if err := db.Joins("Question").
 		Where("git_repo_url = ?", cmd.SourceGitRepo).
 		Take(&existingCmd).Error; err != nil {
-		// If the script does not exist, create a new one
+		// Check if the question exists first
+		var question models.Question
+		if err := db.Where("git_repo_url = ?", cmd.SourceGitRepo).First(&question).Error; err != nil {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: fmt.Sprintf("Question with repo %s not found", cmd.SourceGitRepo),
+			})
+			return
+		}
+		
+		// If we get here, the question exists but doesn't have a test script
 		existingCmd = models.QuestionTestScript{
-			Question:   models.Question{GitRepoURL: cmd.SourceGitRepo},
-			TestScript: cmd.Script,
+			QuestionID:  question.ID,
+			TestScript:  cmd.Script,
 		}
 		db.Create(&existingCmd)
 	} else {

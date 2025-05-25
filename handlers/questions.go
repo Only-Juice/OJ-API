@@ -439,6 +439,16 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
+	// Check if question with same GitRepoURL already exists
+	var existingQuestion models.Question
+	if err := db.Where("git_repo_url = ?", question.GitRepoURL).First(&existingQuestion).Error; err == nil {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Question with this GitRepoURL already exists",
+		})
+		return
+	}
+
 	if err := db.Create(&models.Question{
 		Title:       question.Title,
 		Description: question.Description,
