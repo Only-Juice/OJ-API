@@ -31,6 +31,7 @@ type GetQuestionListResponseData struct {
 // @Produce		json
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
+// @Param			status	query	string	false	"Filter by question status: 'all', 'active', or 'expired'. Default is 'all'."
 // @Success		200		{object}	ResponseHTTP{data=[]GetQuestionListResponseData}
 // @Failure		404
 // @Failure		503
@@ -47,24 +48,67 @@ func GetQuestionList(c *gin.Context) {
 	// Parse query parameters for pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	status := c.DefaultQuery("status", "all") // all, active, expired
 
 	// Calculate offset
 	offset := (page - 1) * limit
 
+	// Build base query
+	baseQuery := db.Model(&models.Question{}).
+		Where("id NOT IN (SELECT question_id FROM exam_questions)")
+
+	// Add status filter
+	now := time.Now()
+	switch status {
+	case "active":
+		baseQuery = baseQuery.Where("start_time <= ? AND end_time >= ?", now, now)
+	case "expired":
+		baseQuery = baseQuery.Where("end_time < ?", now)
+		// "all" doesn't add any additional filter
+	}
+
 	var totalQuestions int64
-	db.Model(&models.Question{}).
-		Where("id NOT IN (SELECT question_id FROM exam_questions)").
-		Count(&totalQuestions)
+	baseQuery.Count(&totalQuestions)
+
 	var questions []_GetQuestionListQuestionData
 
+	// Build select query with sorting
+	selectQuery := "questions.*, CASE WHEN user_question_relations.id IS NOT NULL THEN true ELSE false END AS has_question"
+	if userID == 0 {
+		selectQuery = "questions.*, false AS has_question"
+	}
+
+	// Sort by status: active questions first, then expired
+	orderClause := "CASE WHEN start_time <= '" + now.Format("2006-01-02 15:04:05") + "' AND end_time >= '" + now.Format("2006-01-02 15:04:05") + "' THEN 0 ELSE 1 END, start_time DESC, end_time ASC"
+
 	if userID != 0 {
-		db.Table("questions").Select("questions.*, CASE WHEN user_question_relations.id IS NOT NULL THEN true ELSE false END AS has_question").
+		query := db.Table("questions").Select(selectQuery).
 			Joins("LEFT JOIN user_question_relations ON questions.id = user_question_relations.question_id AND user_question_relations.user_id = ?", userID).
-			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)").
+			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)")
+
+		// Add status filter to main query
+		switch status {
+		case "active":
+			query = query.Where("questions.start_time <= ? AND questions.end_time >= ?", now, now)
+		case "expired":
+			query = query.Where("questions.end_time < ?", now)
+		}
+
+		query.Order(orderClause).
 			Offset(offset).Limit(limit).Scan(&questions)
 	} else {
-		db.Table("questions").Select("questions.*, false AS has_question").
-			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)").
+		query := db.Table("questions").Select(selectQuery).
+			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)")
+
+		// Add status filter to main query
+		switch status {
+		case "active":
+			query = query.Where("questions.start_time <= ? AND questions.end_time >= ?", now, now)
+		case "expired":
+			query = query.Where("questions.end_time < ?", now)
+		}
+
+		query.Order(orderClause).
 			Offset(offset).Limit(limit).Scan(&questions)
 	}
 

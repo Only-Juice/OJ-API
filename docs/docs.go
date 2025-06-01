@@ -1201,6 +1201,12 @@ const docTemplate = `{
                         "description": "page size of results. Default is 10.",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by question status: 'all', 'active', or 'expired'. Default is 'all'.",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
