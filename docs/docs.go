@@ -898,6 +898,18 @@ const docTemplate = `{
                             ]
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -1161,7 +1173,12 @@ const docTemplate = `{
         },
         "/api/question": {
             "get": {
-                "description": "Get a list of questions",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of questions. Authentication is optional - if authenticated, shows user's question status.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1171,7 +1188,7 @@ const docTemplate = `{
                 "tags": [
                     "Question"
                 ],
-                "summary": "Get a list of questions",
+                "summary": "Get a list of questions [Optional Authentication]",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1183,6 +1200,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "page size of results. Default is 10.",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by question status: 'all', 'active', or 'expired'. Default is 'all'.",
+                        "name": "status",
                         "in": "query"
                     }
                 ],
@@ -3236,7 +3259,7 @@ const docTemplate = `{
                 "questions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.Question"
+                        "$ref": "#/definitions/handlers._GetQuestionListQuestionData"
                     }
                 }
             }
@@ -3649,6 +3672,34 @@ const docTemplate = `{
                 },
                 "sender": {
                     "$ref": "#/definitions/gitea.User"
+                }
+            }
+        },
+        "handlers._GetQuestionListQuestionData": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "git_repo_url": {
+                    "type": "string"
+                },
+                "has_question": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },

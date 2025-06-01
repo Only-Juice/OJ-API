@@ -14,25 +14,38 @@ import (
 	"OJ-API/utils"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(required ...bool) gin.HandlerFunc {
+	isRequired := true
+	if len(required) > 0 {
+		isRequired = required[0]
+	}
+
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-				Success: false,
-				Message: "Missing Authorization header",
-			})
-			c.Abort()
+			if isRequired {
+				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Missing Authorization header",
+				})
+				c.Abort()
+				return
+			}
+			c.Next()
 			return
 		}
 
 		const bearerPrefix = "Bearer "
 		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-			c.JSON(http.StatusBadRequest, handlers.ResponseHTTP{
-				Success: false,
-				Message: "Invalid Authorization header format",
-			})
-			c.Abort()
+			if isRequired {
+				c.JSON(http.StatusBadRequest, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Invalid Authorization header format",
+				})
+				c.Abort()
+				return
+			}
+			c.Next()
 			return
 		}
 
@@ -40,11 +53,15 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		jwtClaims, err := utils.ParseJWT(jwt)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-				Success: false,
-				Message: "Invalid JWT",
-			})
-			c.Abort()
+			if isRequired {
+				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Invalid JWT",
+				})
+				c.Abort()
+				return
+			}
+			c.Next()
 			return
 		}
 
@@ -134,7 +151,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/gitea/user/keys", AuthMiddleware(), handlers.PostCreatePublicKeyGitea)
 
 		// Question routes
-		api.GET("/question", handlers.GetQuestionList)
+		api.GET("/question", AuthMiddleware(false), handlers.GetQuestionList)
 		api.GET("/question/id/:ID", handlers.GetQuestionByID)
 		api.GET("/question/user", AuthMiddleware(), handlers.GetUsersQuestions)
 		api.GET("/question/user/id/:ID", AuthMiddleware(), handlers.GetUserQuestionByID)

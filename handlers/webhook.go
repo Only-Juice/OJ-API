@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,8 @@ type WebhookPayload struct {
 //	@Produce		json
 //	@Param			hook	body		WebhookPayload	true	"Gitea Hook"
 //	@Success		200		{object}	ResponseHTTP{type=WebhookPayload}
+//	@Failure		403		{object}	ResponseHTTP{}
+//	@Failure		410		{object}	ResponseHTTP{}
 //	@Failure		503		{object}	ResponseHTTP{}
 //	@Router			/api/gitea [post]
 func PostGiteaHook(c *gin.Context) {
@@ -58,6 +61,24 @@ func PostGiteaHook(c *gin.Context) {
 		}
 		db.Create(&existingQuestion)
 	}
+
+	// Check if current time is within the allowed testing period
+	now := time.Now()
+	if !existingQuestion.StartTime.IsZero() && now.Before(existingQuestion.StartTime) {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Testing period has not started yet",
+		})
+		return
+	}
+	if !existingQuestion.EndTime.IsZero() && now.After(existingQuestion.EndTime) {
+		c.JSON(410, ResponseHTTP{
+			Success: false,
+			Message: "Testing period has ended",
+		})
+		return
+	}
+
 	var existingUser models.User
 	if err := db.Where(&models.User{UserName: payload.Pusher.UserName}).First(&existingUser).Error; err != nil {
 		existingUser = models.User{

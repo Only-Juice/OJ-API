@@ -13,40 +13,105 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type _GetQuestionListQuestionData struct {
+	models.Question
+	HasQuestion bool `json:"has_question"`
+}
+
 type GetQuestionListResponseData struct {
-	QuestionCount int               `json:"question_count" validate:"required"`
-	Questions     []models.Question `json:"questions" validate:"required"`
+	QuestionCount int                            `json:"question_count" validate:"required"`
+	Questions     []_GetQuestionListQuestionData `json:"questions" validate:"required"`
 }
 
 // GetQuestionList is a function to get a list of questions
-// @Summary		Get a list of questions
-// @Description	Get a list of questions
+// @Summary		Get a list of questions [Optional Authentication]
+// @Description	Get a list of questions. Authentication is optional - if authenticated, shows user's question status.
 // @Tags			Question
 // @Accept			json
 // @Produce		json
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
+// @Param			status	query	string	false	"Filter by question status: 'all', 'active', or 'expired'. Default is 'all'."
 // @Success		200		{object}	ResponseHTTP{data=[]GetQuestionListResponseData}
 // @Failure		404
 // @Failure		503
 // @Router			/api/question [get]
+// @Security		BearerAuth
 func GetQuestionList(c *gin.Context) {
 	db := database.DBConn
+	jwtClaim, ok := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	var userID uint
+	if ok && jwtClaim != nil {
+		userID = jwtClaim.UserID
+	}
 
 	// Parse query parameters for pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	status := c.DefaultQuery("status", "all") // all, active, expired
 
 	// Calculate offset
 	offset := (page - 1) * limit
 
+	// Build base query
+	baseQuery := db.Model(&models.Question{}).
+		Where("id NOT IN (SELECT question_id FROM exam_questions)")
+
+	// Add status filter
+	now := time.Now()
+	switch status {
+	case "active":
+		baseQuery = baseQuery.Where("start_time <= ? AND end_time >= ?", now, now)
+	case "expired":
+		baseQuery = baseQuery.Where("end_time < ?", now)
+		// "all" doesn't add any additional filter
+	}
+
 	var totalQuestions int64
-	db.Model(&models.Question{}).
-		Where("id NOT IN (SELECT question_id FROM exam_questions)").
-		Count(&totalQuestions)
-	var questions []models.Question
-	db.Where("id NOT IN (SELECT question_id FROM exam_questions)").
-		Offset(offset).Limit(limit).Find(&questions)
+	baseQuery.Count(&totalQuestions)
+
+	var questions []_GetQuestionListQuestionData
+
+	// Build select query with sorting
+	selectQuery := "questions.*, CASE WHEN user_question_relations.id IS NOT NULL THEN true ELSE false END AS has_question"
+	if userID == 0 {
+		selectQuery = "questions.*, false AS has_question"
+	}
+
+	// Sort by status: active questions first, then expired
+	orderClause := "CASE WHEN start_time <= '" + now.Format("2006-01-02 15:04:05") + "' AND end_time >= '" + now.Format("2006-01-02 15:04:05") + "' THEN 0 ELSE 1 END, start_time DESC, end_time ASC"
+
+	if userID != 0 {
+		query := db.Table("questions").Select(selectQuery).
+			Joins("LEFT JOIN user_question_relations ON questions.id = user_question_relations.question_id AND user_question_relations.user_id = ?", userID).
+			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)")
+
+		// Add status filter to main query
+		switch status {
+		case "active":
+			query = query.Where("questions.start_time <= ? AND questions.end_time >= ?", now, now)
+		case "expired":
+			query = query.Where("questions.end_time < ?", now)
+		}
+
+		query.Order(orderClause).
+			Offset(offset).Limit(limit).Scan(&questions)
+	} else {
+		query := db.Table("questions").Select(selectQuery).
+			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)")
+
+		// Add status filter to main query
+		switch status {
+		case "active":
+			query = query.Where("questions.start_time <= ? AND questions.end_time >= ?", now, now)
+		case "expired":
+			query = query.Where("questions.end_time < ?", now)
+		}
+
+		query.Order(orderClause).
+			Offset(offset).Limit(limit).Scan(&questions)
+	}
+
 	if len(questions) == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: true,

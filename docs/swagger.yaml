@@ -311,6 +311,25 @@ definitions:
     - VisibleTypePublic
     - VisibleTypeLimited
     - VisibleTypePrivate
+  handlers._GetQuestionListQuestionData:
+    properties:
+      description:
+        type: string
+      end_time:
+        example: 2006-01-02T15:04:05Z07:00
+        type: string
+      git_repo_url:
+        type: string
+      has_question:
+        type: boolean
+      id:
+        type: integer
+      start_time:
+        example: 2006-01-02T15:04:05Z07:00
+        type: string
+      title:
+        type: string
+    type: object
   handlers._GetUsersQuestionsResponseData:
     properties:
       description:
@@ -511,7 +530,7 @@ definitions:
         type: integer
       questions:
         items:
-          $ref: '#/definitions/models.Question'
+          $ref: '#/definitions/handlers._GetQuestionListQuestionData'
         type: array
     required:
     - question_count
@@ -1416,6 +1435,14 @@ paths:
                 type:
                   $ref: '#/definitions/handlers.WebhookPayload'
               type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "410":
+          description: Gone
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
         "503":
           description: Service Unavailable
           schema:
@@ -1581,7 +1608,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a list of questions
+      description: Get a list of questions. Authentication is optional - if authenticated,
+        shows user's question status.
       parameters:
       - description: page number of results to return (1-based)
         in: query
@@ -1591,6 +1619,11 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: 'Filter by question status: ''all'', ''active'', or ''expired''.
+          Default is ''all''.'
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:
@@ -1609,7 +1642,9 @@ paths:
           description: Not Found
         "503":
           description: Service Unavailable
-      summary: Get a list of questions
+      security:
+      - BearerAuth: []
+      summary: Get a list of questions [Optional Authentication]
       tags:
       - Question
     post:
