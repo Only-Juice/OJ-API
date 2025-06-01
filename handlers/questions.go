@@ -13,14 +13,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type _GetQuestionListQuestionData struct {
+	models.Question
+	HasQuestion bool `json:"has_question"`
+}
+
 type GetQuestionListResponseData struct {
-	QuestionCount int               `json:"question_count" validate:"required"`
-	Questions     []models.Question `json:"questions" validate:"required"`
+	QuestionCount int                            `json:"question_count" validate:"required"`
+	Questions     []_GetQuestionListQuestionData `json:"questions" validate:"required"`
 }
 
 // GetQuestionList is a function to get a list of questions
-// @Summary		Get a list of questions
-// @Description	Get a list of questions
+// @Summary		Get a list of questions [Optional Authentication]
+// @Description	Get a list of questions. Authentication is optional - if authenticated, shows user's question status.
 // @Tags			Question
 // @Accept			json
 // @Produce		json
@@ -30,8 +35,14 @@ type GetQuestionListResponseData struct {
 // @Failure		404
 // @Failure		503
 // @Router			/api/question [get]
+// @Security		BearerAuth
 func GetQuestionList(c *gin.Context) {
 	db := database.DBConn
+	jwtClaim, ok := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	var userID uint
+	if ok && jwtClaim != nil {
+		userID = jwtClaim.UserID
+	}
 
 	// Parse query parameters for pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -44,9 +55,19 @@ func GetQuestionList(c *gin.Context) {
 	db.Model(&models.Question{}).
 		Where("id NOT IN (SELECT question_id FROM exam_questions)").
 		Count(&totalQuestions)
-	var questions []models.Question
-	db.Where("id NOT IN (SELECT question_id FROM exam_questions)").
-		Offset(offset).Limit(limit).Find(&questions)
+	var questions []_GetQuestionListQuestionData
+
+	if userID != 0 {
+		db.Table("questions").Select("questions.*, CASE WHEN user_question_relations.id IS NOT NULL THEN true ELSE false END AS has_question").
+			Joins("LEFT JOIN user_question_relations ON questions.id = user_question_relations.question_id AND user_question_relations.user_id = ?", userID).
+			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)").
+			Offset(offset).Limit(limit).Scan(&questions)
+	} else {
+		db.Table("questions").Select("questions.*, false AS has_question").
+			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)").
+			Offset(offset).Limit(limit).Scan(&questions)
+	}
+
 	if len(questions) == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: true,
