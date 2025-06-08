@@ -126,21 +126,26 @@ func PostGiteaHook(c *gin.Context) {
 		log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
 		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
 		token, err := utils.GetToken(existingUser.ID)
+		var cloneOptions *git.CloneOptions
 		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to get token: %v", err),
-			})
-			return
+			// Try without token if getting token fails
+			log.Printf("Failed to get token, attempting clone without authentication: %v", err)
+			cloneOptions = &git.CloneOptions{
+				URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
+				Progress: os.Stdout,
+			}
+		} else {
+			cloneOptions = &git.CloneOptions{
+				URL: "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
+				Auth: &http.BasicAuth{
+					Username: existingUser.UserName,
+					Password: token,
+				},
+				Progress: os.Stdout,
+			}
 		}
-		repo, err := git.PlainClone(codePath, false, &git.CloneOptions{
-			URL: "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
-			Auth: &http.BasicAuth{
-				Username: existingUser.UserName,
-				Password: token,
-			},
-			Progress: os.Stdout,
-		})
+
+		repo, err := git.PlainClone(codePath, false, cloneOptions)
 		if err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
