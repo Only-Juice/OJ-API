@@ -128,12 +128,12 @@ func PostGiteaHook(c *gin.Context) {
 		token, err := utils.GetToken(existingUser.ID)
 		var cloneOptions *git.CloneOptions
 		if err != nil {
-			// Try without token if getting token fails
-			log.Printf("Failed to get token, attempting clone without authentication: %v", err)
-			cloneOptions = &git.CloneOptions{
-				URL:      "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
-				Progress: os.Stdout,
-			}
+			log.Printf("Failed to get token: %v", err)
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to get token: %v", err),
+			})
+			return
 		} else {
 			cloneOptions = &git.CloneOptions{
 				URL: "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
