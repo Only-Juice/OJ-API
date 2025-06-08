@@ -26,3 +26,5 @@ go.work.sum
 
 server
 .DS_Store
+
+coverage.html
