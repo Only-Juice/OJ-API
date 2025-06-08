@@ -16,6 +16,8 @@ require (
 	gorm.io/gorm v1.25.12
 )
 
+require github.com/changkun/lockfree v0.0.1 // indirect
+
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/42wim/httpsig v1.2.2 // indirect
