@@ -140,7 +140,7 @@ func AuthBasic(c *gin.Context) {
 
 	// Store refresh token in database
 	db.Model(&existingUser).Updates(models.User{
-		IsAdmin: giteaUser.IsAdmin,
+		IsAdmin:      giteaUser.IsAdmin,
 		RefreshToken: refreshToken,
 	})
 
@@ -176,6 +176,13 @@ func RefreshToken(c *gin.Context) {
 			c.JSON(401, ResponseHTTP{
 				Success: false,
 				Message: "No refresh token provided",
+			})
+			return
+		}
+		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+			c.JSON(401, ResponseHTTP{
+				Success: false,
+				Message: "Invalid authorization header format",
 			})
 			return
 		}
