@@ -41,6 +41,7 @@ func AuthBasic(c *gin.Context) {
 	}
 
 	var client *gitea.Client
+	var err error
 	if account.Token != "" {
 		client, err = gitea.NewClient(config.GetGiteaBaseURL(),
 			gitea.SetToken(account.Token),
