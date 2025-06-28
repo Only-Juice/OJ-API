@@ -57,18 +57,12 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 		// Validate access token specifically
 		jwtClaims, err := utils.ValidateAccessToken(jwt)
 		if err != nil {
-			// Try parsing as any token for backward compatibility
-			jwtClaims, err = utils.ParseJWT(jwt)
-			if err != nil {
-				if isRequired {
-					c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-						Success: false,
-						Message: "Invalid access token",
-					})
-					c.Abort()
-					return
-				}
-				c.Next()
+			if isRequired {
+				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Invalid access token",
+				})
+				c.Abort()
 				return
 			}
 		}
