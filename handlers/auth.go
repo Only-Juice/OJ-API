@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -39,7 +40,7 @@ func AuthBasic(c *gin.Context) {
 		return
 	}
 
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetBasicAuth(account.Username, account.Password),
 		gitea.SetToken(account.Token),
 	)
@@ -96,7 +97,7 @@ func AuthBasic(c *gin.Context) {
 	}
 
 	// Check if the token is valid
-	client_check, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client_check, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(tokenString),
 	)
 	if err != nil {

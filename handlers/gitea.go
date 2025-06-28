@@ -40,7 +40,7 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 		return
 	}
 
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetBasicAuth(account.Username, account.Password),
 	)
 	if err != nil {
@@ -96,7 +96,7 @@ func PostBasicAuthenticationGitea(c *gin.Context) {
 	}
 
 	// Check if the token is valid
-	client_check, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client_check, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(tokenString),
 	)
 	if err != nil {
@@ -200,7 +200,7 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {
@@ -275,7 +275,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {
@@ -397,7 +397,7 @@ func GetUserProfileGitea(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {
@@ -454,7 +454,7 @@ func PostCreatePublicKeyGitea(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {

@@ -160,7 +160,7 @@ func ChangeUserPassword(c *gin.Context) {
 		return
 	}
 
-	client_check, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client_check, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetBasicAuth(jwtClaims.Username, request.OldPassword),
 	)
 	if err != nil {
@@ -200,7 +200,7 @@ func ChangeUserPassword(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {
