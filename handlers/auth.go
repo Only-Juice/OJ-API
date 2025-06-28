@@ -247,7 +247,7 @@ func Logout(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {
 		authHeader := c.GetHeader("Authorization")
-		if len(authHeader) >= 7 {
+		if strings.HasPrefix(authHeader, "Bearer ") {
 			refreshToken = authHeader[7:] // Remove "Bearer " prefix
 		}
 	}
