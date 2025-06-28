@@ -12,19 +12,25 @@ import (
 	"OJ-API/utils"
 )
 
-// Use basic authentication to access the Gitea API
+type LoginRequest struct {
+	Username string `json:"username" example:"username"`
+	Password string `json:"password" example:"password"`
+	Token    string `json:"token" example:""` // Optional token for API access
+}
+
+// Use basic authentication or token to access the Gitea API
 // @Summary	User login with username and password
-// @Description Use basic authentication to login and get access token and refresh token
+// @Description Use basic authentication or token to login and get access token and refresh token
 // @Tags		Auth
 // @Accept		json
 // @Produce	json
-// @Param		BasicAuthentication	body		BasicAuthentication	true	"Basic Authentication"
+// @Param		LoginRequest	body		LoginRequest	true	"Login Request"
 // @Success	200		{object}	ResponseHTTP{} "Return access token and refresh token"
 // @Failure	503
 // @Router		/api/auth/login [post]
 func AuthBasic(c *gin.Context) {
 	db := database.DBConn
-	account := new(BasicAuthentication)
+	account := new(LoginRequest)
 	if err := c.ShouldBindJSON(account); err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -35,6 +41,7 @@ func AuthBasic(c *gin.Context) {
 
 	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
 		gitea.SetBasicAuth(account.Username, account.Password),
+		gitea.SetToken(account.Token),
 	)
 	if err != nil {
 		c.JSON(503, ResponseHTTP{

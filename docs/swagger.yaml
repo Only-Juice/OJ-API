@@ -662,6 +662,19 @@ definitions:
     - total_score
     - user_name
     type: object
+  handlers.LoginRequest:
+    properties:
+      password:
+        example: password
+        type: string
+      token:
+        description: Optional token for API access
+        example: ""
+        type: string
+      username:
+        example: username
+        type: string
+    type: object
   handlers.QuestionScore:
     properties:
       git_user_repo_url:
@@ -1058,15 +1071,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Use basic authentication to login and get access token and refresh
-        token
+      description: Use basic authentication or token to login and get access token
+        and refresh token
       parameters:
-      - description: Basic Authentication
+      - description: Login Request
         in: body
-        name: BasicAuthentication
+        name: LoginRequest
         required: true
         schema:
-          $ref: '#/definitions/handlers.BasicAuthentication'
+          $ref: '#/definitions/handlers.LoginRequest'
       produces:
       - application/json
       responses:

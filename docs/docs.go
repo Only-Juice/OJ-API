@@ -275,7 +275,7 @@ const docTemplate = `{
         },
         "/api/auth/login": {
             "post": {
-                "description": "Use basic authentication to login and get access token and refresh token",
+                "description": "Use basic authentication or token to login and get access token and refresh token",
                 "consumes": [
                     "application/json"
                 ],
@@ -288,12 +288,12 @@ const docTemplate = `{
                 "summary": "User login with username and password",
                 "parameters": [
                     {
-                        "description": "Basic Authentication",
-                        "name": "BasicAuthentication",
+                        "description": "Login Request",
+                        "name": "LoginRequest",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.BasicAuthentication"
+                            "$ref": "#/definitions/handlers.LoginRequest"
                         }
                     }
                 ],
@@ -3547,6 +3547,24 @@ const docTemplate = `{
                 "user_name": {
                     "type": "string",
                     "example": "owner"
+                }
+            }
+        },
+        "handlers.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "password"
+                },
+                "token": {
+                    "description": "Optional token for API access",
+                    "type": "string",
+                    "example": ""
+                },
+                "username": {
+                    "type": "string",
+                    "example": "username"
                 }
             }
         },
