@@ -273,6 +273,107 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/auth/login": {
+            "post": {
+                "description": "Use basic authentication to login and get access token and refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User login with username and password",
+                "parameters": [
+                    {
+                        "description": "Basic Authentication",
+                        "name": "BasicAuthentication",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BasicAuthentication"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return access token and refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "description": "Logout user and invalidate refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "Logout successful",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/refresh": {
+            "post": {
+                "description": "Use refresh token to get a new access token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refresh access token",
+                "responses": {
+                    "200": {
+                        "description": "Return new access token",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "503": {
+                        "description": "Server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
         "/api/exams": {
             "get": {
                 "description": "Retrieve a list of all exams",

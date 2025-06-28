@@ -21,12 +21,31 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		var jwt string
+
+		// First, try to get JWT from Authorization header
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			const bearerPrefix = "Bearer "
+			if len(authHeader) > len(bearerPrefix) && authHeader[:len(bearerPrefix)] == bearerPrefix {
+				jwt = authHeader[len(bearerPrefix):]
+			}
+		}
+
+		// If no JWT from header, try to get from access_token cookie
+		if jwt == "" {
+			cookie, err := c.Cookie("access_token")
+			if err == nil {
+				jwt = cookie
+			}
+		}
+
+		// If no JWT found and required, return unauthorized
+		if jwt == "" {
 			if isRequired {
 				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 					Success: false,
-					Message: "Missing Authorization header",
+					Message: "Missing Authorization header or access token cookie",
 				})
 				c.Abort()
 				return
@@ -35,34 +54,23 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 			return
 		}
 
-		const bearerPrefix = "Bearer "
-		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-			if isRequired {
-				c.JSON(http.StatusBadRequest, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Invalid Authorization header format",
-				})
-				c.Abort()
-				return
-			}
-			c.Next()
-			return
-		}
-
-		jwt := authHeader[len(bearerPrefix):]
-
-		jwtClaims, err := utils.ParseJWT(jwt)
+		// Validate access token specifically
+		jwtClaims, err := utils.ValidateAccessToken(jwt)
 		if err != nil {
-			if isRequired {
-				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Invalid JWT",
-				})
-				c.Abort()
+			// Try parsing as any token for backward compatibility
+			jwtClaims, err = utils.ParseJWT(jwt)
+			if err != nil {
+				if isRequired {
+					c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+						Success: false,
+						Message: "Invalid access token",
+					})
+					c.Abort()
+					return
+				}
+				c.Next()
 				return
 			}
-			c.Next()
-			return
 		}
 
 		ctx := context.WithValue(c.Request.Context(), models.JWTClaimsKey, jwtClaims)
@@ -120,6 +128,11 @@ func RegisterRoutes(r *gin.Engine) {
 	// Routes
 	api := r.Group("/api")
 	{
+		// Auth routes
+		api.POST("/auth/login", handlers.AuthBasic)
+		api.POST("/auth/refresh", handlers.RefreshToken)
+		api.POST("/auth/logout", handlers.Logout)
+
 		// Admin routes
 		api.POST("/admin/user/:id/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
 		api.GET("/admin/user", AuthMiddleware(), handlers.GetAllUserInfo)
