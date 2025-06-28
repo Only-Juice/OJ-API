@@ -3955,6 +3955,9 @@ const docTemplate = `{
                 "is_public": {
                     "type": "boolean"
                 },
+                "refresh_token": {
+                    "type": "string"
+                },
                 "user_name": {
                     "type": "string"
                 }

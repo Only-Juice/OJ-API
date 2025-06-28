@@ -138,8 +138,10 @@ func AuthBasic(c *gin.Context) {
 		return
 	}
 
+	// Store refresh token in database
 	db.Model(&existingUser).Updates(models.User{
 		IsAdmin: giteaUser.IsAdmin,
+		RefreshToken: refreshToken,
 	})
 
 	// Set both tokens as cookies
