@@ -7,9 +7,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
-	"os"
 	"sync"
 
+	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
 )
@@ -22,7 +22,7 @@ var (
 // getEncryptionKey returns the cached encryption key, initializing it if necessary
 func getEncryptionKey() string {
 	encryptionKeyOnce.Do(func() {
-		encryptionKey = os.Getenv("ENCRYPTION_KEY")
+		encryptionKey = config.Config("ENCRYPTION_KEY")
 	})
 	return encryptionKey
 }

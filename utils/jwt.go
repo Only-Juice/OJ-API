@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"os"
+	"OJ-API/config"
 	"sync"
 	"time"
 
@@ -16,7 +16,7 @@ var (
 // getJWTSecret returns the cached JWT secret, initializing it if necessary
 func getJWTSecret() string {
 	jwtSecretOnce.Do(func() {
-		jwtSecret = os.Getenv("JWT_SECRET")
+		jwtSecret = config.Config("JWT_SECRET")
 	})
 	return jwtSecret
 }
