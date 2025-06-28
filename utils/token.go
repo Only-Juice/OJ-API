@@ -8,10 +8,24 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync"
 
 	"OJ-API/database"
 	"OJ-API/models"
 )
+
+var (
+	encryptionKey     string
+	encryptionKeyOnce sync.Once
+)
+
+// getEncryptionKey returns the cached encryption key, initializing it if necessary
+func getEncryptionKey() string {
+	encryptionKeyOnce.Do(func() {
+		encryptionKey = os.Getenv("ENCRYPTION_KEY")
+	})
+	return encryptionKey
+}
 
 // DecodeBase64Key decodes the Base64-encoded encryption key
 func decodeBase64Key(encodedKey string) ([]byte, error) {
@@ -85,7 +99,7 @@ func DecryptToken(encryptedToken, key string) (string, error) {
 
 // StoreToken stores an encrypted token in the database
 func StoreToken(userID uint, token string) error {
-	encryptedToken, err := EncryptToken(token, os.Getenv("ENCRYPTION_KEY"))
+	encryptedToken, err := EncryptToken(token, getEncryptionKey())
 	if err != nil {
 		return err
 	}
@@ -102,5 +116,5 @@ func GetToken(userID uint) (string, error) {
 		return "", err
 	}
 
-	return DecryptToken(user.GiteaToken, os.Getenv("ENCRYPTION_KEY"))
+	return DecryptToken(user.GiteaToken, getEncryptionKey())
 }

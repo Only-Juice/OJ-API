@@ -2,10 +2,24 @@ package utils
 
 import (
 	"os"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+var (
+	jwtSecret     string
+	jwtSecretOnce sync.Once
+)
+
+// getJWTSecret returns the cached JWT secret, initializing it if necessary
+func getJWTSecret() string {
+	jwtSecretOnce.Do(func() {
+		jwtSecret = os.Getenv("JWT_SECRET")
+	})
+	return jwtSecret
+}
 
 type JWTClaims struct {
 	UserID    uint   `json:"user_id"`
@@ -29,8 +43,7 @@ func GenerateAccessToken(userID uint, username string, isAdmin bool) (string, er
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	jwtSecret := os.Getenv("JWT_SECRET")
-	return token.SignedString([]byte(jwtSecret))
+	return token.SignedString([]byte(getJWTSecret()))
 }
 
 // GenerateRefreshToken generates a long-lived refresh token (7 days)
@@ -47,8 +60,7 @@ func GenerateRefreshToken(userID uint, username string, isAdmin bool) (string, e
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	jwtSecret := os.Getenv("JWT_SECRET")
-	return token.SignedString([]byte(jwtSecret))
+	return token.SignedString([]byte(getJWTSecret()))
 }
 
 // GenerateTokens generates both access and refresh tokens
@@ -75,7 +87,7 @@ func GenerateJWT(userID uint, username string, isAdmin bool) (string, error) {
 func ParseJWT(tokenString string) (*JWTClaims, error) {
 	claims := &JWTClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return []byte(getJWTSecret()), nil
 	})
 	if err != nil {
 		return nil, err
