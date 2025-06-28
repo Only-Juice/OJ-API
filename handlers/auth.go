@@ -32,7 +32,7 @@ func setCrossDomainCookie(c *gin.Context, name, value string, maxAge int) {
 
 	cookieStr := fmt.Sprintf("%s=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=%s%s",
 		name, value, maxAge, sameSite, secure)
-	c.Header("Set-Cookie", cookieStr)
+	c.Writer.Header().Add("Set-Cookie", cookieStr)
 }
 
 type LoginRequest struct {
