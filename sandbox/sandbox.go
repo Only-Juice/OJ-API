@@ -10,8 +10,8 @@ import (
 )
 
 type Sandbox struct {
-	AvailableBoxIDs *lockfree.Queue
-	waitingQueue    *lockfree.Queue
+	AvailableBoxIDs *lockfree.Queue // Sandbox that can use
+	waitingQueue    *lockfree.Queue // Sandbox that executing code
 	jobQueue        *lockfree.Queue //Storing Unjudge job
 	sandboxCount    int
 }
