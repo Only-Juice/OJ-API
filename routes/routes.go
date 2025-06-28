@@ -72,16 +72,37 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 }
 
 func RegisterRoutes(r *gin.Engine) {
-	// Middleware to handle CORS
+	// Enhanced CORS middleware with comprehensive browser compatibility
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, Cookie")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "Set-Cookie")
+		origin := c.Request.Header.Get("Origin")
+		method := c.Request.Method
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+		// Handle CORS headers - set before any processing
+		// For credentials to work, we cannot use wildcard with specific origin
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		} else {
+			// Fallback for requests without Origin header
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			// Note: Cannot set credentials to true with wildcard origin
+		}
+
+		// Comprehensive headers for all browsers including Edge, Chrome, Firefox, Safari
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Accept-Language, Content-Language, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Origin, Cache-Control, X-Requested-With, Cookie, Set-Cookie, Access-Control-Allow-Origin, Access-Control-Allow-Credentials, Pragma, Expires, Last-Modified, If-Modified-Since, If-None-Match, ETag, Priority, Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Ch-Ua, Sec-Ch-Ua-Mobile, Sec-Ch-Ua-Platform, User-Agent, Referer")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Set-Cookie, Authorization, Content-Length, Content-Type, Cache-Control, ETag, Last-Modified, Expires")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
+		// Additional headers for browser compatibility
+		c.Writer.Header().Set("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
+
+		// Handle preflight OPTIONS requests immediately
+		if method == "OPTIONS" {
+			// Ensure all CORS headers are set for preflight
+			c.Writer.Header().Set("Content-Type", "text/plain")
+			c.Writer.Header().Set("Content-Length", "0")
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
