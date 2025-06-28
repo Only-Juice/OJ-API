@@ -266,7 +266,7 @@ func GetQuestion(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {
@@ -334,7 +334,7 @@ func GetQuestion(c *gin.Context) {
 func GetQuestionByID(c *gin.Context) {
 	db := database.DBConn
 
-	client, err := gitea.NewClient("http://" + config.Config("GIT_HOST"))
+	client, err := gitea.NewClient(config.GetGiteaBaseURL())
 	if err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -405,7 +405,7 @@ func GetUserQuestionByID(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {
