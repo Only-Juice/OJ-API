@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -12,6 +13,27 @@ import (
 	"OJ-API/models"
 	"OJ-API/utils"
 )
+
+// Helper function to set cookies with proper CORS configuration
+func setCrossDomainCookie(c *gin.Context, name, value string, maxAge int) {
+	// Check if request is from HTTPS
+	isSecure := c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https"
+
+	// For development environment or non-HTTPS, use Lax instead of None
+	sameSite := "Lax"
+	secure := ""
+
+	// Only use SameSite=None with Secure for HTTPS cross-origin requests
+	origin := c.GetHeader("Origin")
+	if isSecure && origin != "" {
+		sameSite = "None"
+		secure = "; Secure"
+	}
+
+	cookieStr := fmt.Sprintf("%s=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=%s%s",
+		name, value, maxAge, sameSite, secure)
+	c.Header("Set-Cookie", cookieStr)
+}
 
 type LoginRequest struct {
 	Username string `json:"username" example:"username"`
@@ -152,13 +174,17 @@ func AuthBasic(c *gin.Context) {
 		RefreshToken: refreshToken,
 	})
 
-	// Set both tokens as cookies
-	c.SetCookie("access_token", accessToken, 15*60, "/", "", false, true)       // 15 minutes
-	c.SetCookie("refresh_token", refreshToken, 7*24*3600, "/", "", false, true) // 7 days
+	// Set both tokens as cookies with proper CORS configuration
+	setCrossDomainCookie(c, "access_token", accessToken, 15*60)       // 15 minutes
+	setCrossDomainCookie(c, "refresh_token", refreshToken, 7*24*3600) // 7 days
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Login successfully",
+		Data: gin.H{
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+		},
 	})
 }
 
@@ -227,8 +253,8 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Set new access token cookie
-	c.SetCookie("access_token", accessToken, 15*60, "/", "", false, true) // 15 minutes
+	// Set new access token cookie with proper CORS configuration
+	setCrossDomainCookie(c, "access_token", accessToken, 15*60) // 15 minutes
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
@@ -269,9 +295,9 @@ func Logout(c *gin.Context) {
 		}
 	}
 
-	// Clear cookies
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	// Clear cookies with proper CORS configuration
+	setCrossDomainCookie(c, "access_token", "", -1)
+	setCrossDomainCookie(c, "refresh_token", "", -1)
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
