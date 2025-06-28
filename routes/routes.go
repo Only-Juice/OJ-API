@@ -21,6 +21,10 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		if !isRequired {
+			c.Next()
+			return
+		}
 		var jwt string
 
 		// First, try to get JWT from Authorization header
@@ -42,29 +46,23 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 
 		// If no JWT found and required, return unauthorized
 		if jwt == "" {
-			if isRequired {
-				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Missing Authorization header or access token cookie",
-				})
-				c.Abort()
-				return
-			}
-			c.Next()
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Missing Authorization header or access token cookie",
+			})
+			c.Abort()
 			return
 		}
 
 		// Validate access token specifically
 		jwtClaims, err := utils.ValidateAccessToken(jwt)
 		if err != nil {
-			if isRequired {
-				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Invalid access token",
-				})
-				c.Abort()
-				return
-			}
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Invalid access token",
+			})
+			c.Abort()
+			return
 		}
 
 		ctx := context.WithValue(c.Request.Context(), models.JWTClaimsKey, jwtClaims)
