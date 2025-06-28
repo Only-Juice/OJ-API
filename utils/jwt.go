@@ -17,6 +17,9 @@ var (
 func getJWTSecret() string {
 	jwtSecretOnce.Do(func() {
 		jwtSecret = config.Config("JWT_SECRET")
+		if jwtSecret == "" {
+			panic("JWT_SECRET is not set in the environment variables")
+		}
 	})
 	return jwtSecret
 }

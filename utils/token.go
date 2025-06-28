@@ -23,6 +23,9 @@ var (
 func getEncryptionKey() string {
 	encryptionKeyOnce.Do(func() {
 		encryptionKey = config.Config("ENCRYPTION_KEY")
+		if encryptionKey == "" {
+			panic("ENCRYPTION_KEY is not set in the environment variables")
+		}
 	})
 	return encryptionKey
 }
