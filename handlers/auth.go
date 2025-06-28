@@ -40,10 +40,16 @@ func AuthBasic(c *gin.Context) {
 		return
 	}
 
-	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
-		gitea.SetBasicAuth(account.Username, account.Password),
-		gitea.SetToken(account.Token),
-	)
+	var client *gitea.Client
+	if account.Token != "" {
+		client, err = gitea.NewClient(config.GetGiteaBaseURL(),
+			gitea.SetToken(account.Token),
+		)
+	} else {
+		client, err = gitea.NewClient(config.GetGiteaBaseURL(),
+			gitea.SetBasicAuth(account.Username, account.Password),
+		)
+	}
 	if err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
