@@ -16,8 +16,15 @@ import (
 
 const execTimeoutDuration = time.Second * 60
 
-// SandboxPtr is a pointer to Sandbox
 var SandboxPtr *Sandbox
+
+func (s *Sandbox) AssignJob() {
+	if s.AvailableCount() == 0 || s.IsJobEmpty() {
+		return
+	}
+	job := s.ReleaseJob()
+	s.RunShellCommandByRepo(job)
+}
 
 func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
@@ -26,7 +33,7 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQues
 		JudgeTime: time.Now().UTC(),
 	})
 
-	boxID := s.Reserve()
+	boxID, _ := s.Reserve(1 * time.Second)
 	defer s.Release(boxID)
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -135,8 +142,14 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQues
 	}
 }
 
-func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable) {
+func (s *Sandbox) RunShellCommandByRepo(work *Job) {
+	// parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable
+
 	db := database.DBConn
+
+	parentsRepo := work.Repo
+	codePath := work.CodePath
+	userQuestion := work.UQR
 
 	var cmd models.QuestionTestScript
 	if err := db.Joins("Question").
