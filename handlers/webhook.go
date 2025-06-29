@@ -195,6 +195,6 @@ func PostGiteaHook(c *gin.Context) {
 
 		defer os.RemoveAll(codePath)
 
-		sandbox.SandboxPtr.RunShellCommandByRepo(existingQuestion.GitRepoURL, []byte(codePath), newScore)
+		sandbox.SandboxPtr.ReserveJob(payload.Repository.Parent.FullName, []byte(codePath), newScore)
 	}()
 }
