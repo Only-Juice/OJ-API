@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"OJ-API/models"
 	"fmt"
 	"log"
 	"os/exec"
@@ -19,7 +20,7 @@ type Sandbox struct {
 type Job struct {
 	Repo     string
 	CodePath []byte
-	UQRID    uint
+	UQR      models.UserQuestionTable
 }
 
 func NewSandbox(count int) *Sandbox {
@@ -85,11 +86,15 @@ func (s *Sandbox) ProcessingCount() int {
 	return s.sandboxCount - int(s.AvailableCount())
 }
 
-func (s *Sandbox) ReserveJob(repo string, codePath []byte, uqtid uint) {
+func (s *Sandbox) IsJobEmpty() bool {
+	return s.jobQueue.Length() == 0
+}
+
+func (s *Sandbox) ReserveJob(repo string, codePath []byte, uqtid models.UserQuestionTable) {
 	job := &Job{
 		Repo:     repo,
 		CodePath: codePath,
-		UQRID:    uqtid,
+		UQR:      uqtid,
 	}
 	s.jobQueue.Enqueue(job)
 }
