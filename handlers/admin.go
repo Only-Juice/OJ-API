@@ -78,7 +78,7 @@ func ResetUserPassword(c *gin.Context) {
 		})
 		return
 	}
-	client, err := gitea.NewClient("http://"+config.Config("GIT_HOST"),
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
 		gitea.SetToken(token),
 	)
 	if err != nil {

@@ -21,47 +21,47 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		if !isRequired {
+			c.Next()
+			return
+		}
+		var jwt string
+
+		// First, try to get JWT from Authorization header
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			if isRequired {
-				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Missing Authorization header",
-				})
-				c.Abort()
-				return
+		if authHeader != "" {
+			const bearerPrefix = "Bearer "
+			if len(authHeader) > len(bearerPrefix) && authHeader[:len(bearerPrefix)] == bearerPrefix {
+				jwt = authHeader[len(bearerPrefix):]
 			}
-			c.Next()
+		}
+
+		// If no JWT from header, try to get from access_token cookie
+		if jwt == "" {
+			cookie, err := c.Cookie("access_token")
+			if err == nil {
+				jwt = cookie
+			}
+		}
+
+		// If no JWT found and required, return unauthorized
+		if jwt == "" {
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Missing Authorization header or access token cookie",
+			})
+			c.Abort()
 			return
 		}
 
-		const bearerPrefix = "Bearer "
-		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-			if isRequired {
-				c.JSON(http.StatusBadRequest, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Invalid Authorization header format",
-				})
-				c.Abort()
-				return
-			}
-			c.Next()
-			return
-		}
-
-		jwt := authHeader[len(bearerPrefix):]
-
-		jwtClaims, err := utils.ParseJWT(jwt)
+		// Validate access token specifically
+		jwtClaims, err := utils.ValidateAccessToken(jwt)
 		if err != nil {
-			if isRequired {
-				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-					Success: false,
-					Message: "Invalid JWT",
-				})
-				c.Abort()
-				return
-			}
-			c.Next()
+			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Invalid access token",
+			})
+			c.Abort()
 			return
 		}
 
@@ -72,15 +72,37 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 }
 
 func RegisterRoutes(r *gin.Engine) {
-	// Middleware to handle CORS
+	// Enhanced CORS middleware with comprehensive browser compatibility
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+		origin := c.Request.Header.Get("Origin")
+		method := c.Request.Method
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+		// Handle CORS headers - set before any processing
+		// For credentials to work, we cannot use wildcard with specific origin
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		} else {
+			// Fallback for requests without Origin header
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			// Note: Cannot set credentials to true with wildcard origin
+		}
+
+		// Comprehensive headers for all browsers including Edge, Chrome, Firefox, Safari
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Accept-Language, Content-Language, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Origin, Cache-Control, X-Requested-With, Cookie, Set-Cookie, Access-Control-Allow-Origin, Access-Control-Allow-Credentials, Pragma, Expires, Last-Modified, If-Modified-Since, If-None-Match, ETag, Priority, Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Ch-Ua, Sec-Ch-Ua-Mobile, Sec-Ch-Ua-Platform, User-Agent, Referer")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Set-Cookie, Authorization, Content-Length, Content-Type, Cache-Control, ETag, Last-Modified, Expires")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
+		// Additional headers for browser compatibility
+		c.Writer.Header().Set("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
+
+		// Handle preflight OPTIONS requests immediately
+		if method == "OPTIONS" {
+			// Ensure all CORS headers are set for preflight
+			c.Writer.Header().Set("Content-Type", "text/plain")
+			c.Writer.Header().Set("Content-Length", "0")
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
@@ -120,6 +142,11 @@ func RegisterRoutes(r *gin.Engine) {
 	// Routes
 	api := r.Group("/api")
 	{
+		// Auth routes
+		api.POST("/auth/login", handlers.AuthBasic)
+		api.POST("/auth/refresh", handlers.RefreshToken)
+		api.POST("/auth/logout", handlers.Logout)
+
 		// Admin routes
 		api.POST("/admin/user/:id/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
 		api.GET("/admin/user", AuthMiddleware(), handlers.GetAllUserInfo)
