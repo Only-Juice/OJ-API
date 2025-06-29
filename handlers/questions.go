@@ -320,6 +320,15 @@ func GetQuestion(c *gin.Context) {
 	})
 }
 
+type GetQuestionByIDResponseData struct {
+	Title       string `json:"title" validate:"required"`
+	Description string `json:"description" validate:"required"`
+	README      string `json:"readme" validate:"required"`
+	GitRepoURL  string `json:"git_repo_url" validate:"required"`
+	StartTime   string `json:"start_time" validate:"required" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339"`
+	EndTime     string `json:"end_time" validate:"required" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339"`
+}
+
 // GetQuestionByID is a function to get a question by ID
 // @Summary		Get a question by ID
 // @Description Retrieve only public questions
@@ -365,12 +374,13 @@ func GetQuestionByID(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question fetched successfully",
-		Data: GetQuestionResponseData{
-			Title:            question.Title,
-			Description:      question.Description,
-			GitRepoURL:       question.GitRepoURL,
-			ParentGitRepoURL: "",
-			README:           GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
+		Data: GetQuestionByIDResponseData{
+			Title:       question.Title,
+			Description: question.Description,
+			GitRepoURL:  question.GitRepoURL,
+			StartTime:   question.StartTime.Format(time.RFC3339),
+			EndTime:     question.EndTime.Format(time.RFC3339),
+			README:      GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
 		},
 	})
 }
