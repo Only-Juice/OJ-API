@@ -172,7 +172,7 @@ type BulkCreateUserResponse struct {
 // @Failure		404
 // @Failure		503
 // @Security	BearerAuth
-// @Router		/api/gitea/user/bulk [post]
+// @Router		/api/gitea/admin/user/bulk [post]
 func PostBulkCreateUserGitea(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -253,7 +253,7 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 // @Failure		404
 // @Failure		503
 // @Security	BearerAuth
-// @Router		/api/gitea/question/{question_id} [post]
+// @Router		/api/gitea/{question_id}/question [post]
 func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	db := database.DBConn
 	questionIDStr := c.Param("question_id")

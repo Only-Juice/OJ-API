@@ -147,7 +147,7 @@ func GetScoreByRepo(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/{UQR_ID} [get]
+//	@Router			/api/score/uqr/{UQR_ID}/score [get]
 //	@Security		BearerAuth
 func GetScoreByUQRID(c *gin.Context) {
 	db := database.DBConn
@@ -254,7 +254,7 @@ func GetScoreByUQRID(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/question/{question_id} [get]
+//	@Router			/api/score/{question_id}/question [get]
 //	@Security		BearerAuth
 func GetScoreByQuestionID(c *gin.Context) {
 	db := database.DBConn
@@ -344,7 +344,7 @@ func GetScoreByQuestionID(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/user/rescore/{question_id} [post]
+//	@Router			/api/score/{question_id}/question/user_rescore [post]
 //	@Security		BearerAuth
 func ReScoreUserQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -529,7 +529,7 @@ func GetTopScore(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/question/{question_id}/rescore [post]
+//	@Router			/api/score/admin/{question_id}/question/rescore [post]
 //	@Security		BearerAuth
 func ReScoreQuestion(c *gin.Context) {
 	db := database.DBConn

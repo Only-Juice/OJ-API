@@ -35,7 +35,7 @@ type GetQuestionListResponseData struct {
 // @Success		200		{object}	ResponseHTTP{data=[]GetQuestionListResponseData}
 // @Failure		404
 // @Failure		503
-// @Router			/api/question [get]
+// @Router			/api/questions [get]
 // @Security		BearerAuth
 func GetQuestionList(c *gin.Context) {
 	db := database.DBConn
@@ -158,7 +158,7 @@ type GetUsersQuestionsResponseData struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/user [get]
+// @Router			/api/questions/user [get]
 // @Security		BearerAuth
 func GetUsersQuestions(c *gin.Context) {
 	db := database.DBConn
@@ -253,7 +253,7 @@ func GetReadme(client *gitea.Client, userName string, gitRepoURL string) string 
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/{UQR_ID} [get]
+// @Router			/api/questions/uqr/{UQR_ID}/question [get]
 // @Security		BearerAuth
 func GetQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -330,7 +330,7 @@ func GetQuestion(c *gin.Context) {
 // @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/id/{ID} [get]
+// @Router			/api/questions/{ID}/question [get]
 func GetQuestionByID(c *gin.Context) {
 	db := database.DBConn
 
@@ -392,7 +392,7 @@ type GetUserQuestionResponseData struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/user/id/{ID} [get]
+// @Router			/api/questions/user/{ID}/question [get]
 // @Security		BearerAuth
 func GetUserQuestionByID(c *gin.Context) {
 	db := database.DBConn
@@ -482,7 +482,7 @@ type AddQuestionRequest struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question [post]
+// @Router			/api/questions/admin/question [post]
 // @Security		BearerAuth
 func AddQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -556,7 +556,7 @@ type PatchQuestionRequest struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/id/{ID} [patch]
+// @Router			/api/questions/admin/{ID}/question [patch]
 // @Security		BearerAuth
 func PatchQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -640,7 +640,7 @@ func PatchQuestion(c *gin.Context) {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/id/{ID} [delete]
+// @Router			/api/questions/admin/{ID}/question [delete]
 // @Security		BearerAuth
 func DeleteQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -703,7 +703,7 @@ type QuestionTestScript struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/question/test_script/{ID} [get]
+// @Router			/api/questions/admin/{ID}/test_script [get]
 // @Security		BearerAuth
 func GetQuestionTestScript(c *gin.Context) {
 	db := database.DBConn

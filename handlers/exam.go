@@ -33,7 +33,7 @@ type ExamRequest struct {
 // @Failure      401
 // @Failure      403
 // @Failure      500
-// @Router       /api/exams [post]
+// @Router       /api/exams/admin [post]
 // @Security BearerAuth
 func CreateExam(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -93,7 +93,7 @@ func CreateExam(c *gin.Context) {
 // @Param        id path string true "Exam ID"
 // @Success      200 {object} ResponseHTTP{data=models.Exam}
 // @Failure      404 {object} ResponseHTTP{}
-// @Router       /api/exams/{id} [get]
+// @Router       /api/exams/admin/{id}/exam [get]
 // @Security BearerAuth
 func GetExam(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -135,7 +135,7 @@ func GetExam(c *gin.Context) {
 // @Failure      400 {object} ResponseHTTP{}
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
-// @Router       /api/exams/{id} [put]
+// @Router       /api/exams/admin/{id}/exam [put]
 // @Security BearerAuth
 func UpdateExam(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -190,7 +190,7 @@ func UpdateExam(c *gin.Context) {
 // @Success      200 {object} ResponseHTTP{}
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
-// @Router       /api/exams/{id} [delete]
+// @Router       /api/exams/admin/{id}/exam [delete]
 // @Security BearerAuth
 func DeleteExam(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -334,7 +334,7 @@ type point struct {
 // @Success      200 {object} ResponseHTTP{}
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
-// @Router       /api/exams/{id}/questions/{question_id} [post]
+// @Router       /api/exams/admin/{id}/questions/{question_id}/question [post]
 // @Security BearerAuth
 func AddQuestionToExam(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -421,7 +421,7 @@ func AddQuestionToExam(c *gin.Context) {
 // @Success      200 {object} ResponseHTTP{}
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
-// @Router       /api/exams/{id}/questions/{question_id} [delete]
+// @Router       /api/exams/admin/{id}/questions/{question_id}/question [delete]
 // @Security BearerAuth
 func RemoveQuestionFromExam(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)

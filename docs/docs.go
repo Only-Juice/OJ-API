@@ -84,7 +84,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/admin/user/{id}": {
+        "/api/admin/{id}/user": {
             "get": {
                 "security": [
                     {
@@ -212,7 +212,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/admin/user/{id}/reset_password": {
+        "/api/admin/{id}/user/reset_password": {
             "post": {
                 "security": [
                     {
@@ -413,7 +413,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/api/exams/admin": {
             "post": {
                 "security": [
                     {
@@ -476,7 +478,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/exams/{id}": {
+        "/api/exams/admin/{id}/exam": {
             "get": {
                 "security": [
                     {
@@ -646,6 +648,122 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/exams/admin/{id}/questions/{question_id}/question": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Associate a question with a specific exam",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Exam"
+                ],
+                "summary": "Add a question to an exam",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exam ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Question ID",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Score for the question",
+                        "name": "point",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.point"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Disassociate a question from a specific exam",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Exam"
+                ],
+                "summary": "Remove a question from an exam",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exam ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Question ID",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
         "/api/exams/{id}/leaderboard": {
             "get": {
                 "description": "Retrieve the leaderboard for a specific exam",
@@ -753,122 +871,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/exams/{id}/questions/{question_id}": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Associate a question with a specific exam",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Exam"
-                ],
-                "summary": "Add a question to an exam",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Exam ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Question ID",
-                        "name": "question_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Score for the question",
-                        "name": "point",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.point"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Disassociate a question from a specific exam",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Exam"
-                ],
-                "summary": "Remove a question from an exam",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Exam ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Question ID",
-                        "name": "question_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
                         }
                     },
                     "404": {
@@ -1020,145 +1022,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/gitea/auth": {
-            "post": {
-                "description": "Use basic authentication to access the Gitea API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gitea"
-                ],
-                "summary": "Use basic authentication to access the Gitea API",
-                "parameters": [
-                    {
-                        "description": "Basic Authentication",
-                        "name": "BasicAuthentication",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.BasicAuthentication"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Return access token",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/gitea/question/{question_id}": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Take a question and create a repository in Gitea",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gitea"
-                ],
-                "summary": "Take a question and create a repository in Gitea",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Question ID",
-                        "name": "question_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/gitea/user": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get User Profile",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gitea"
-                ],
-                "summary": "Get User Profile",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/gitea.User"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/gitea/user/bulk": {
+        "/api/gitea/admin/user/bulk": {
             "post": {
                 "security": [
                     {
@@ -1200,6 +1064,95 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/handlers.BulkCreateUserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/gitea/auth": {
+            "post": {
+                "description": "Use basic authentication to access the Gitea API",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Use basic authentication to access the Gitea API",
+                "parameters": [
+                    {
+                        "description": "Basic Authentication",
+                        "name": "BasicAuthentication",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BasicAuthentication"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return access token",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/gitea/user": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get User Profile",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Get User Profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/gitea.User"
                                         }
                                     }
                                 }
@@ -1272,7 +1225,56 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question": {
+        "/api/gitea/{question_id}/question": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Take a question and create a repository in Gitea",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Take a question and create a repository in Gitea",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/questions": {
             "get": {
                 "security": [
                     {
@@ -1339,7 +1341,9 @@ const docTemplate = `{
                         "description": "Service Unavailable"
                     }
                 }
-            },
+            }
+        },
+        "/api/questions/admin/question": {
             "post": {
                 "security": [
                     {
@@ -1402,55 +1406,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question/id/{ID}": {
-            "get": {
-                "description": "Retrieve only public questions",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Question"
-                ],
-                "summary": "Get a question by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID of the Question to get",
-                        "name": "ID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/handlers.GetQuestionResponseData"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            },
+        "/api/questions/admin/{ID}/question": {
             "delete": {
                 "security": [
                     {
@@ -1579,7 +1535,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question/test_script/{ID}": {
+        "/api/questions/admin/{ID}/test_script": {
             "get": {
                 "security": [
                     {
@@ -1640,7 +1596,68 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question/user": {
+        "/api/questions/uqr/{UQR_ID}/question": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a question by UQR_ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Question"
+                ],
+                "summary": "Get a question by UQR_ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID of the UserQuestionRelation to get",
+                        "name": "UQR_ID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetQuestionResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/questions/user": {
             "get": {
                 "security": [
                     {
@@ -1709,7 +1726,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question/user/id/{ID}": {
+        "/api/questions/user/{ID}/question": {
             "get": {
                 "security": [
                     {
@@ -1770,14 +1787,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/question/{UQR_ID}": {
+        "/api/questions/{ID}/question": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a question by UQR_ID",
+                "description": "Retrieve only public questions",
                 "consumes": [
                     "application/json"
                 ],
@@ -1787,12 +1799,12 @@ const docTemplate = `{
                 "tags": [
                     "Question"
                 ],
-                "summary": "Get a question by UQR_ID",
+                "summary": "Get a question by ID",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID of the UserQuestionRelation to get",
-                        "name": "UQR_ID",
+                        "description": "ID of the Question to get",
+                        "name": "ID",
                         "in": "path",
                         "required": true
                     }
@@ -1816,12 +1828,6 @@ const docTemplate = `{
                             ]
                         }
                     },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
                     "404": {
                         "description": "Not Found"
                     },
@@ -1831,7 +1837,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/sandbox": {
+        "/api/sandbox/admin/sandbox_cmd": {
             "post": {
                 "security": [
                     {
@@ -2012,6 +2018,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/score/admin/{question_id}/question/rescore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Re-score a specific question by question ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Score"
+                ],
+                "summary": "Re-score a specific question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "question ID",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/score/all": {
             "get": {
                 "security": [
@@ -2139,7 +2194,146 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/score/question/{question_id}": {
+        "/api/score/top": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the top score of each question for user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Score"
+                ],
+                "summary": "Get the top score of each question for user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetTopScoreResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/score/uqr/{UQR_ID}/score": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a score by UQR ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Score"
+                ],
+                "summary": "Get a score by UQR ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "UQR ID",
+                        "name": "UQR_ID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.Score"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
+        "/api/score/{question_id}/question": {
             "get": {
                 "security": [
                     {
@@ -2212,122 +2406,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/score/question/{question_id}/rescore": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Re-score a specific question by question ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Score"
-                ],
-                "summary": "Re-score a specific question",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "question ID",
-                        "name": "question_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/score/top": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get the top score of each question for user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Score"
-                ],
-                "summary": "Get the top score of each question for user",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "page number of results to return (1-based)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "page size of results. Default is 10.",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/handlers.GetTopScoreResponseData"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/score/user/rescore/{question_id}": {
+        "/api/score/{question_id}/question/user_rescore": {
             "post": {
                 "security": [
                     {
@@ -2359,79 +2438,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/score/{UQR_ID}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a score by UQR ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Score"
-                ],
-                "summary": "Get a score by UQR ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "UQR ID",
-                        "name": "UQR_ID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "page number of results to return (1-based)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "page size of results. Default is 10.",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/handlers.Score"
-                                        }
-                                    }
-                                }
-                            ]
                         }
                     },
                     "400": {
