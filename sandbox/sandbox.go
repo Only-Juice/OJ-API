@@ -1,16 +1,26 @@
 package sandbox
 
 import (
+	"OJ-API/models"
 	"fmt"
+	"log"
 	"os/exec"
+	"time"
 
 	"golang.design/x/lockfree"
 )
 
 type Sandbox struct {
-	AvailableBoxIDs *lockfree.Queue
-	waitingQueue    *lockfree.Queue
+	AvailableBoxIDs *lockfree.Queue // Sandbox that can use
+	waitingQueue    *lockfree.Queue // Sandbox that executing code
+	jobQueue        *lockfree.Queue //Storing Unjudge job
 	sandboxCount    int
+}
+
+type Job struct {
+	Repo     string
+	CodePath []byte
+	UQR      models.UserQuestionTable
 }
 
 func NewSandbox(count int) *Sandbox {
@@ -28,29 +38,40 @@ func NewSandbox(count int) *Sandbox {
 		AvailableBoxIDs: availableBoxIDs,
 		sandboxCount:    count,
 		waitingQueue:    lockfree.NewQueue(),
+		jobQueue:        lockfree.NewQueue(),
 	}
 	return s
 }
 
-func (s *Sandbox) Reserve() int {
+func (s *Sandbox) Reserve(timeout time.Duration) (int, bool) {
 	if item := s.AvailableBoxIDs.Dequeue(); item != nil {
-		boxID := item.(int)
-		return boxID
+		return item.(int), true
 	}
 
-	waitChan := make(chan int)
+	waitChan := make(chan int, 1)
 	s.waitingQueue.Enqueue(waitChan)
-	return <-waitChan
+
+	select {
+	case boxID := <-waitChan:
+		return boxID, true
+	case <-time.After(timeout):
+		return -1, false
+	}
 }
 
 func (s *Sandbox) Release(boxID int) {
 	if item := s.waitingQueue.Dequeue(); item != nil {
-		waitChan := item.(chan int)
-		waitChan <- boxID
-		close(waitChan)
-	} else {
-		s.AvailableBoxIDs.Enqueue(boxID)
+		if waitChan, ok := item.(chan int); ok {
+			select {
+			case waitChan <- boxID:
+				close(waitChan)
+			default:
+				s.AvailableBoxIDs.Enqueue(boxID)
+			}
+			return
+		}
 	}
+	s.AvailableBoxIDs.Enqueue(boxID)
 }
 
 func (s *Sandbox) AvailableCount() int {
@@ -65,18 +86,57 @@ func (s *Sandbox) ProcessingCount() int {
 	return s.sandboxCount - int(s.AvailableCount())
 }
 
+func (s *Sandbox) IsJobEmpty() bool {
+	return s.jobQueue.Length() == 0
+}
+
+func (s *Sandbox) ReserveJob(repo string, codePath []byte, uqtid models.UserQuestionTable) {
+	job := &Job{
+		Repo:     repo,
+		CodePath: codePath,
+		UQR:      uqtid,
+	}
+	s.jobQueue.Enqueue(job)
+}
+
+func (s *Sandbox) ReleaseJob() *Job {
+
+	if int(s.jobQueue.Length()) == 0 {
+		return nil // queue 是空的
+	}
+
+	item := s.jobQueue.Dequeue()
+
+	job, ok := item.(*Job)
+	if !ok {
+		log.Println("[Sandbox] Dequeued item is not of type *Job")
+		return nil
+	}
+
+	return job
+}
+
 func (s *Sandbox) Cleanup() {
-	for {
-		item := s.AvailableBoxIDs.Dequeue()
-		if item == nil {
-			break
-		}
-		boxID := item.(int)
-		cmd := exec.Command("isolate", "--cleanup", fmt.Sprintf("-b %v", boxID))
-		fmt.Printf("Cleaning up box %v\n", boxID)
+	for i := 0; i < s.sandboxCount; i++ {
+		cmd := exec.Command("isolate", "-b", fmt.Sprintf("%v", i), "--cleanup")
+		fmt.Printf("Cleaning up box %v\n", i)
 		err := cmd.Run()
 		if err != nil {
-			fmt.Printf("Error cleaning up box %v: %v\n", boxID, err)
+			fmt.Printf("Error cleaning up box %v: %v\n", i, err)
+		}
+
+	}
+	for {
+		ok := s.AvailableBoxIDs.Dequeue()
+		if ok == nil {
+			break
+		}
+	}
+
+	for {
+		ok := s.waitingQueue.Dequeue()
+		if ok == nil {
+			break
 		}
 	}
 }
