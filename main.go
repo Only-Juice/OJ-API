@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -34,6 +35,9 @@ func main() {
 		log.Panic("Invalid ENCRYPTION_KEY length:", len(decodedKey))
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if err := database.Connect(); err != nil {
 		log.Panic("Can't connect database:", err.Error())
 	}
@@ -42,6 +46,7 @@ func main() {
 		log.Panic("Invalid SANDBOX_COUNT config:", err.Error())
 	}
 	sandbox.SandboxPtr = sandbox.NewSandbox(sandboxCount)
+	go sandbox.SandboxPtr.WorkerLoop(ctx)
 	defer sandbox.SandboxPtr.Cleanup()
 
 	// Signal handling
@@ -50,6 +55,7 @@ func main() {
 	go func() {
 		<-c
 		fmt.Println("Received interrupt signal, cleaning up...")
+		cancel()
 		sandbox.SandboxPtr.Cleanup()
 		os.Exit(0)
 	}()
