@@ -324,6 +324,8 @@ definitions:
         type: boolean
       id:
         type: integer
+      is_active:
+        type: boolean
       start_time:
         example: 2006-01-02T15:04:05Z07:00
         type: string
@@ -363,6 +365,9 @@ definitions:
       git_repo_url:
         example: user_name/repo_name
         type: string
+      is_active:
+        example: true
+        type: boolean
       start_time:
         example: "2006-01-02T15:04:05Z"
         type: string
@@ -675,6 +680,27 @@ definitions:
         example: username
         type: string
     type: object
+  handlers.PatchQuestionRequest:
+    properties:
+      description:
+        example: Question Description
+        type: string
+      end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      git_repo_url:
+        example: user_name/repo_name
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      title:
+        example: Question Title
+        type: string
+    type: object
   handlers.QuestionScore:
     properties:
       git_user_repo_url:
@@ -874,6 +900,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       start_time:
         example: 2006-01-02T15:04:05Z07:00
         type: string
@@ -1233,7 +1261,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
-      summary: Get questions for an exam
+      security:
+      - BearerAuth: []
+      summary: Get questions for an exam [Optional Authentication]
       tags:
       - Exam
   /api/exams/{id}/score/top:
@@ -1806,7 +1836,7 @@ paths:
         name: question
         required: true
         schema:
-          $ref: '#/definitions/handlers.AddQuestionRequest'
+          $ref: '#/definitions/handlers.PatchQuestionRequest'
       - description: ID of the Question to update
         in: path
         name: ID

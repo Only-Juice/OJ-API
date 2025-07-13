@@ -21,10 +21,6 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		if !isRequired {
-			c.Next()
-			return
-		}
 		var jwt string
 
 		// First, try to get JWT from Authorization header
@@ -45,7 +41,7 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 		}
 
 		// If no JWT found and required, return unauthorized
-		if jwt == "" {
+		if jwt == "" && isRequired {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Missing Authorization header or access token cookie",
@@ -56,7 +52,7 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 
 		// Validate access token specifically
 		jwtClaims, err := utils.ValidateAccessToken(jwt)
-		if err != nil {
+		if err != nil && isRequired {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Invalid access token",
@@ -159,7 +155,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.PUT("/exams/admin/:id/exam", AuthMiddleware(), handlers.UpdateExam)
 		api.DELETE("/exams/admin/:id/exam", AuthMiddleware(), handlers.DeleteExam)
 		api.GET("/exams", handlers.ListExams)
-		api.GET("/exams/:id/questions", handlers.GetExamQuestions)
+		api.GET("/exams/:id/questions", AuthMiddleware(false), handlers.GetExamQuestions)
 		api.POST("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.AddQuestionToExam)
 		api.DELETE("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.RemoveQuestionFromExam)
 		api.GET("/exams/:id/score/top", AuthMiddleware(), handlers.GetTopExamScore)

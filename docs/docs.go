@@ -834,6 +834,11 @@ const docTemplate = `{
         },
         "/api/exams/{id}/questions": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve all questions associated with a specific exam",
                 "produces": [
                     "application/json"
@@ -841,7 +846,7 @@ const docTemplate = `{
                 "tags": [
                     "Exam"
                 ],
-                "summary": "Get questions for an exam",
+                "summary": "Get questions for an exam [Optional Authentication]",
                 "parameters": [
                     {
                         "type": "string",
@@ -1490,7 +1495,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.AddQuestionRequest"
+                            "$ref": "#/definitions/handlers.PatchQuestionRequest"
                         }
                     },
                     {
@@ -3122,6 +3127,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "user_name/repo_name"
                 },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "start_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z"
@@ -3574,6 +3583,35 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PatchQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Question Description"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "git_repo_url": {
+                    "type": "string",
+                    "example": "user_name/repo_name"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Question Title"
+                }
+            }
+        },
         "handlers.QuestionScore": {
             "type": "object",
             "required": [
@@ -3819,6 +3857,9 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "start_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z07:00"
@@ -3913,6 +3954,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "start_time": {
                     "type": "string",

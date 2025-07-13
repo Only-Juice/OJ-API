@@ -274,7 +274,7 @@ func ListExams(c *gin.Context) {
 }
 
 // GetExamQuestions retrieves all questions for a specific exam
-// @Summary      Get questions for an exam
+// @Summary      Get questions for an exam [Optional Authentication]
 // @Description  Retrieve all questions associated with a specific exam
 // @Tags         Exam
 // @Produce      json
@@ -283,7 +283,14 @@ func ListExams(c *gin.Context) {
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
 // @Router       /api/exams/{id}/questions [get]
+// @Security	 BearerAuth
 func GetExamQuestions(c *gin.Context) {
+	jwtClaim, ok := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	var isAdmin bool
+	if ok && jwtClaim != nil {
+		isAdmin = jwtClaim.IsAdmin
+	}
+
 	id := c.Param("id")
 	var exam models.Exam
 
@@ -297,9 +304,16 @@ func GetExamQuestions(c *gin.Context) {
 	}
 
 	var examQuestions []models.ExamQuestion
-	if err := db.Where(&models.ExamQuestion{
+
+	query := db.Where(&models.ExamQuestion{
 		ExamID: exam.ID,
-	}).Joins("Question").Find(&examQuestions).Error; err != nil {
+	}).Joins("Question")
+
+	if !isAdmin {
+		query = query.Where("is_active = ?", true)
+	}
+
+	if err := query.Find(&examQuestions).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ResponseHTTP{
 			Success: false,
 			Message: "Failed to retrieve questions: " + err.Error(),
@@ -360,7 +374,7 @@ func AddQuestionToExam(c *gin.Context) {
 
 	questionID := c.Param("question_id")
 	var question models.Question
-	if err := db.First(&question, questionID).Error; err != nil {
+	if err := db.Where("is_active = ? AND id = ?", true, questionID).Take(&question).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -447,7 +461,7 @@ func RemoveQuestionFromExam(c *gin.Context) {
 
 	questionID := c.Param("question_id")
 	var question models.Question
-	if err := db.First(&question, questionID).Error; err != nil {
+	if err := db.Where("is_active = ? AND id = ?", true, questionID).Take(&question).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -517,13 +531,13 @@ func GetTopExamScore(c *gin.Context) {
 
 	var totalCount int64
 
-	subQuery := db.Model(&models.UserQuestionTable{}).
+	if err := db.Model(&models.UserQuestionTable{}).
 		Select("DISTINCT question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Where("question_id IN (SELECT question_id FROM exam_questions WHERE exam_id = ?)", id).
-		Where("UQR.user_id = ?", jwtClaims.UserID)
-
-	if err := db.Table("(?) AS sub", subQuery).
+		Where("UQR.user_id = ?", jwtClaims.UserID).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -536,10 +550,12 @@ func GetTopExamScore(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN exam_questions EQ ON UQR.question_id = EQ.question_id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Select("DISTINCT ON (UQR.question_id) UQR.question_id, git_user_repo_url, score, message, judge_time, EQ.point").
+		Where("Q.is_active = ?", true).
 		Where("UQR.user_id = ?", jwtClaims.UserID).
-		Order("UQR.question_id, score DESC").
-		Order("judge_time DESC").
+		Where("EQ.exam_id = ?", id).
+		Order("UQR.question_id ASC, score DESC, judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&scores).Error; err != nil {
@@ -658,7 +674,8 @@ func GetExamLeaderboard(c *gin.Context) {
         FROM user_question_tables
         JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
         JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
-        WHERE EQ.exam_id = ?
+		JOIN questions Q ON UQR.question_id = Q.id
+        WHERE Q.is_active = true AND EQ.exam_id = ?
         GROUP BY UQR.user_id, UQR.question_id, EQ.point
     ) AS subquery`, id).
 		Joins("JOIN users ON users.id = subquery.user_id").
@@ -702,12 +719,14 @@ func GetExamLeaderboard(c *gin.Context) {
 
 	var questionScores []QuestionScoreDetail
 	subquery := db.Model(&models.UserQuestionTable{}).
-		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, UQR.git_user_repo_url, EQ.point").
+		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url, MAX(EQ.point) AS point").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN exam_questions EQ ON UQR.question_id = EQ.question_id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Where("UQR.user_id IN ?", userIDs).
 		Where("EQ.exam_id = ?", id).
-		Group("UQR.user_id, UQR.question_id, UQR.git_user_repo_url, EQ.point")
+		Group("UQR.user_id, UQR.question_id")
 
 	if err := db.Table("(?) AS sq", subquery).
 		Joins("JOIN questions ON questions.id = sq.question_id").
@@ -719,7 +738,6 @@ func GetExamLeaderboard(c *gin.Context) {
 		})
 		return
 	}
-
 	// Map to organize question scores by user
 	userQuestionScores := make(map[uint][]EnhancedQuestionScore)
 	for _, qs := range questionScores {

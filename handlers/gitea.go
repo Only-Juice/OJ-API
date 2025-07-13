@@ -287,7 +287,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	}
 
 	var existingQuestion models.Question
-	if err := db.Where(&models.Question{ID: uint(questionID)}).First(&existingQuestion).Error; err != nil {
+	if err := db.Where("id = ? AND is_active = ?", questionID, true).First(&existingQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",

@@ -41,8 +41,10 @@ func GetQuestionList(c *gin.Context) {
 	db := database.DBConn
 	jwtClaim, ok := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
 	var userID uint
+	var isAdmin bool
 	if ok && jwtClaim != nil {
 		userID = jwtClaim.UserID
+		isAdmin = jwtClaim.IsAdmin
 	}
 
 	// Parse query parameters for pagination
@@ -56,6 +58,11 @@ func GetQuestionList(c *gin.Context) {
 	// Build base query
 	baseQuery := db.Model(&models.Question{}).
 		Where("id NOT IN (SELECT question_id FROM exam_questions)")
+
+	if !isAdmin {
+		// If not admin, filter out inactive questions
+		baseQuery = baseQuery.Where("is_active = ?", true)
+	}
 
 	// Add status filter
 	now := time.Now()
@@ -173,7 +180,7 @@ func GetUsersQuestions(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	var totalQuestions int64
-	db.Model(&models.UserQuestionRelation{}).Where("user_id = ?", userID).Count(&totalQuestions)
+	db.Model(&models.UserQuestionRelation{}).Joins("Question").Where("user_id = ? AND is_active = ?", userID, true).Count(&totalQuestions)
 	var questions []struct {
 		models.Question
 		UQRID          uint
@@ -181,7 +188,7 @@ func GetUsersQuestions(c *gin.Context) {
 	}
 	db.Table("questions").Select("questions.*, user_question_relations.id as uqr_id, user_question_relations.git_user_repo_url").
 		Joins("JOIN user_question_relations ON questions.id = user_question_relations.question_id").
-		Where("user_question_relations.user_id = ?", userID).
+		Where("user_question_relations.user_id = ? AND is_active", userID, true).
 		Offset(offset).Limit(limit).Scan(&questions)
 
 	if len(questions) == 0 {
@@ -298,7 +305,7 @@ func GetQuestion(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ?", uqr.QuestionID).Limit(1).Find(&question)
+	db.Where("id = ? AND is_active = ?", uqr.QuestionID, true).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -353,7 +360,7 @@ func GetQuestionByID(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ?", ID).Limit(1).Find(&question)
+	db.Where("id = ? AND is_active = ?", ID, true).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -437,7 +444,7 @@ func GetUserQuestionByID(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ?", uqr.QuestionID).Limit(1).Find(&question)
+	db.Where("id = ? AND is_active = ?", uqr.QuestionID, true).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -468,6 +475,7 @@ type AddQuestionRequest struct {
 	GitRepoURL  string    `json:"git_repo_url" validate:"required" example:"user_name/repo_name"`
 	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
 	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	IsActive    bool      `json:"is_active" example:"true"`
 }
 
 // AddQuestion is a function to add a question
@@ -520,6 +528,7 @@ func AddQuestion(c *gin.Context) {
 		GitRepoURL:  question.GitRepoURL,
 		StartTime:   question.StartTime,
 		EndTime:     question.EndTime,
+		IsActive:    question.IsActive,
 	}).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -541,6 +550,7 @@ type PatchQuestionRequest struct {
 	GitRepoURL  string    `json:"git_repo_url" example:"user_name/repo_name"`
 	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
 	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	IsActive    bool      `json:"is_active" example:"true"`
 }
 
 // PatchQuestion is a function to update a question
@@ -549,7 +559,7 @@ type PatchQuestionRequest struct {
 // @Tags			Question
 // @Accept			json
 // @Produce		json
-// @Param			question	body		AddQuestionRequest	true	"Question object"
+// @Param			question	body		PatchQuestionRequest	true	"Question object"
 // @Param			ID		path		int				true	"ID of the Question to update"
 // @Success		200		{object}	ResponseHTTP{data=models.Question}
 // @Failure		400
@@ -611,6 +621,9 @@ func PatchQuestion(c *gin.Context) {
 	}
 	if !updateQuestion.EndTime.IsZero() {
 		question.EndTime = updateQuestion.EndTime
+	}
+	if updateQuestion.IsActive {
+		question.IsActive = updateQuestion.IsActive
 	}
 
 	if err := db.Save(&question).Error; err != nil {
