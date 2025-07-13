@@ -28,7 +28,7 @@ type Sandbox struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/sandbox [post]
+// @Router			/api/sandbox/admin/sandbox_cmd [post]
 // @Security		BearerAuth
 func PostSandboxCmd(c *gin.Context) {
 	db := database.DBConn
@@ -63,11 +63,11 @@ func PostSandboxCmd(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		// If we get here, the question exists but doesn't have a test script
 		existingCmd = models.QuestionTestScript{
-			QuestionID:  question.ID,
-			TestScript:  cmd.Script,
+			QuestionID: question.ID,
+			TestScript: cmd.Script,
 		}
 		db.Create(&existingCmd)
 	} else {

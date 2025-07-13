@@ -172,7 +172,7 @@ type BulkCreateUserResponse struct {
 // @Failure		404
 // @Failure		503
 // @Security	BearerAuth
-// @Router		/api/gitea/user/bulk [post]
+// @Router		/api/gitea/admin/user/bulk [post]
 func PostBulkCreateUserGitea(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -253,7 +253,7 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 // @Failure		404
 // @Failure		503
 // @Security	BearerAuth
-// @Router		/api/gitea/question/{question_id} [post]
+// @Router		/api/gitea/{question_id}/question [post]
 func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	db := database.DBConn
 	questionIDStr := c.Param("question_id")
@@ -287,7 +287,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	}
 
 	var existingQuestion models.Question
-	if err := db.Where(&models.Question{ID: uint(questionID)}).First(&existingQuestion).Error; err != nil {
+	if err := db.Where("id = ? AND is_active = ?", questionID, true).First(&existingQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
