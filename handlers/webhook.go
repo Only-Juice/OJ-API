@@ -193,8 +193,6 @@ func PostGiteaHook(c *gin.Context) {
 		}
 		fmt.Println(ref.Hash())
 
-		defer os.RemoveAll(codePath)
-
 		sandbox.SandboxPtr.ReserveJob(payload.Repository.Parent.FullName, []byte(codePath), newScore)
 	}()
 }
