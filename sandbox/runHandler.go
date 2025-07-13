@@ -61,7 +61,7 @@ func (s *Sandbox) runShellCommand(compileCommand []byte, executeCommand []byte, 
 	defer cancel()
 
 	// saving code as file
-	compileScript := append(compileCommand, []byte("\nrm build -rf")...)
+	compileScript := compileCommand
 	codeID, err := WriteToTempFile(compileScript)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -71,9 +71,6 @@ func (s *Sandbox) runShellCommand(compileCommand []byte, executeCommand []byte, 
 		return
 	}
 	defer os.Remove(shellFilename(codeID))
-
-	fmt.Printf("編譯: %q\n", string(compileCommand))
-	fmt.Printf("執行: %q\n", fmt.Sprintf("%v/%s", string(executeCommand), "utils"))
 
 	if len(codePath) > 0 {
 		// copy python code(./sandbox/python/grp_parser.py) to code path
@@ -175,8 +172,8 @@ func (s *Sandbox) runShellCommand(compileCommand []byte, executeCommand []byte, 
 		return
 	}
 
-	os.RemoveAll(string(codePath))
-	fmt.Printf("Done for judge!")
+	defer os.RemoveAll(string(codePath))
+	fmt.Printf("Done for judge!\n")
 }
 
 func (s *Sandbox) runShellCommandByRepo(work *Job) {
@@ -197,6 +194,7 @@ func (s *Sandbox) runShellCommandByRepo(work *Job) {
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
+
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
 		"--fsize=5120",
@@ -233,7 +231,7 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	return true, string(out)
 }
 
-func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, codePath []byte) (string, string) {
+func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
 		"--fsize=5120",
@@ -242,7 +240,6 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 		"--processes=100",
 		"--open-files=0",
 		"--env=PATH",
-		"--stdout=out.txt",
 		"--time=1",
 		"--wall-time=1.5",
 		"--mem=131072",
@@ -255,7 +252,7 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
 	}
 
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellFilename(shellCommand))
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellCommand)
 
 	log.Printf("Command: isolate %s", strings.Join(cmdArgs, " "))
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
@@ -264,16 +261,10 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 
 	if err != nil {
 		log.Printf("Failed to run command: %v", err)
+		return "Execute with Error!", false
 	}
 
-	boxOutputPath := fmt.Sprintf("/var/local/lib/isolate/%v/box/out.txt", box)
+	log.Printf("Program Output: %s", string(out))
 
-	output, readErr := os.ReadFile(boxOutputPath)
-	if readErr != nil {
-		log.Printf("Failed to read output: %v", readErr)
-	}
-
-	log.Printf("Program Output: %s", string(output))
-
-	return string(out), string(output)
+	return string(out), true
 }

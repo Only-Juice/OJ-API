@@ -193,6 +193,6 @@ func PostGiteaHook(c *gin.Context) {
 		}
 		fmt.Println(ref.Hash())
 
-		sandbox.SandboxPtr.ReserveJob(payload.Repository.Parent.FullName, []byte(codePath), newScore)
+		sandbox.SandboxPtr.ReserveJob(existingQuestion.GitRepoURL, []byte(codePath), newScore)
 	}()
 }
