@@ -68,7 +68,7 @@ func PostGiteaHook(c *gin.Context) {
 	}
 
 	var existingQuestion models.Question
-	if err := db.Where(&models.Question{ID: existingUserQuestionRelation.QuestionID}).First(&existingQuestion).Error; err != nil {
+	if err := db.Where(&models.Question{ID: existingUserQuestionRelation.QuestionID, IsActive: true}).First(&existingQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "No question found for this user-question relation",

@@ -21,10 +21,6 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		if !isRequired {
-			c.Next()
-			return
-		}
 		var jwt string
 
 		// First, try to get JWT from Authorization header
@@ -45,7 +41,7 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 		}
 
 		// If no JWT found and required, return unauthorized
-		if jwt == "" {
+		if jwt == "" && isRequired {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Missing Authorization header or access token cookie",
@@ -56,7 +52,7 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 
 		// Validate access token specifically
 		jwtClaims, err := utils.ValidateAccessToken(jwt)
-		if err != nil {
+		if err != nil && isRequired {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Invalid access token",
@@ -148,55 +144,55 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/auth/logout", handlers.Logout)
 
 		// Admin routes
-		api.POST("/admin/user/:id/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
+		api.POST("/admin/:id/user/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
 		api.GET("/admin/user", AuthMiddleware(), handlers.GetAllUserInfo)
-		api.GET("/admin/user/:id", AuthMiddleware(), handlers.GetUserInfo)
-		api.PATCH("/admin/user/:id", AuthMiddleware(), handlers.UpdateUserInfo)
+		api.GET("/admin/:id/user", AuthMiddleware(), handlers.GetUserInfo)
+		api.PATCH("/admin/:id/user", AuthMiddleware(), handlers.UpdateUserInfo)
 
 		// Exam routes
-		api.POST("/exams", AuthMiddleware(), handlers.CreateExam)
-		api.GET("/exams/:id", AuthMiddleware(), handlers.GetExam)
-		api.PUT("/exams/:id", AuthMiddleware(), handlers.UpdateExam)
-		api.DELETE("/exams/:id", AuthMiddleware(), handlers.DeleteExam)
+		api.POST("/exams/admin", AuthMiddleware(), handlers.CreateExam)
+		api.GET("/exams/admin/:id/exam", AuthMiddleware(), handlers.GetExam)
+		api.PUT("/exams/admin/:id/exam", AuthMiddleware(), handlers.UpdateExam)
+		api.DELETE("/exams/admin/:id/exam", AuthMiddleware(), handlers.DeleteExam)
 		api.GET("/exams", handlers.ListExams)
-		api.GET("/exams/:id/questions", handlers.GetExamQuestions)
-		api.POST("/exams/:id/questions/:question_id", AuthMiddleware(), handlers.AddQuestionToExam)
-		api.DELETE("/exams/:id/questions/:question_id", AuthMiddleware(), handlers.RemoveQuestionFromExam)
+		api.GET("/exams/:id/questions", AuthMiddleware(false), handlers.GetExamQuestions)
+		api.POST("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.AddQuestionToExam)
+		api.DELETE("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.RemoveQuestionFromExam)
 		api.GET("/exams/:id/score/top", AuthMiddleware(), handlers.GetTopExamScore)
 		api.GET("/exams/:id/leaderboard", handlers.GetExamLeaderboard)
 
 		// Sandbox routes
-		api.POST("/sandbox", AuthMiddleware(), handlers.PostSandboxCmd)
+		api.POST("/sandbox/admin/sandbox_cmd", AuthMiddleware(), handlers.PostSandboxCmd)
 		api.GET("/sandbox/status", handlers.GetSandboxStatus)
 
 		// Gitea routes
 		api.POST("/gitea", handlers.PostGiteaHook)
 		api.POST("/gitea/auth", handlers.PostBasicAuthenticationGitea)
-		api.POST("/gitea/question/:question_id", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
+		api.POST("/gitea/:question_id/question", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
 		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
-		api.POST("/gitea/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
+		api.POST("/gitea/admin/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
 		api.POST("/gitea/user/keys", AuthMiddleware(), handlers.PostCreatePublicKeyGitea)
 
-		// Question routes
-		api.GET("/question", AuthMiddleware(false), handlers.GetQuestionList)
-		api.GET("/question/id/:ID", handlers.GetQuestionByID)
-		api.GET("/question/user", AuthMiddleware(), handlers.GetUsersQuestions)
-		api.GET("/question/user/id/:ID", AuthMiddleware(), handlers.GetUserQuestionByID)
-		api.GET("/question/:UQR_ID", AuthMiddleware(), handlers.GetQuestion)
-		api.POST("/question", AuthMiddleware(), handlers.AddQuestion)
-		api.PATCH("/question/id/:ID", AuthMiddleware(), handlers.PatchQuestion)
-		api.DELETE("/question/id/:ID", AuthMiddleware(), handlers.DeleteQuestion)
-		api.GET("/question/test_script/:ID", AuthMiddleware(), handlers.GetQuestionTestScript)
+		// Questions routes
+		api.GET("/questions", AuthMiddleware(false), handlers.GetQuestionList)
+		api.GET("/questions/:ID/question", handlers.GetQuestionByID)
+		api.PATCH("/questions/admin/:ID/question", AuthMiddleware(), handlers.PatchQuestion)
+		api.DELETE("/questions/admin/:ID/question", AuthMiddleware(), handlers.DeleteQuestion)
+		api.POST("/questions/admin/question", AuthMiddleware(), handlers.AddQuestion)
+		api.GET("/questions/user", AuthMiddleware(), handlers.GetUsersQuestions)
+		api.GET("/questions/user/:ID/question", AuthMiddleware(), handlers.GetUserQuestionByID)
+		api.GET("/questions/uqr/:UQR_ID/question", AuthMiddleware(), handlers.GetQuestion)
+		api.GET("/questions/admin/:ID/test_script", AuthMiddleware(), handlers.GetQuestionTestScript)
 
 		// Score routes
 		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
 		api.GET("/score/all", AuthMiddleware(), handlers.GetAllScore)
 		api.GET("/score/leaderboard", handlers.GetLeaderboard)
-		api.GET("/score/question/:question_id", AuthMiddleware(), handlers.GetScoreByQuestionID)
-		api.POST("/score/question/:question_id/rescore", AuthMiddleware(), handlers.ReScoreQuestion)
+		api.GET("/score/:question_id/question", AuthMiddleware(), handlers.GetScoreByQuestionID)
+		api.POST("/score/admin/:question_id/question/rescore", AuthMiddleware(), handlers.ReScoreQuestion)
 		api.GET("/score/top", AuthMiddleware(), handlers.GetTopScore)
-		api.POST("/score/user/rescore/:question_id", AuthMiddleware(), handlers.ReScoreUserQuestion)
-		api.GET("/score/:UQR_ID", AuthMiddleware(), handlers.GetScoreByUQRID)
+		api.POST("/score/:question_id/question/user_rescore", AuthMiddleware(), handlers.ReScoreUserQuestion)
+		api.GET("/score/uqr/:UQR_ID/score", AuthMiddleware(), handlers.GetScoreByUQRID)
 
 		// User routes
 		api.GET("/user", AuthMiddleware(), handlers.GetUser)

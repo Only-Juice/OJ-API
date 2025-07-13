@@ -33,7 +33,7 @@ type ResetUserPasswordDTO struct {
 // @Failure      401
 // @Failure      403
 // @Failure      500
-// @Router /api/admin/user/{id}/reset_password [post]
+// @Router /api/admin/{id}/user/reset_password [post]
 // @Security BearerAuth
 func ResetUserPassword(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -115,7 +115,7 @@ func ResetUserPassword(c *gin.Context) {
 // @Failure      401
 // @Failure      403
 // @Failure      500
-// @Router /api/admin/user/{id} [get]
+// @Router /api/admin/{id}/user [get]
 // @Security BearerAuth
 func GetUserInfo(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -216,7 +216,7 @@ type UpdateUserInfoDTO struct {
 // @Failure      401
 // @Failure      403
 // @Failure      500
-// @Router /api/admin/user/{id} [patch]
+// @Router /api/admin/{id}/user [patch]
 // @Security BearerAuth
 func UpdateUserInfo(c *gin.Context) {
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
