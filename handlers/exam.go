@@ -374,7 +374,7 @@ func AddQuestionToExam(c *gin.Context) {
 
 	questionID := c.Param("question_id")
 	var question models.Question
-	if err := db.Where("is_active = ? AND id = ?", true, questionID).Take(&question).Error; err != nil {
+	if err := db.First(&question, questionID).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -461,7 +461,7 @@ func RemoveQuestionFromExam(c *gin.Context) {
 
 	questionID := c.Param("question_id")
 	var question models.Question
-	if err := db.Where("is_active = ? AND id = ?", true, questionID).Take(&question).Error; err != nil {
+	if err := db.First(&question, questionID).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
