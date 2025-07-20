@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"sync"
 	"time"
 
 	"golang.design/x/lockfree"
@@ -13,8 +14,9 @@ import (
 type Sandbox struct {
 	AvailableBoxIDs *lockfree.Queue // Sandbox that can use
 	waitingQueue    *lockfree.Queue // Sandbox that executing code
-	jobQueue        *lockfree.Queue //Storing Unjudge job
-	sandboxCount    int
+	jobQueue        *lockfree.Queue // Storing Unjudge job
+	sandboxCount    int             // How many sandbox
+	lock            sync.Mutex      // Mutex to avoid race condition
 }
 
 type Job struct {
@@ -44,13 +46,16 @@ func NewSandbox(count int) *Sandbox {
 }
 
 func (s *Sandbox) Reserve(timeout time.Duration) (int, bool) {
+	s.lock.Lock()
 	if item := s.AvailableBoxIDs.Dequeue(); item != nil {
+		s.lock.Unlock()
 		return item.(int), true
 	}
 
 	waitChan := make(chan int, 1)
 	s.waitingQueue.Enqueue(waitChan)
 
+	s.lock.Unlock()
 	select {
 	case boxID := <-waitChan:
 		return boxID, true
@@ -60,7 +65,11 @@ func (s *Sandbox) Reserve(timeout time.Duration) (int, bool) {
 }
 
 func (s *Sandbox) Release(boxID int) {
-	if item := s.waitingQueue.Dequeue(); item != nil {
+	s.lock.Lock()
+	item := s.waitingQueue.Dequeue()
+	s.lock.Unlock()
+
+	if item != nil {
 		if waitChan, ok := item.(chan int); ok {
 			select {
 			case waitChan <- boxID:
@@ -71,7 +80,10 @@ func (s *Sandbox) Release(boxID int) {
 			return
 		}
 	}
+
+	s.lock.Lock()
 	s.AvailableBoxIDs.Enqueue(boxID)
+	s.lock.Unlock()
 }
 
 func (s *Sandbox) AvailableCount() int {
@@ -91,6 +103,10 @@ func (s *Sandbox) IsJobEmpty() bool {
 }
 
 func (s *Sandbox) ReserveJob(repo string, codePath []byte, uqtid models.UserQuestionTable) {
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	job := &Job{
 		Repo:     repo,
 		CodePath: codePath,

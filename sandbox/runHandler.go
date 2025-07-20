@@ -35,21 +35,24 @@ func (s *Sandbox) WorkerLoop(ctx context.Context) {
 }
 
 func (s *Sandbox) assignJob() {
-	if s.AvailableCount() == 0 || s.IsJobEmpty() {
-		return
+	for s.AvailableCount() > 0 && !s.IsJobEmpty() {
+		job := s.ReleaseJob()
+		boxID, ok := s.Reserve(1 * time.Second)
+		if !ok {
+			s.ReserveJob(job.Repo, job.CodePath, job.UQR)
+			continue
+		}
+		go s.runShellCommandByRepo(boxID, job)
 	}
-	job := s.ReleaseJob()
-	s.runShellCommandByRepo(job)
 }
 
-func (s *Sandbox) runShellCommand(compileCommand []byte, executeCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
+func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		JudgeTime: time.Now().UTC(),
 	})
 
-	boxID, _ := s.Reserve(1 * time.Second)
 	defer s.Release(boxID)
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -95,9 +98,9 @@ func (s *Sandbox) runShellCommand(compileCommand []byte, executeCommand []byte, 
 	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID), codePath)
 
 	if !success {
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: "Compilation Failed:\n" + compileOut,
+		db.Model(&userQuestion).Updates(map[string]interface{}{
+			"score":   0,
+			"message": "Compilation Failed:\n" + compileOut,
 		})
 		return
 	}
@@ -176,7 +179,7 @@ func (s *Sandbox) runShellCommand(compileCommand []byte, executeCommand []byte, 
 	fmt.Printf("Done for judge!\n")
 }
 
-func (s *Sandbox) runShellCommandByRepo(work *Job) {
+func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 	// parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable
 
 	db := database.DBConn
@@ -190,7 +193,7 @@ func (s *Sandbox) runShellCommandByRepo(work *Job) {
 		return
 	}
 
-	s.runShellCommand([]byte(cmd.TestScript), []byte(cmd.ExecuteScript), work.CodePath, work.UQR)
+	s.runShellCommand(boxID, []byte(cmd.TestScript), []byte(cmd.ExecuteScript), work.CodePath, work.UQR)
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
@@ -221,7 +224,7 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return false, "Compile with Error!"
+		return false, err.Error() + "\n" + string(out)
 	}
 
 	if strings.Contains(string(out), "error:") {
@@ -263,8 +266,6 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 		log.Printf("Failed to run command: %v", err)
 		return "Execute with Error!", false
 	}
-
-	log.Printf("Program Output: %s", string(out))
 
 	return string(out), true
 }
