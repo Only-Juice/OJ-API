@@ -449,8 +449,6 @@ func ReScoreUserQuestion(c *gin.Context) {
 		}
 		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-		defer os.RemoveAll(codePath)
-
 		sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScore)
 	}()
 }
