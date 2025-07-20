@@ -83,7 +83,7 @@ func GetScoreByRepo(c *gin.Context) {
 	var totalCount int64
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON question_id = Q.id").
 		Where("git_user_repo_url = ? AND Q.is_active = ?", repoURL, true).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -96,7 +96,7 @@ func GetScoreByRepo(c *gin.Context) {
 	var _scores []models.UserQuestionTable
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON question_id = Q.id").
 		Where("git_user_repo_url = ? AND Q.is_active = ?", repoURL, true).
 		Order("judge_time DESC").
 		Offset(offset).
@@ -497,7 +497,7 @@ func GetTopScore(c *gin.Context) {
 	subQuery := db.Model(&models.UserQuestionTable{}).
 		Select("DISTINCT question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Where("UQR.user_id = ?", jwtClaims.UserID)
@@ -515,7 +515,7 @@ func GetTopScore(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON question_id = Q.id").
 		Where("Q.is_active = ?", true).
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Where("user_id = ?", jwtClaims.UserID).
@@ -693,7 +693,7 @@ func GetAllScore(c *gin.Context) {
 
 	subQuery := db.Model(&models.UserQuestionTable{}).
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
 		Where("UQR.user_id = ?", jwtClaims.UserID)
 
@@ -709,7 +709,7 @@ func GetAllScore(c *gin.Context) {
 	var scores []TopScore
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON question_id = Q.id").
 		Where("Q.is_active = ?", true).
 		Select("question_id, git_user_repo_url, score, message, judge_time").
 		Where("user_id = ?", jwtClaims.UserID).
