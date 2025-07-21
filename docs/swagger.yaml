@@ -331,6 +331,8 @@ definitions:
         type: string
       title:
         type: string
+      top_score:
+        type: integer
     type: object
   handlers._GetUsersQuestionsResponseData:
     properties:
@@ -410,6 +412,31 @@ definitions:
     - default_password
     - email_domain
     - usernames
+    type: object
+  handlers.BulkCreateUserItem:
+    properties:
+      email:
+        example: username1@example.com
+        type: string
+      password:
+        example: password
+        type: string
+      username:
+        example: username1
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handlers.BulkCreateUserRequest:
+    properties:
+      user:
+        items:
+          $ref: '#/definitions/handlers.BulkCreateUserItem'
+        type: array
+    required:
+    - user
     type: object
   handlers.BulkCreateUserResponse:
     properties:
@@ -1631,6 +1658,43 @@ paths:
       summary: Bulk create User
       tags:
       - Gitea
+  /api/gitea/admin/user/bulk_v2:
+    post:
+      consumes:
+      - application/json
+      description: Bulk create User v2
+      parameters:
+      - description: User Email, Username, Password
+        in: body
+        name: BulkCreateUserRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkCreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return successful and failed users
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.BulkCreateUserResponse'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Bulk create User v2
+      tags:
+      - Gitea
   /api/gitea/auth:
     post:
       consumes:
@@ -1722,7 +1786,7 @@ paths:
       consumes:
       - application/json
       description: Get a list of questions. Authentication is optional - if authenticated,
-        shows user's question status.
+        shows user's question status and top score.
       parameters:
       - description: page number of results to return (1-based)
         in: query
