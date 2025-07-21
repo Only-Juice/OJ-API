@@ -1090,6 +1090,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/gitea/admin/user/bulk_v2": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bulk create User v2",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Bulk create User v2",
+                "parameters": [
+                    {
+                        "description": "User Email, Username, Password",
+                        "name": "BulkCreateUserRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkCreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return successful and failed users",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.BulkCreateUserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/gitea/auth": {
             "post": {
                 "description": "Use basic authentication to access the Gitea API",
@@ -1286,7 +1349,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get a list of questions. Authentication is optional - if authenticated, shows user's question status.",
+                "description": "Get a list of questions. Authentication is optional - if authenticated, shows user's question status and top score.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3186,6 +3249,42 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.BulkCreateUserItem": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "username1@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "username1"
+                }
+            }
+        },
+        "handlers.BulkCreateUserRequest": {
+            "type": "object",
+            "required": [
+                "user"
+            ],
+            "properties": {
+                "user": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.BulkCreateUserItem"
+                    }
+                }
+            }
+        },
         "handlers.BulkCreateUserResponse": {
             "type": "object",
             "properties": {
@@ -3866,6 +3965,9 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "top_score": {
+                    "type": "integer"
                 }
             }
         },

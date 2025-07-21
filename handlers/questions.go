@@ -16,6 +16,7 @@ import (
 type _GetQuestionListQuestionData struct {
 	models.Question
 	HasQuestion bool `json:"has_question"`
+	TopScore    *int `json:"top_score,omitempty"`
 }
 
 type GetQuestionListResponseData struct {
@@ -25,7 +26,7 @@ type GetQuestionListResponseData struct {
 
 // GetQuestionList is a function to get a list of questions
 // @Summary		Get a list of questions [Optional Authentication]
-// @Description	Get a list of questions. Authentication is optional - if authenticated, shows user's question status.
+// @Description	Get a list of questions. Authentication is optional - if authenticated, shows user's question status and top score.
 // @Tags			Question
 // @Accept			json
 // @Produce		json
@@ -77,47 +78,30 @@ func GetQuestionList(c *gin.Context) {
 	var totalQuestions int64
 	baseQuery.Count(&totalQuestions)
 
-	var questions []_GetQuestionListQuestionData
-
-	// Build select query with sorting
-	selectQuery := "questions.*, CASE WHEN user_question_relations.id IS NOT NULL THEN true ELSE false END AS has_question"
-	if userID == 0 {
-		selectQuery = "questions.*, false AS has_question"
-	}
+	var questions []models.Question
 
 	// Sort by status: active questions first, then expired
 	orderClause := "CASE WHEN start_time <= '" + now.Format("2006-01-02 15:04:05") + "' AND end_time >= '" + now.Format("2006-01-02 15:04:05") + "' THEN 0 ELSE 1 END, start_time DESC, end_time ASC"
 
-	if userID != 0 {
-		query := db.Table("questions").Select(selectQuery).
-			Joins("LEFT JOIN user_question_relations ON questions.id = user_question_relations.question_id AND user_question_relations.user_id = ?", userID).
-			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)")
+	// Get questions first
+	query := db.Model(&models.Question{}).
+		Where("id NOT IN (SELECT question_id FROM exam_questions)")
 
-		// Add status filter to main query
-		switch status {
-		case "active":
-			query = query.Where("questions.start_time <= ? AND questions.end_time >= ?", now, now)
-		case "expired":
-			query = query.Where("questions.end_time < ?", now)
-		}
-
-		query.Order(orderClause).
-			Offset(offset).Limit(limit).Scan(&questions)
-	} else {
-		query := db.Table("questions").Select(selectQuery).
-			Where("questions.id NOT IN (SELECT question_id FROM exam_questions)")
-
-		// Add status filter to main query
-		switch status {
-		case "active":
-			query = query.Where("questions.start_time <= ? AND questions.end_time >= ?", now, now)
-		case "expired":
-			query = query.Where("questions.end_time < ?", now)
-		}
-
-		query.Order(orderClause).
-			Offset(offset).Limit(limit).Scan(&questions)
+	if !isAdmin {
+		query = query.Where("is_active = ?", true)
 	}
+
+	// Add status filter
+	switch status {
+	case "active":
+		query = query.Where("start_time <= ? AND end_time >= ?", now, now)
+	case "expired":
+		query = query.Where("end_time < ?", now)
+	}
+
+	// Get questions with proper ordering
+	query.Order(orderClause).
+		Offset(offset).Limit(limit).Find(&questions)
 
 	if len(questions) == 0 {
 		c.JSON(404, ResponseHTTP{
@@ -128,12 +112,95 @@ func GetQuestionList(c *gin.Context) {
 		return
 	}
 
+	// If user is authenticated, check which questions they have and get top scores
+	if userID != 0 {
+		questionIDs := make([]uint, len(questions))
+		for i, q := range questions {
+			questionIDs[i] = q.ID
+		}
+
+		// Check which questions user has
+		var userQuestions []uint
+		db.Model(&models.UserQuestionRelation{}).
+			Select("question_id").
+			Where("user_id = ? AND question_id IN ?", userID, questionIDs).
+			Pluck("question_id", &userQuestions)
+
+		userQuestionMap := make(map[uint]bool)
+		for _, qid := range userQuestions {
+			userQuestionMap[qid] = true
+		}
+
+		// Get top scores for these questions
+		var topScores []struct {
+			QuestionID uint `json:"question_id"`
+			TopScore   *int `json:"top_score"`
+		}
+
+		err := db.Raw(`
+			SELECT 
+				q.id as question_id,
+				COALESCE(MAX(uqt.score), NULL) as top_score
+			FROM questions q
+			LEFT JOIN user_question_relations uqr ON q.id = uqr.question_id AND uqr.user_id = ?
+			LEFT JOIN user_question_tables uqt ON uqr.id = uqt.uqr_id
+			WHERE q.id IN ?
+			GROUP BY q.id
+		`, userID, questionIDs).Scan(&topScores).Error
+
+		if err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: "Failed to fetch top scores",
+			})
+			return
+		}
+
+		// Create a map for easy lookup
+		scoreMap := make(map[uint]*int)
+		for _, score := range topScores {
+			scoreMap[score.QuestionID] = score.TopScore
+		}
+
+		// Convert to response format and add user-specific data
+		var responseQuestions []_GetQuestionListQuestionData
+		for _, q := range questions {
+			responseQ := _GetQuestionListQuestionData{
+				Question:    q,
+				HasQuestion: userQuestionMap[q.ID],
+				TopScore:    scoreMap[q.ID],
+			}
+			responseQuestions = append(responseQuestions, responseQ)
+		}
+
+		c.JSON(200, ResponseHTTP{
+			Success: true,
+			Message: "Questions fetched successfully",
+			Data: GetQuestionListResponseData{
+				QuestionCount: int(totalQuestions),
+				Questions:     responseQuestions,
+			},
+		})
+		return
+	}
+
+	// For non-authenticated users, convert to response format
+	var responseQuestions []_GetQuestionListQuestionData
+	for _, q := range questions {
+		responseQ := _GetQuestionListQuestionData{
+			Question:    q,
+			HasQuestion: false,
+			TopScore:    nil,
+		}
+		responseQuestions = append(responseQuestions, responseQ)
+	}
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Questions fetched successfully",
 		Data: GetQuestionListResponseData{
 			QuestionCount: int(totalQuestions),
-			Questions:     questions,
+			Questions:     responseQuestions,
 		},
 	})
 }

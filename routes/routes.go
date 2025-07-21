@@ -55,13 +55,14 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 		if err != nil {
 			if !isRequired {
 				jwtClaims = nil
+			} else {
+				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Invalid access token",
+				})
+				c.Abort()
+				return
 			}
-			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
-				Success: false,
-				Message: "Invalid access token",
-			})
-			c.Abort()
-			return
 		}
 
 		ctx := context.WithValue(c.Request.Context(), models.JWTClaimsKey, jwtClaims)
@@ -174,6 +175,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/gitea/:question_id/question", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
 		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
 		api.POST("/gitea/admin/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
+		api.POST("/gitea/admin/user/bulk_v2", AuthMiddleware(), handlers.PostBulkCreateUserGiteav2)
 		api.POST("/gitea/user/keys", AuthMiddleware(), handlers.PostCreatePublicKeyGitea)
 
 		// Questions routes

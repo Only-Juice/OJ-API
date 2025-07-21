@@ -534,7 +534,7 @@ func GetTopExamScore(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Select("DISTINCT question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
-		Joins("JOIN questions Q ON user_question_tables.question_id = Q.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
 		Where("question_id IN (SELECT question_id FROM exam_questions WHERE exam_id = ?)", id).
 		Where("UQR.user_id = ?", jwtClaims.UserID).
