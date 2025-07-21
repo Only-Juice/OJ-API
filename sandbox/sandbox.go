@@ -91,7 +91,7 @@ func (s *Sandbox) AvailableCount() int {
 }
 
 func (s *Sandbox) WaitingCount() int {
-	return int(s.waitingQueue.Length())
+	return int(s.jobQueue.Length())
 }
 
 func (s *Sandbox) ProcessingCount() int {
