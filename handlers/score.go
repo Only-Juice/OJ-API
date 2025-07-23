@@ -449,9 +449,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 		}
 		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-		defer os.RemoveAll(codePath)
-
-		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScore)
+		sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScore)
 	}()
 }
 
@@ -657,7 +655,7 @@ func ReScoreQuestion(c *gin.Context) {
 			wg.Add(1)
 			go func(i int, codePath string) {
 				defer wg.Done()
-				sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScores[i])
+				sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScores[i])
 			}(i, codePath)
 		}
 
