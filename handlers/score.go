@@ -3,15 +3,11 @@ package handlers
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"OJ-API/config"
@@ -436,28 +432,30 @@ func ReScoreUserQuestion(c *gin.Context) {
 	})
 
 	go func() {
-		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
-		token, _ := utils.GetToken(jwtClaims.UserID)
-		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-			URL: "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL,
-			Auth: &http.BasicAuth{
-				Username: jwtClaims.Username,
-				Password: token,
-			},
-			Progress: os.Stdout,
-		})
+		// 獲取用戶 token
+		token, err := utils.GetToken(jwtClaims.UserID)
 		if err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: err.Error(),
+				Message: fmt.Sprintf("Failed to get token: %v", err),
 			})
 			return
 		}
-		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-		// 使用 gRPC 客戶端添加任務
+		// 構建 Git 倉庫 URL
+		gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL
+
+		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 		clientManager := services.GetSandboxClientManager()
-		if err := clientManager.ReserveJob(question.GitRepoURL, []byte(codePath), uint64(newScore.ID)); err != nil {
+		if err := clientManager.ReserveJob(
+			question.GitRepoURL, // repo
+			gitRepoURL,          // gitRepoURL
+			uqr.GitUserRepoURL,  // gitFullName
+			"",                  // gitAfterHash (空字符串表示使用 HEAD)
+			jwtClaims.Username,  // gitUsername
+			token,               // gitToken
+			uint64(newScore.ID), // userQuestionTableID
+		); err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to queue job: %v", err),
@@ -651,38 +649,40 @@ func ReScoreQuestion(c *gin.Context) {
 		for i, u := range uqr {
 			var existingUser models.User
 			db.Where(&models.User{ID: u.UserID}).First(&existingUser)
-			codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), u.GitUserRepoURL+"/"+uuid.New().String())
-			_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-				URL: "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL,
-				Auth: &http.BasicAuth{
-					Username: existingUser.UserName,
-					Password: existingUser.GiteaToken,
-				},
-				Progress: os.Stdout,
-			})
+
+			// 獲取用戶 token
+			token, err := utils.GetToken(existingUser.ID)
 			if err != nil {
 				db.Model(&newScores[i]).Updates(models.UserQuestionTable{
 					Score:   -2,
-					Message: "Failed to clone repository",
+					Message: fmt.Sprintf("Failed to get token: %v", err),
 				})
-				return
+				continue
 			}
-			os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-			defer os.RemoveAll(codePath)
+			// 構建 Git 倉庫 URL
+			gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL
 
 			wg.Add(1)
-			go func(i int, codePath string) {
+			go func(i int, gitRepoURL string, gitFullName string, username string, token string) {
 				defer wg.Done()
-				// 使用 gRPC 客戶端添加任務
+				// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 				clientManager := services.GetSandboxClientManager()
-				if err := clientManager.ReserveJob(question.GitRepoURL, []byte(codePath), uint64(newScores[i].ID)); err != nil {
+				if err := clientManager.ReserveJob(
+					question.GitRepoURL,     // repo
+					gitRepoURL,              // gitRepoURL
+					gitFullName,             // gitFullName
+					"",                      // gitAfterHash (空字符串表示使用 HEAD)
+					username,                // gitUsername
+					token,                   // gitToken
+					uint64(newScores[i].ID), // userQuestionTableID
+				); err != nil {
 					db.Model(&newScores[i]).Updates(models.UserQuestionTable{
 						Score:   -2,
 						Message: fmt.Sprintf("Failed to queue job: %v", err),
 					})
 				}
-			}(i, codePath)
+			}(i, gitRepoURL, u.GitUserRepoURL, existingUser.UserName, token)
 		}
 
 		wg.Wait()

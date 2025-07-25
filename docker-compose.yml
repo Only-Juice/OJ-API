@@ -7,14 +7,15 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8080:3001"
     environment:
       - SANDBOX_GRPC_ADDRESS=sandbox-server:50051
+      - DB_HOST=192.168.2.123
     depends_on:
       - sandbox-server
-      - postgres
-    networks:
-      - app-network
+      # - postgres
+    # networks:
+    #   - app-network
 
   # Sandbox gRPC服務
   sandbox-server:
@@ -28,26 +29,27 @@ services:
       - /tmp:/tmp
     environment:
       - SANDBOX_COUNT=4
-    networks:
-      - app-network
+      - DB_HOST=192.168.2.123
+    # networks:
+    #   - app-network
 
   # PostgreSQL數據庫
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: ojapi
-      POSTGRES_USER: ojapi
-      POSTGRES_PASSWORD: ojapi123
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
+#   postgres:
+#     image: postgres:15
+#     environment:
+#       POSTGRES_DB: ojapi
+#       POSTGRES_USER: ojapi
+#       POSTGRES_PASSWORD: ojapi123
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - app-network
 
-volumes:
-  postgres_data:
+# volumes:
+#   postgres_data:
 
-networks:
-  app-network:
-    driver: bridge
+# networks:
+#   app-network:
+#     driver: bridge

@@ -7,13 +7,17 @@ option go_package = "OJ-API/proto/sandbox";
 // 代碼執行請求
 message ExecuteCodeRequest {
   string repo = 1;
-  bytes code_path = 2;
-  uint64 user_question_table_id = 3;
-  string username = 4;
-  string question_title = 5;
-  string language = 6;
-  bytes compile_command = 7;
-  bytes execute_command = 8;
+  string git_repo_url = 2;        // Git 倉庫完整 URL
+  string git_full_name = 3;       // Git 倉庫完整名稱 (owner/repo)
+  string git_after_hash = 4;      // 要 checkout 的 commit hash
+  string git_username = 5;        // Git 用戶名
+  string git_token = 6;           // Git 訪問 token
+  uint64 user_question_table_id = 7;
+  string username = 8;
+  string question_title = 9;
+  string language = 10;
+  bytes compile_command = 11;
+  bytes execute_command = 12;
 }
 
 // 代碼執行回應
@@ -39,13 +43,17 @@ message SandboxStatusResponse {
 // 任務管理請求
 message AddJobRequest {
   string repo = 1;
-  bytes code_path = 2;
-  uint64 user_question_table_id = 3;
-  string username = 4;
-  string question_title = 5;
-  string language = 6;
-  bytes compile_command = 7;
-  bytes execute_command = 8;
+  string git_repo_url = 2;        // Git 倉庫完整 URL
+  string git_full_name = 3;       // Git 倉庫完整名稱 (owner/repo)
+  string git_after_hash = 4;      // 要 checkout 的 commit hash
+  string git_username = 5;        // Git 用戶名
+  string git_token = 6;           // Git 訪問 token
+  uint64 user_question_table_id = 7;
+  string username = 8;
+  string question_title = 9;
+  string language = 10;
+  bytes compile_command = 11;
+  bytes execute_command = 12;
 }
 
 // 任務管理回應

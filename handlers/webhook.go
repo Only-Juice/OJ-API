@@ -3,15 +3,10 @@ package handlers
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/google/uuid"
 
 	"OJ-API/config"
 	"OJ-API/database"
@@ -122,11 +117,8 @@ func PostGiteaHook(c *gin.Context) {
 	})
 
 	go func() {
-		// Clone the given repository to the given directory
-		log.Printf("git clone %s", "http://"+config.Config("GIT_HOST")+"/"+payload.Repository.FullName)
-		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), payload.Repository.FullName+"/"+uuid.New().String())
+		// 獲取用戶 token
 		token, err := utils.GetToken(existingUser.ID)
-		var cloneOptions *git.CloneOptions
 		if err != nil {
 			log.Printf("Failed to get token: %v", err)
 			db.Model(&newScore).Updates(models.UserQuestionTable{
@@ -134,68 +126,22 @@ func PostGiteaHook(c *gin.Context) {
 				Message: fmt.Sprintf("Failed to get token: %v", err),
 			})
 			return
-		} else {
-			cloneOptions = &git.CloneOptions{
-				URL: "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName,
-				Auth: &http.BasicAuth{
-					Username: existingUser.UserName,
-					Password: token,
-				},
-				Progress: os.Stdout,
-			}
 		}
 
-		repo, err := git.PlainClone(codePath, false, cloneOptions)
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to clone repository: %v", err),
-			})
-			return
-		}
-		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
-		log.Printf("git show-ref --head HEAD")
-		ref, err := repo.Head()
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to get HEAD: %v", err),
-			})
-			return
-		}
-		fmt.Println(ref.Hash())
+		// 構建 Git 倉庫 URL
+		gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName
 
-		worktree, err := repo.Worktree()
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to get worktree: %v", err),
-			})
-			return
-		}
-		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(payload.After),
-		})
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to checkout: %v", err),
-			})
-			return
-		}
-		ref, err = repo.Head()
-		if err != nil {
-			db.Model(&newScore).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to get HEAD: %v", err),
-			})
-			return
-		}
-		fmt.Println(ref.Hash())
-
-		// 使用 gRPC 客戶端添加任務
+		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 		clientManager := services.GetSandboxClientManager()
-		if err := clientManager.ReserveJob(existingQuestion.GitRepoURL, []byte(codePath), uint64(newScore.ID)); err != nil {
+		if err := clientManager.ReserveJob(
+			existingQuestion.GitRepoURL, // repo
+			gitRepoURL,                  // gitRepoURL
+			payload.Repository.FullName, // gitFullName
+			payload.After,               // gitAfterHash
+			existingUser.UserName,       // gitUsername
+			token,                       // gitToken
+			uint64(newScore.ID),         // userQuestionTableID
+		); err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to queue job: %v", err),

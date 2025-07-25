@@ -2,8 +2,8 @@ package services
 
 import (
 	"OJ-API/models"
-	"OJ-API/sandbox"
 	pb "OJ-API/proto"
+	"OJ-API/sandbox"
 	"context"
 	"fmt"
 	"log"
@@ -38,12 +38,12 @@ func (s *SandboxServer) ExecuteCode(ctx context.Context, req *pb.ExecuteCodeRequ
 	}
 
 	// 將任務添加到隊列
-	s.sandbox.ReserveJob(req.Repo, req.CodePath, uqr)
+	s.sandbox.ReserveJob(req.Repo, req.GitRepoUrl, req.GitFullName, req.GitAfterHash, req.GitUsername, req.GitToken, uqr)
 
 	return &pb.ExecuteCodeResponse{
-		Success: true,
-		Message: "Code execution job queued successfully",
-		Score:   0, // 初始分數，會在實際執行後更新
+		Success:   true,
+		Message:   "Code execution job queued successfully",
+		Score:     0, // 初始分數，會在實際執行後更新
 		JudgeTime: time.Now().Format(time.RFC3339),
 	}, nil
 }
@@ -71,7 +71,7 @@ func (s *SandboxServer) AddJob(ctx context.Context, req *pb.AddJobRequest) (*pb.
 	}
 
 	// 添加任務到隊列
-	s.sandbox.ReserveJob(req.Repo, req.CodePath, uqr)
+	s.sandbox.ReserveJob(req.Repo, req.GitRepoUrl, req.GitFullName, req.GitAfterHash, req.GitUsername, req.GitToken, uqr)
 
 	return &pb.AddJobResponse{
 		Success: true,
@@ -111,13 +111,17 @@ func (c *SandboxClient) Close() error {
 }
 
 // ExecuteCode 執行代碼
-func (c *SandboxClient) ExecuteCode(ctx context.Context, repo string, codePath []byte, userQuestionTableID uint64) (*pb.ExecuteCodeResponse, error) {
+func (c *SandboxClient) ExecuteCode(ctx context.Context, repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) (*pb.ExecuteCodeResponse, error) {
 	req := &pb.ExecuteCodeRequest{
-		Repo:                  repo,
-		CodePath:              codePath,
-		UserQuestionTableId:   userQuestionTableID,
+		Repo:                repo,
+		GitRepoUrl:          gitRepoURL,
+		GitFullName:         gitFullName,
+		GitAfterHash:        gitAfterHash,
+		GitUsername:         gitUsername,
+		GitToken:            gitToken,
+		UserQuestionTableId: userQuestionTableID,
 	}
-	
+
 	return c.client.ExecuteCode(ctx, req)
 }
 
@@ -128,13 +132,17 @@ func (c *SandboxClient) GetStatus(ctx context.Context) (*pb.SandboxStatusRespons
 }
 
 // AddJob 添加任務
-func (c *SandboxClient) AddJob(ctx context.Context, repo string, codePath []byte, userQuestionTableID uint64) (*pb.AddJobResponse, error) {
+func (c *SandboxClient) AddJob(ctx context.Context, repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) (*pb.AddJobResponse, error) {
 	req := &pb.AddJobRequest{
-		Repo:                  repo,
-		CodePath:              codePath,
-		UserQuestionTableId:   userQuestionTableID,
+		Repo:                repo,
+		GitRepoUrl:          gitRepoURL,
+		GitFullName:         gitFullName,
+		GitAfterHash:        gitAfterHash,
+		GitUsername:         gitUsername,
+		GitToken:            gitToken,
+		UserQuestionTableId: userQuestionTableID,
 	}
-	
+
 	return c.client.AddJob(ctx, req)
 }
 

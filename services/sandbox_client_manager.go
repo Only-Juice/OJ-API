@@ -38,11 +38,11 @@ func (m *SandboxClientManager) initialize() {
 		log.Printf("Failed to initialize sandbox client: %v", err)
 		return
 	}
-	
+
 	m.mutex.Lock()
 	m.client = client
 	m.mutex.Unlock()
-	
+
 	log.Printf("Sandbox gRPC client initialized successfully, connected to %s", address)
 }
 
@@ -54,16 +54,16 @@ func (m *SandboxClientManager) GetClient() *SandboxClient {
 }
 
 // ReserveJob 添加任務到沙箱隊列
-func (m *SandboxClientManager) ReserveJob(repo string, codePath []byte, userQuestionTableID uint64) error {
+func (m *SandboxClientManager) ReserveJob(repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) error {
 	client := m.GetClient()
 	if client == nil {
 		return fmt.Errorf("sandbox client not initialized")
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
-	_, err := client.AddJob(ctx, repo, codePath, userQuestionTableID)
+
+	_, err := client.AddJob(ctx, repo, gitRepoURL, gitFullName, gitAfterHash, gitUsername, gitToken, userQuestionTableID)
 	return err
 }
 
@@ -73,10 +73,10 @@ func (m *SandboxClientManager) GetStatus() (*pb.SandboxStatusResponse, error) {
 	if client == nil {
 		return nil, fmt.Errorf("sandbox client not initialized")
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	return client.GetStatus(ctx)
 }
 
@@ -84,7 +84,7 @@ func (m *SandboxClientManager) GetStatus() (*pb.SandboxStatusResponse, error) {
 func (m *SandboxClientManager) Close() error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	
+
 	if m.client != nil {
 		return m.client.Close()
 	}
