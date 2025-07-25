@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +14,7 @@ import (
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/routes"
-	"OJ-API/sandbox"
+	"OJ-API/services"
 )
 
 // @title			OJ-PoC API
@@ -35,19 +33,13 @@ func main() {
 		log.Panic("Invalid ENCRYPTION_KEY length:", len(decodedKey))
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	if err := database.Connect(); err != nil {
 		log.Panic("Can't connect database:", err.Error())
 	}
-	sandboxCount, err := strconv.Atoi(config.Config("SANDBOX_COUNT"))
-	if err != nil {
-		log.Panic("Invalid SANDBOX_COUNT config:", err.Error())
-	}
-	sandbox.SandboxPtr = sandbox.NewSandbox(sandboxCount)
-	go sandbox.SandboxPtr.WorkerLoop(ctx)
-	defer sandbox.SandboxPtr.Cleanup()
+	
+	// 初始化 gRPC 客戶端管理器
+	clientManager := services.GetSandboxClientManager()
+	defer clientManager.Close()
 
 	// Signal handling
 	c := make(chan os.Signal, 1)
@@ -55,8 +47,7 @@ func main() {
 	go func() {
 		<-c
 		fmt.Println("Received interrupt signal, cleaning up...")
-		cancel()
-		sandbox.SandboxPtr.Cleanup()
+		clientManager.Close()
 		os.Exit(0)
 	}()
 

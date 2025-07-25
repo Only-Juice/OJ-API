@@ -12,7 +12,7 @@ func Config(key string) string {
 	// load .env file
 	err := godotenv.Load(".env.local")
 	if err != nil {
-		fmt.Print("Error loading .env file")
+		fmt.Print("Error loading .env.local file")
 	}
 	// Return the value of the variable
 	return os.Getenv(key)
@@ -25,4 +25,13 @@ func GetGiteaBaseURL() string {
 		gitBaseURL = "http://" + Config("GIT_HOST") // Default to http if not provided
 	}
 	return gitBaseURL
+}
+
+// GetSandboxGRPCAddress returns the sandbox gRPC server address
+func GetSandboxGRPCAddress() string {
+	address := Config("SANDBOX_GRPC_ADDRESS")
+	if address == "" {
+		address = "localhost:50051" // Default address
+	}
+	return address
 }

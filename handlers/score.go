@@ -10,13 +10,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
-	"OJ-API/sandbox"
+	"OJ-API/services"
 	"OJ-API/utils"
 )
 
@@ -436,20 +437,32 @@ func ReScoreUserQuestion(c *gin.Context) {
 
 	go func() {
 		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
+		token, _ := utils.GetToken(jwtClaims.UserID)
 		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-			URL:      "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL,
+			URL: "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL,
+			Auth: &http.BasicAuth{
+				Username: jwtClaims.Username,
+				Password: token,
+			},
 			Progress: os.Stdout,
 		})
 		if err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: "Failed to clone repository",
+				Message: err.Error(),
 			})
 			return
 		}
 		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-		sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScore)
+		// 使用 gRPC 客戶端添加任務
+		clientManager := services.GetSandboxClientManager()
+		if err := clientManager.ReserveJob(question.GitRepoURL, []byte(codePath), uint64(newScore.ID)); err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to queue job: %v", err),
+			})
+		}
 	}()
 }
 
@@ -636,9 +649,15 @@ func ReScoreQuestion(c *gin.Context) {
 		var wg sync.WaitGroup
 
 		for i, u := range uqr {
+			var existingUser models.User
+			db.Where(&models.User{ID: u.UserID}).First(&existingUser)
 			codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), u.GitUserRepoURL+"/"+uuid.New().String())
 			_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-				URL:      "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL,
+				URL: "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL,
+				Auth: &http.BasicAuth{
+					Username: existingUser.UserName,
+					Password: existingUser.GiteaToken,
+				},
 				Progress: os.Stdout,
 			})
 			if err != nil {
@@ -655,7 +674,14 @@ func ReScoreQuestion(c *gin.Context) {
 			wg.Add(1)
 			go func(i int, codePath string) {
 				defer wg.Done()
-				sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScores[i])
+				// 使用 gRPC 客戶端添加任務
+				clientManager := services.GetSandboxClientManager()
+				if err := clientManager.ReserveJob(question.GitRepoURL, []byte(codePath), uint64(newScores[i].ID)); err != nil {
+					db.Model(&newScores[i]).Updates(models.UserQuestionTable{
+						Score:   -2,
+						Message: fmt.Sprintf("Failed to queue job: %v", err),
+					})
+				}
 			}(i, codePath)
 		}
 

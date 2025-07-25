@@ -4072,6 +4072,9 @@ const docTemplate = `{
         "models.QuestionTestScript": {
             "type": "object",
             "properties": {
+                "execute_script": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },

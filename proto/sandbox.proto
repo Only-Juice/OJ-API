@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package sandbox;
+
+option go_package = "OJ-API/proto/sandbox";
+
+// 代碼執行請求
+message ExecuteCodeRequest {
+  string repo = 1;
+  bytes code_path = 2;
+  uint64 user_question_table_id = 3;
+  string username = 4;
+  string question_title = 5;
+  string language = 6;
+  bytes compile_command = 7;
+  bytes execute_command = 8;
+}
+
+// 代碼執行回應
+message ExecuteCodeResponse {
+  bool success = 1;
+  string message = 2;
+  int32 score = 3;
+  string judge_time = 4;
+  string execution_result = 5;
+}
+
+// 沙箱狀態請求
+message SandboxStatusRequest {}
+
+// 沙箱狀態回應
+message SandboxStatusResponse {
+  int32 available_count = 1;
+  int32 waiting_count = 2;
+  int32 processing_count = 3;
+  int32 total_count = 4;
+}
+
+// 任務管理請求
+message AddJobRequest {
+  string repo = 1;
+  bytes code_path = 2;
+  uint64 user_question_table_id = 3;
+  string username = 4;
+  string question_title = 5;
+  string language = 6;
+  bytes compile_command = 7;
+  bytes execute_command = 8;
+}
+
+// 任務管理回應
+message AddJobResponse {
+  bool success = 1;
+  string message = 2;
+  string job_id = 3;
+}
+
+// 沙箱服務定義
+service SandboxService {
+  // 執行代碼
+  rpc ExecuteCode(ExecuteCodeRequest) returns (ExecuteCodeResponse);
+  
+  // 獲取沙箱狀態
+  rpc GetStatus(SandboxStatusRequest) returns (SandboxStatusResponse);
+  
+  // 添加任務到隊列
+  rpc AddJob(AddJobRequest) returns (AddJobResponse);
+  
+  // 健康檢查
+  rpc HealthCheck(SandboxStatusRequest) returns (SandboxStatusResponse);
+}

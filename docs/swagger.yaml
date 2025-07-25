@@ -937,6 +937,8 @@ definitions:
     type: object
   models.QuestionTestScript:
     properties:
+      execute_script:
+        type: string
       id:
         type: integer
       question:

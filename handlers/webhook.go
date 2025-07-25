@@ -16,7 +16,7 @@ import (
 	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
-	"OJ-API/sandbox"
+	"OJ-API/services"
 	"OJ-API/utils"
 )
 
@@ -193,6 +193,13 @@ func PostGiteaHook(c *gin.Context) {
 		}
 		fmt.Println(ref.Hash())
 
-		sandbox.SandboxPtr.ReserveJob(existingQuestion.GitRepoURL, []byte(codePath), newScore)
+		// 使用 gRPC 客戶端添加任務
+		clientManager := services.GetSandboxClientManager()
+		if err := clientManager.ReserveJob(existingQuestion.GitRepoURL, []byte(codePath), uint64(newScore.ID)); err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to queue job: %v", err),
+			})
+		}
 	}()
 }

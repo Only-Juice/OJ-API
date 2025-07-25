@@ -73,7 +73,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 		})
 		return
 	}
-	defer os.Remove(shellFilename(codeID))
+	// defer os.Remove(shellFilename(codeID))
 
 	if len(codePath) > 0 {
 		// copy python code(./sandbox/python/grp_parser.py) to code path
@@ -122,7 +122,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 		})
 		return
 	}
-	defer os.Remove(shellFilename(execodeID))
+	// defer os.Remove(shellFilename(execodeID))
 
 	s.runExecute(boxID, ctx, shellFilename(execodeID), codePath)
 
