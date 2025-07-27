@@ -603,14 +603,16 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
-	if err := db.Create(&models.Question{
+	newQuestion := models.Question{
 		Title:       question.Title,
 		Description: question.Description,
 		GitRepoURL:  question.GitRepoURL,
 		StartTime:   question.StartTime,
 		EndTime:     question.EndTime,
 		IsActive:    question.IsActive,
-	}).Error; err != nil {
+	}
+
+	if err := db.Create(&newQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to create question",
@@ -621,7 +623,7 @@ func AddQuestion(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question created successfully",
-		Data:    question,
+		Data:    newQuestion,
 	})
 }
 
