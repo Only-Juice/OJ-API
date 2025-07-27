@@ -63,7 +63,7 @@ func main() {
 	sandboxID := uuid.New().String()
 
 	// 連接到 API Server 調度器
-	schedulerAddress := config.Config("OJ_HOST")
+	schedulerAddress := config.Config("SCHEDULER_ADDRESS")
 	if schedulerAddress == "" {
 		schedulerAddress = "localhost:3001"
 	}
