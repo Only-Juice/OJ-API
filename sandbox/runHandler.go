@@ -49,7 +49,7 @@ func (s *Sandbox) assignJob() {
 	}
 }
 
-func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
+func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -67,7 +67,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 	defer cancel()
 
 	// saving code as file
-	compileScript := compileCommand
+	compileScript := []byte(cmd.TestScript)
 	codeID, err := WriteToTempFile(compileScript)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -79,10 +79,11 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 	defer os.Remove(shellFilename(codeID))
 
 	if len(codePath) > 0 {
-		// copy python code(./sandbox/python/grp_parser.py) to code path
+		// copy grp_parser to code path
 		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
 		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(codePath), "utils"))
-		copyJSON := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/score.json", fmt.Sprintf("%v/%s", string(codePath), "utils"))
+		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(codePath), "utils"), cmd)
+		//copyJSON := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/score.json", fmt.Sprintf("%v/%s", string(codePath), "utils"))
 
 		var stderr bytes.Buffer
 		copy.Stderr = &stderr
@@ -94,16 +95,16 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 			})
 			return
 		}
-		if err := copyJSON.Run(); err != nil {
-			fmt.Println(copy.String())
-			db.Model(&userQuestion).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to copy score test JSON: %v", err),
-			})
-			return
-		}
-
-		os.RemoveAll("./sandbox/grp_parser/score.json")
+		/*
+			if err := copyJSON.Run(); err != nil {
+				fmt.Println(copy.String())
+				db.Model(&userQuestion).Updates(models.UserQuestionTable{
+					Score:   -2,
+					Message: fmt.Sprintf("Failed to copy score test JSON: %v", err),
+				})
+				return
+			}
+		*/
 	}
 
 	/*
@@ -126,7 +127,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 
 	LogWithLocation("Start Execute")
 
-	executeScript := append(executeCommand, []byte("\nrm build -rf")...)
+	executeScript := append([]byte(cmd.ExecuteScript), []byte("\nrm build -rf")...)
 	execodeID, err := WriteToTempFile(executeScript)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -206,8 +207,7 @@ func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 		s.ReserveJob(work.Repo, work.CodePath, work.UQR)
 		return
 	}
-	s.getJsonfromdb(cmd)
-	s.runShellCommand(boxID, []byte(cmd.TestScript), []byte(cmd.ExecuteScript), work.CodePath, work.UQR)
+	s.runShellCommand(boxID, cmd, work.CodePath, work.UQR)
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
@@ -257,7 +257,7 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 		"--open-files=0",
 		"--env=PATH",
 		"--time=1",
-		"--wall-time=1.5",
+		"--wall-time=2",
 		"--mem=131072",
 	}
 
@@ -283,10 +283,9 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 	return string(out), true
 }
 
-func (s *Sandbox) getJsonfromdb(row models.QuestionTestScript) {
-	dir := "./sandbox/grp_parser"
+func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 	filename := "score.json"
-	filepath := filepath.Join(dir, filename)
+	filepath := filepath.Join(path, filename)
 	fmt.Println("Final Path: ", filepath)
 	var prettyJSON []byte
 	var tmp interface{}
