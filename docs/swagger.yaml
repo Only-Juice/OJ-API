@@ -123,6 +123,16 @@ definitions:
       push:
         type: boolean
     type: object
+  gitea.ProjectsMode:
+    enum:
+    - repo
+    - owner
+    - all
+    type: string
+    x-enum-varnames:
+    - ProjectsModeRepo
+    - ProjectsModeOwner
+    - ProjectsModeAll
   gitea.RepoCommit:
     properties:
       author:
@@ -140,6 +150,8 @@ definitions:
     type: object
   gitea.Repository:
     properties:
+      allow_fast_forward_only_merge:
+        type: boolean
       allow_merge_commits:
         type: boolean
       allow_rebase:
@@ -158,6 +170,8 @@ definitions:
         type: string
       default_branch:
         type: string
+      default_delete_branch_after_merge:
+        type: boolean
       default_merge_style:
         $ref: '#/definitions/gitea.MergeStyle'
       description:
@@ -206,6 +220,8 @@ definitions:
         type: string
       name:
         type: string
+      object_format_name:
+        type: string
       open_issues_count:
         type: integer
       open_pr_counter:
@@ -220,6 +236,8 @@ definitions:
         $ref: '#/definitions/gitea.Permission'
       private:
         type: boolean
+      projects_mode:
+        $ref: '#/definitions/gitea.ProjectsMode'
       release_counter:
         type: integer
       size:

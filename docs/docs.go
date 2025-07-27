@@ -2960,6 +2960,19 @@ const docTemplate = `{
                 }
             }
         },
+        "gitea.ProjectsMode": {
+            "type": "string",
+            "enum": [
+                "repo",
+                "owner",
+                "all"
+            ],
+            "x-enum-varnames": [
+                "ProjectsModeRepo",
+                "ProjectsModeOwner",
+                "ProjectsModeAll"
+            ]
+        },
         "gitea.RepoCommit": {
             "type": "object",
             "properties": {
@@ -2986,6 +2999,9 @@ const docTemplate = `{
         "gitea.Repository": {
             "type": "object",
             "properties": {
+                "allow_fast_forward_only_merge": {
+                    "type": "boolean"
+                },
                 "allow_merge_commits": {
                     "type": "boolean"
                 },
@@ -3012,6 +3028,9 @@ const docTemplate = `{
                 },
                 "default_branch": {
                     "type": "string"
+                },
+                "default_delete_branch_after_merge": {
+                    "type": "boolean"
                 },
                 "default_merge_style": {
                     "$ref": "#/definitions/gitea.MergeStyle"
@@ -3085,6 +3104,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "object_format_name": {
+                    "type": "string"
+                },
                 "open_issues_count": {
                     "type": "integer"
                 },
@@ -3105,6 +3127,9 @@ const docTemplate = `{
                 },
                 "private": {
                     "type": "boolean"
+                },
+                "projects_mode": {
+                    "$ref": "#/definitions/gitea.ProjectsMode"
                 },
                 "release_counter": {
                     "type": "integer"
