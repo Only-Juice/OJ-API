@@ -1,7 +1,6 @@
 package sandbox
 
 import (
-	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
 	"bytes"
@@ -13,11 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/google/uuid"
 )
 
 const execTimeoutDuration = time.Second * 60
@@ -45,7 +39,7 @@ func (s *Sandbox) assignJob() {
 		job := s.ReleaseJob()
 		boxID, ok := s.Reserve(1 * time.Second)
 		if !ok {
-			s.ReserveJob(job.Repo, job.GitRepoURL, job.GitFullName, job.GitAfterHash, job.GitUsername, job.GitToken, job.UQR)
+			s.ReserveJob(job.Repo, job.CodePath, job.UQR)
 			continue
 		}
 		go s.runShellCommandByRepo(boxID, job)
@@ -79,7 +73,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 		})
 		return
 	}
-	// defer os.Remove(shellFilename(codeID))
+	defer os.Remove(shellFilename(codeID))
 
 	if len(codePath) > 0 {
 		// copy python code(./sandbox/python/grp_parser.py) to code path
@@ -128,7 +122,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 		})
 		return
 	}
-	// defer os.Remove(shellFilename(execodeID))
+	defer os.Remove(shellFilename(execodeID))
 
 	s.runExecute(boxID, ctx, shellFilename(execodeID), codePath)
 
@@ -186,9 +180,9 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 }
 
 func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
-	db := database.DBConn
+	// parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable
 
-	// 首先獲取 QuestionTestScript
+	db := database.DBConn
 	var cmd models.QuestionTestScript
 	if err := db.Joins("Question").
 		Where("git_repo_url = ?", work.Repo).Take(&cmd).Error; err != nil {
@@ -196,72 +190,10 @@ func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 			Score:   -2,
 			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
 		})
-		s.Release(boxID)
 		return
 	}
 
-	// 執行 Git clone
-	codePath, err := s.cloneRepository(work)
-	if err != nil {
-		db.Model(&work.UQR).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: fmt.Sprintf("Failed to clone repository: %v", err),
-		})
-		s.Release(boxID)
-		return
-	}
-
-	// 設置目錄權限
-	if err := os.Chmod(codePath, 0777); err != nil {
-		log.Printf("Warning: failed to set directory permissions: %v", err)
-	}
-
-	// 執行測試
-	s.runShellCommand(boxID, []byte(cmd.TestScript), []byte(cmd.ExecuteScript), []byte(codePath), work.UQR)
-}
-
-// cloneRepository 執行 git clone 操作
-func (s *Sandbox) cloneRepository(work *Job) (string, error) {
-	// 生成唯一的代碼路徑
-	codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), work.GitFullName+"/"+uuid.New().String())
-
-	// 配置 clone 選項
-	cloneOptions := &git.CloneOptions{
-		URL: work.GitRepoURL,
-		Auth: &http.BasicAuth{
-			Username: work.GitUsername,
-			Password: work.GitToken,
-		},
-		Progress: nil, // 在生產環境中不輸出進度
-	}
-
-	// 執行 clone
-	repo, err := git.PlainClone(codePath, false, cloneOptions)
-	if err != nil {
-		return "", fmt.Errorf("failed to clone repository: %v", err)
-	}
-
-	// 如果有指定的 commit hash，則 checkout 到該 commit
-	if work.GitAfterHash != "" {
-		// 獲取 worktree 並 checkout 到指定 commit
-		worktree, err := repo.Worktree()
-		if err != nil {
-			return "", fmt.Errorf("failed to get worktree: %v", err)
-		}
-
-		// Checkout 到指定的 commit hash
-		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(work.GitAfterHash),
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to checkout to %s: %v", work.GitAfterHash, err)
-		}
-		log.Printf("Successfully cloned and checked out %s to %s at commit %s", work.GitFullName, codePath, work.GitAfterHash)
-	} else {
-		log.Printf("Successfully cloned %s to %s (using HEAD)", work.GitFullName, codePath)
-	}
-
-	return codePath, nil
+	s.runShellCommand(boxID, []byte(cmd.TestScript), []byte(cmd.ExecuteScript), work.CodePath, work.UQR)
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {

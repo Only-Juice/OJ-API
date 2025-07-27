@@ -20,13 +20,9 @@ type Sandbox struct {
 }
 
 type Job struct {
-	Repo         string
-	GitRepoURL   string // Git 倉庫完整 URL
-	GitFullName  string // Git 倉庫完整名稱 (owner/repo)
-	GitAfterHash string // 要 checkout 的 commit hash
-	GitUsername  string // Git 用戶名
-	GitToken     string // Git 訪問 token
-	UQR          models.UserQuestionTable
+	Repo     string
+	CodePath []byte
+	UQR      models.UserQuestionTable
 }
 
 func NewSandbox(count int) *Sandbox {
@@ -106,19 +102,15 @@ func (s *Sandbox) IsJobEmpty() bool {
 	return s.jobQueue.Length() == 0
 }
 
-func (s *Sandbox) ReserveJob(repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, uqtid models.UserQuestionTable) {
+func (s *Sandbox) ReserveJob(repo string, codePath []byte, uqtid models.UserQuestionTable) {
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	job := &Job{
-		Repo:         repo,
-		GitRepoURL:   gitRepoURL,
-		GitFullName:  gitFullName,
-		GitAfterHash: gitAfterHash,
-		GitUsername:  gitUsername,
-		GitToken:     gitToken,
-		UQR:          uqtid,
+		Repo:     repo,
+		CodePath: codePath,
+		UQR:      uqtid,
 	}
 	s.jobQueue.Enqueue(job)
 }
