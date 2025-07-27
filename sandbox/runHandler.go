@@ -3,10 +3,10 @@ package sandbox
 import (
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/utils"
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -26,7 +26,7 @@ func (s *Sandbox) WorkerLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("WorkerLoop received cancel signal, stopping...")
+			utils.Info("WorkerLoop received cancel signal, stopping...")
 			return
 		case <-ticker.C:
 			s.assignJob()
@@ -82,7 +82,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 		var stderr bytes.Buffer
 		copy.Stderr = &stderr
 		if err := copy.Run(); err != nil {
-			fmt.Println(copy.String())
+			utils.Debug(copy.String())
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to copy python code: %v", err),
@@ -132,8 +132,8 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 
 	*/
 
-	fmt.Println("Compilation and execution finished successfully.")
-	fmt.Println("Ready to proceed to the next step or return output.")
+	utils.Debug("Compilation and execution finished successfully.")
+	utils.Debug("Ready to proceed to the next step or return output.")
 
 	// read score from file
 	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
@@ -176,7 +176,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 	}
 
 	defer os.RemoveAll(string(codePath))
-	fmt.Printf("Done for judge!\n")
+	utils.Debug("Done for judge!")
 }
 
 func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
@@ -255,13 +255,13 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 
 	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellCommand)
 
-	log.Printf("Command: isolate %s", strings.Join(cmdArgs, " "))
+	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
 
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Printf("Failed to run command: %v", err)
+		utils.Errorf("Failed to run command: %v", err)
 		return "Execute with Error!", false
 	}
 

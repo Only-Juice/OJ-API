@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -23,6 +21,7 @@ import (
 	pb "OJ-API/proto"
 	"OJ-API/routes"
 	"OJ-API/services"
+	"OJ-API/utils"
 )
 
 // @title			OJ-PoC API
@@ -33,16 +32,19 @@ import (
 // @In header
 // @Name Authorization
 func main() {
+	// 初始化日誌
+	utils.InitLog()
+
 	decodedKey, err := base64.StdEncoding.DecodeString(config.Config("ENCRYPTION_KEY"))
 	if err != nil {
-		log.Panic("Invalid ENCRYPTION_KEY config:", err.Error())
+		utils.Fatal("Invalid ENCRYPTION_KEY config:", err.Error())
 	}
 	if len(decodedKey) != 16 && len(decodedKey) != 24 && len(decodedKey) != 32 {
-		log.Panic("Invalid ENCRYPTION_KEY length:", len(decodedKey))
+		utils.Fatal("Invalid ENCRYPTION_KEY length:", len(decodedKey))
 	}
 
 	if err := database.Connect(); err != nil {
-		log.Panic("Can't connect database:", err.Error())
+		utils.Fatal("Can't connect database:", err.Error())
 	}
 
 	// 初始化沙箱調度器
@@ -81,6 +83,13 @@ func main() {
 	httpServer := &http.Server{
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			// 檢查是否為 gRPC 請求
+			// 檢查是否為健康檢查請求
+			if req.URL.Path == "/health" {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("OK"))
+				return
+			}
+
 			if req.ProtoMajor == 2 && strings.HasPrefix(req.Header.Get("Content-Type"), "application/grpc") {
 				grpcServer.ServeHTTP(w, req)
 			} else {
@@ -95,7 +104,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("Received interrupt signal, cleaning up...")
+		utils.Info("Received interrupt signal, cleaning up...")
 		httpServer.Shutdown(context.Background())
 		grpcServer.GracefulStop()
 		scheduler.Close()
@@ -106,11 +115,11 @@ func main() {
 	port := config.Config("API_PORT")
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatal("Failed to listen on port:", err)
+		utils.Fatal("Failed to listen on port:", err)
 	}
 
-	log.Printf("Server (HTTP + gRPC) is running on port %s...", port)
+	utils.Infof("Server (HTTP + gRPC) is running on port %s...", port)
 	if err := httpServer.Serve(lis); err != nil && err != http.ErrServerClosed {
-		log.Fatal("Failed to start server:", err)
+		utils.Fatal("Failed to start server:", err)
 	}
 }

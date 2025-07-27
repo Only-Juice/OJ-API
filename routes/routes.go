@@ -138,7 +138,6 @@ func RegisterRoutes(r *gin.Engine) {
 		}
 		ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.DefaultModelsExpandDepth(0))(c)
 	})
-
 	// Routes
 	api := r.Group("/api")
 	{

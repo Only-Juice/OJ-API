@@ -6,10 +6,10 @@ import (
 	"OJ-API/models"
 	pb "OJ-API/proto"
 	"OJ-API/sandbox"
+	"OJ-API/utils"
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -30,14 +30,17 @@ import (
 )
 
 func main() {
+	// 初始化日誌
+	utils.InitLog()
+
 	// 加載環境變數
 	if err := godotenv.Load(".env.local"); err != nil {
-		log.Println("No .env.local file found")
+		utils.Info("No .env.local file found")
 	}
 
 	// 初始化數據庫連接
 	if err := database.Connect(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		utils.Fatalf("Failed to connect to database: %v", err)
 	}
 
 	// 創建沙箱實例
@@ -67,7 +70,7 @@ func main() {
 
 	conn, err := grpc.Dial(schedulerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to connect to scheduler: %v", err)
+		utils.Fatalf("Failed to connect to scheduler: %v", err)
 	}
 	defer conn.Close()
 
@@ -76,10 +79,10 @@ func main() {
 	// 建立雙向流連接
 	stream, err := schedulerClient.SandboxStream(context.Background())
 	if err != nil {
-		log.Fatalf("Failed to create stream: %v", err)
+		utils.Fatalf("Failed to create stream: %v", err)
 	}
 
-	log.Printf("Sandbox %s connecting to scheduler at %s...", sandboxID, schedulerAddress)
+	utils.Debugf("Sandbox %s connecting to scheduler at %s...", sandboxID, schedulerAddress)
 
 	// 發送連接請求
 	connectMsg := &pb.SandboxMessage{
@@ -93,7 +96,7 @@ func main() {
 	}
 
 	if err := stream.Send(connectMsg); err != nil {
-		log.Fatalf("Failed to send connect message: %v", err)
+		utils.Fatalf("Failed to send connect message: %v", err)
 	}
 
 	// 啟動消息處理 goroutine
@@ -107,7 +110,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
-	log.Println("Shutting down sandbox server...")
+	utils.Info("Shutting down sandbox server...")
 	cancel() // 停止工作循環
 	stream.CloseSend()
 }
@@ -117,11 +120,11 @@ func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, san
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
-			log.Println("Stream closed by scheduler")
+			utils.Debugf("Stream closed by scheduler")
 			break
 		}
 		if err != nil {
-			log.Printf("Stream receive error: %v", err)
+			utils.Debugf("Stream receive error: %v", err)
 			break
 		}
 
@@ -129,24 +132,24 @@ func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, san
 		case *pb.SchedulerMessage_ConnectResponse:
 			resp := msgType.ConnectResponse
 			if resp.Success {
-				log.Printf("Successfully connected to scheduler: %s", resp.Message)
+				utils.Debugf("Successfully connected to scheduler: %s", resp.Message)
 				// 連接成功後立即發送初始狀態
 				sendCurrentStatus(stream, msg.SandboxId, sandboxInstance)
 			} else {
-				log.Printf("Failed to connect to scheduler: %s", resp.Message)
+				utils.Errorf("Failed to connect to scheduler: %s", resp.Message)
 			}
 
 		case *pb.SchedulerMessage_JobRequest:
 			// 處理任務請求
 			jobReq := msgType.JobRequest
-			log.Printf("Received job request for repo: %s, commit: %s", jobReq.GitFullName, jobReq.GitAfterHash)
+			utils.Debugf("Received job request for repo: %s, commit: %s", jobReq.GitFullName, jobReq.GitAfterHash)
 
 			// 異步處理任務
 			go func() {
 				// 發送任務響應
 				responseMsg, err := AddJob(sandboxInstance, context.Background(), jobReq)
 				if err != nil {
-					log.Printf("Failed to add job: %v", err)
+					utils.Errorf("Failed to add job: %v", err)
 					return
 				}
 
@@ -159,9 +162,9 @@ func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, san
 				}
 
 				if err := stream.Send(sandboxMsg); err != nil {
-					log.Printf("Failed to send job response: %v", err)
+					utils.Debugf("Failed to send job response: %v", err)
 				} else {
-					log.Printf("Successfully sent job response")
+					utils.Debugf("Successfully sent job response")
 				}
 			}()
 
@@ -234,13 +237,13 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 	}
 
 	if err := stream.Send(statusMsg); err != nil {
-		log.Printf("Failed to send status update: %v", err)
+		utils.Debugf("Failed to send status update: %v", err)
 	} else {
 		if forceUpdate {
-			log.Printf("Force sent status update after 15s - Available: %d, Waiting: %d, Processing: %d, Total: %d",
+			utils.Debugf("Force sent status update after 15s - Available: %d, Waiting: %d, Processing: %d, Total: %d",
 				available, waiting, processing, total)
 		} else {
-			log.Printf("Sent status update - Available: %d, Waiting: %d, Processing: %d, Total: %d",
+			utils.Debugf("Sent status update - Available: %d, Waiting: %d, Processing: %d, Total: %d",
 				available, waiting, processing, total)
 		}
 	}
@@ -304,15 +307,15 @@ func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToke
 		if err != nil {
 			return "", fmt.Errorf("failed to checkout to %s: %v", GitAfterHash, err)
 		}
-		log.Printf("Successfully cloned and checked out %s to %s at commit %s", GitFullName, codePath, GitAfterHash)
+		utils.Debugf("Successfully cloned and checked out %s to %s at commit %s", GitFullName, codePath, GitAfterHash)
 	} else {
-		log.Printf("Successfully cloned %s to %s (using HEAD)", GitFullName, codePath)
+		utils.Debugf("Successfully cloned %s to %s (using HEAD)", GitFullName, codePath)
 	}
 
 	// 設置目錄權限為 777 (讀寫執行權限)
 	err = os.Chmod(codePath, 0777)
 	if err != nil {
-		log.Printf("Warning: failed to set permissions for %s: %v", codePath, err)
+		utils.Warnf("Warning: failed to set permissions for %s: %v", codePath, err)
 	}
 
 	// 遞歸設置所有子目錄和文件的權限
@@ -326,7 +329,7 @@ func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToke
 		return os.Chmod(path, 0644)
 	})
 	if err != nil {
-		log.Printf("Warning: failed to set recursive permissions for %s: %v", codePath, err)
+		utils.Warnf("Warning: failed to set recursive permissions for %s: %v", codePath, err)
 	}
 
 	return codePath, nil

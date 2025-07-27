@@ -2,9 +2,9 @@ package services
 
 import (
 	pb "OJ-API/proto"
+	"OJ-API/utils"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -57,7 +57,7 @@ func (s *SandboxScheduler) SandboxStream(stream pb.SchedulerService_SandboxStrea
 			close(instance.JobChan)
 			delete(s.instances, sandboxID)
 			s.mutex.Unlock()
-			log.Printf("Sandbox %s disconnected", sandboxID)
+			utils.Infof("Sandbox %s disconnected", sandboxID)
 		}
 	}()
 
@@ -67,7 +67,7 @@ func (s *SandboxScheduler) SandboxStream(stream pb.SchedulerService_SandboxStrea
 			break
 		}
 		if err != nil {
-			log.Printf("Stream receive error: %v", err)
+			utils.Errorf("Stream receive error: %v", err)
 			break
 		}
 
@@ -102,11 +102,11 @@ func (s *SandboxScheduler) SandboxStream(stream pb.SchedulerService_SandboxStrea
 			}
 
 			if err := stream.Send(response); err != nil {
-				log.Printf("Failed to send connect response: %v", err)
+				utils.Errorf("Failed to send connect response: %v", err)
 				return err
 			}
 
-			log.Printf("Sandbox %s connected successfully", sandboxID)
+			utils.Infof("Sandbox %s connected successfully", sandboxID)
 
 			// 立即請求狀態更新
 			statusRequest := &pb.SchedulerMessage{
@@ -117,9 +117,9 @@ func (s *SandboxScheduler) SandboxStream(stream pb.SchedulerService_SandboxStrea
 			}
 
 			if err := stream.Send(statusRequest); err != nil {
-				log.Printf("Failed to send initial status request: %v", err)
+				utils.Errorf("Failed to send initial status request: %v", err)
 			} else {
-				log.Printf("Requested initial status from sandbox %s", sandboxID)
+				utils.Debugf("Requested initial status from sandbox %s", sandboxID)
 			}
 
 			// 啟動任務發送 goroutine
@@ -130,7 +130,7 @@ func (s *SandboxScheduler) SandboxStream(stream pb.SchedulerService_SandboxStrea
 			if instance != nil {
 				instance.Status = msgType.Status
 				instance.LastSeen = time.Now()
-				log.Printf("Received status from sandbox %s - Available: %d, Waiting: %d, Processing: %d, Total: %d",
+				utils.Debugf("Received status from sandbox %s - Available: %d, Waiting: %d, Processing: %d, Total: %d",
 					sandboxID, msgType.Status.AvailableCount, msgType.Status.WaitingCount,
 					msgType.Status.ProcessingCount, msgType.Status.TotalCount)
 			}
@@ -138,7 +138,7 @@ func (s *SandboxScheduler) SandboxStream(stream pb.SchedulerService_SandboxStrea
 		case *pb.SandboxMessage_JobResponse:
 			// 處理任務響應
 			jobResp := msgType.JobResponse
-			log.Printf("Job response from sandbox %s: Success=%t, Message=%s",
+			utils.Infof("Job response from sandbox %s: Success=%t, Message=%s",
 				sandboxID, jobResp.Success, jobResp.Message)
 		}
 	}
@@ -157,12 +157,12 @@ func (s *SandboxScheduler) sendJobsToSandbox(instance *SandboxInstance) {
 		}
 
 		if err := instance.Stream.Send(message); err != nil {
-			log.Printf("Failed to send job to sandbox %s: %v", instance.ID, err)
+			utils.Errorf("Failed to send job to sandbox %s: %v", instance.ID, err)
 			// 將任務放回隊列或標記為失敗
 			break
 		}
 
-		log.Printf("Sent job to sandbox %s", instance.ID)
+		utils.Debugf("Sent job to sandbox %s", instance.ID)
 	}
 }
 
@@ -210,7 +210,7 @@ func (s *SandboxScheduler) ReserveJob(parentGitFullName string, gitRepoURL strin
 	// 非阻塞發送到任務通道
 	select {
 	case instance.JobChan <- jobReq:
-		log.Printf("Job queued for sandbox %s", instance.ID)
+		utils.Debugf("Job queued for sandbox %s", instance.ID)
 		return nil
 	default:
 		return fmt.Errorf("sandbox %s job queue is full", instance.ID)
@@ -267,13 +267,13 @@ func (s *SandboxScheduler) cleanupInactiveInstances() {
 			// 如果超過 1 分鐘沒有狀態更新，標記為不活躍
 			if now.Sub(instance.LastSeen) > time.Minute {
 				if instance.Active {
-					log.Printf("Marking sandbox %s as inactive due to missing status update", id)
+					utils.Warnf("Marking sandbox %s as inactive due to missing status update", id)
 					instance.Active = false
 				}
 
 				// 如果超過 5 分鐘沒有狀態更新，完全移除
 				if now.Sub(instance.LastSeen) > 5*time.Minute {
-					log.Printf("Removing inactive sandbox %s", id)
+					utils.Infof("Removing inactive sandbox %s", id)
 					close(instance.JobChan)
 					delete(s.instances, id)
 				}

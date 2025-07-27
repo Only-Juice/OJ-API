@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
@@ -49,7 +48,7 @@ func PostGiteaHook(c *gin.Context) {
 		})
 		return
 	}
-	log.Printf("Received hook: %+v", payload)
+	utils.Debugf("Received hook: %+v", payload)
 
 	var existingUserQuestionRelation models.UserQuestionRelation
 	if err := db.Where(&models.UserQuestionRelation{
@@ -120,7 +119,7 @@ func PostGiteaHook(c *gin.Context) {
 		// 獲取用戶 token
 		token, err := utils.GetToken(existingUser.ID)
 		if err != nil {
-			log.Printf("Failed to get token: %v", err)
+			utils.Errorf("Failed to get token: %v", err)
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to get token: %v", err),

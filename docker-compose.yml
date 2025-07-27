@@ -9,13 +9,16 @@ services:
     ports:
       - "8080:3001"
     environment:
-      - SANDBOX_GRPC_ADDRESS=sandbox-server:50051
       - DB_HOST=192.168.2.123
-    depends_on:
-      - sandbox-server
-      # - postgres
+      - LOG_LEVEL=info
     # networks:
     #   - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://api-server:3001/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 10s
 
   # Sandbox gRPC服務
   sandbox-server:
@@ -28,7 +31,11 @@ services:
     environment:
       - SANDBOX_COUNT=4
       - DB_HOST=192.168.2.123
-      - OJ_HOST=172.18.0.3:3001
+      - OJ_HOST=api-server:3001
+      - LOG_LEVEL=info
+    depends_on:
+      api-server:
+        condition: service_healthy
     # networks:
     #   - app-network
 

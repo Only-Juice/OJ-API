@@ -11,7 +11,8 @@ run-sandbox: build
 
 run-all: build
 	./server & \
-	./start_sandboxes.sh
+	sleep 2 && \
+	./server-sandbox
 
 watch:
 	reflex -s -R '^docs/' -r '\.go$$' make run-all
