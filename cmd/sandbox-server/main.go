@@ -68,21 +68,72 @@ func main() {
 		schedulerAddress = "localhost:3001"
 	}
 
+	// 優雅關機處理
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// 啟動重連循環
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				conn, err := connectToScheduler(ctx, schedulerAddress, sandboxID, sandboxCount, sandboxInstance)
+				if err != nil {
+					utils.Errorf("Failed to connect to scheduler: %v", err)
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(5 * time.Second):
+						continue
+					}
+				}
+
+				// 連接成功，處理連接直到斷線
+				err = handleConnection(ctx, conn, sandboxID, sandboxInstance)
+				if err != nil {
+					utils.Errorf("Connection lost: %v", err)
+				}
+				conn.Close()
+
+				// 連接斷開，等待重連
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(3 * time.Second):
+					utils.Info("Attempting to reconnect to scheduler...")
+				}
+			}
+		}
+	}()
+
+	<-sigChan
+	utils.Info("Shutting down sandbox server...")
+	cancel() // 停止工作循環
+}
+
+// connectToScheduler 連接到調度器並建立流
+func connectToScheduler(ctx context.Context, schedulerAddress, sandboxID string, sandboxCount int, sandboxInstance *sandbox.Sandbox) (*grpc.ClientConn, error) {
+	utils.Debugf("Sandbox %s connecting to scheduler at %s...", sandboxID, schedulerAddress)
+
 	conn, err := grpc.Dial(schedulerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		utils.Fatalf("Failed to connect to scheduler: %v", err)
+		return nil, fmt.Errorf("failed to dial scheduler: %v", err)
 	}
-	defer conn.Close()
 
+	return conn, nil
+}
+
+// handleConnection 處理與調度器的連接
+func handleConnection(ctx context.Context, conn *grpc.ClientConn, sandboxID string, sandboxInstance *sandbox.Sandbox) error {
 	schedulerClient := pb.NewSchedulerServiceClient(conn)
 
 	// 建立雙向流連接
-	stream, err := schedulerClient.SandboxStream(context.Background())
+	stream, err := schedulerClient.SandboxStream(ctx)
 	if err != nil {
-		utils.Fatalf("Failed to create stream: %v", err)
+		return fmt.Errorf("failed to create stream: %v", err)
 	}
-
-	utils.Debugf("Sandbox %s connecting to scheduler at %s...", sandboxID, schedulerAddress)
 
 	// 發送連接請求
 	connectMsg := &pb.SandboxMessage{
@@ -90,42 +141,59 @@ func main() {
 		MessageType: &pb.SandboxMessage_Connect{
 			Connect: &pb.SandboxConnectRequest{
 				SandboxId: sandboxID,
-				Capacity:  int32(sandboxCount),
+				Capacity:  int32(sandboxInstance.AvailableCount() + sandboxInstance.ProcessingCount()),
 			},
 		},
 	}
 
 	if err := stream.Send(connectMsg); err != nil {
-		utils.Fatalf("Failed to send connect message: %v", err)
+		return fmt.Errorf("failed to send connect message: %v", err)
 	}
 
+	// 創建用於停止 goroutines 的 context
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	defer streamCancel()
+
 	// 啟動消息處理 goroutine
-	go handleSchedulerMessages(stream, sandboxInstance)
+	messageDone := make(chan error, 1)
+	go func() {
+		err := handleSchedulerMessages(stream, sandboxInstance)
+		messageDone <- err
+	}()
 
 	// 啟動狀態更新 goroutine
-	go sendStatusUpdates(stream, sandboxID, sandboxInstance)
+	statusDone := make(chan error, 1)
+	go func() {
+		err := sendStatusUpdates(streamCtx, stream, sandboxID, sandboxInstance)
+		statusDone <- err
+	}()
 
-	// 優雅關機處理
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
-
-	utils.Info("Shutting down sandbox server...")
-	cancel() // 停止工作循環
-	stream.CloseSend()
+	// 等待任一 goroutine 結束或 context 取消
+	select {
+	case err := <-messageDone:
+		streamCancel()
+		return err
+	case err := <-statusDone:
+		streamCancel()
+		return err
+	case <-ctx.Done():
+		streamCancel()
+		stream.CloseSend()
+		return ctx.Err()
+	}
 }
 
 // handleSchedulerMessages 處理來自調度器的消息
-func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, sandboxInstance *sandbox.Sandbox) {
+func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, sandboxInstance *sandbox.Sandbox) error {
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
 			utils.Debugf("Stream closed by scheduler")
-			break
+			return nil
 		}
 		if err != nil {
 			utils.Debugf("Stream receive error: %v", err)
-			break
+			return err
 		}
 
 		switch msgType := msg.MessageType.(type) {
@@ -134,7 +202,9 @@ func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, san
 			if resp.Success {
 				utils.Debugf("Successfully connected to scheduler: %s", resp.Message)
 				// 連接成功後立即發送初始狀態
-				sendCurrentStatus(stream, msg.SandboxId, sandboxInstance)
+				if err := sendCurrentStatus(stream, msg.SandboxId, sandboxInstance); err != nil {
+					utils.Debugf("Failed to send initial status: %v", err)
+				}
 			} else {
 				utils.Errorf("Failed to connect to scheduler: %s", resp.Message)
 			}
@@ -170,18 +240,27 @@ func handleSchedulerMessages(stream pb.SchedulerService_SandboxStreamClient, san
 
 		case *pb.SchedulerMessage_StatusRequest:
 			// 處理狀態請求 - 立即發送狀態
-			sendCurrentStatus(stream, msg.SandboxId, sandboxInstance)
+			if err := sendCurrentStatus(stream, msg.SandboxId, sandboxInstance); err != nil {
+				utils.Debugf("Failed to send status response: %v", err)
+			}
 		}
 	}
 }
 
 // sendStatusUpdates 定期發送狀態更新
-func sendStatusUpdates(stream pb.SchedulerService_SandboxStreamClient, sandboxID string, sandboxInstance *sandbox.Sandbox) {
+func sendStatusUpdates(ctx context.Context, stream pb.SchedulerService_SandboxStreamClient, sandboxID string, sandboxInstance *sandbox.Sandbox) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		sendCurrentStatus(stream, sandboxID, sandboxInstance)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if err := sendCurrentStatus(stream, sandboxID, sandboxInstance); err != nil {
+				return err
+			}
+		}
 	}
 }
 
@@ -194,7 +273,7 @@ var lastStatus = struct {
 }{}
 
 // sendCurrentStatus 發送當前狀態
-func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID string, sandboxInstance *sandbox.Sandbox) {
+func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID string, sandboxInstance *sandbox.Sandbox) error {
 	available := int32(sandboxInstance.AvailableCount())
 	waiting := int32(sandboxInstance.WaitingCount())
 	processing := int32(sandboxInstance.ProcessingCount())
@@ -212,7 +291,7 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 	forceUpdate := timeSinceLastSend >= 15*time.Second
 
 	if !statusChanged && !forceUpdate {
-		return // 沒有變化且未超過15秒，不發送
+		return nil // 沒有變化且未超過15秒，不發送
 	}
 
 	// 更新上次狀態和發送時間
@@ -238,6 +317,7 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 
 	if err := stream.Send(statusMsg); err != nil {
 		utils.Debugf("Failed to send status update: %v", err)
+		return err
 	} else {
 		if forceUpdate {
 			utils.Debugf("Force sent status update after 15s - Available: %d, Waiting: %d, Processing: %d, Total: %d",
@@ -247,6 +327,8 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 				available, waiting, processing, total)
 		}
 	}
+
+	return nil
 }
 
 // AddJob 添加任務到隊列
