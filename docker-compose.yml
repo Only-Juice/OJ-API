@@ -22,14 +22,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.sandbox
-    ports:
-      - "50051:50051"
     privileged: true  # isolate需要特權模式
     volumes:
       - /tmp:/tmp
     environment:
       - SANDBOX_COUNT=4
       - DB_HOST=192.168.2.123
+      - OJ_HOST=172.18.0.3:3001
     # networks:
     #   - app-network
 

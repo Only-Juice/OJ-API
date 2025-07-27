@@ -26,12 +26,3 @@ func GetGiteaBaseURL() string {
 	}
 	return gitBaseURL
 }
-
-// GetSandboxGRPCAddress returns the sandbox gRPC server address
-func GetSandboxGRPCAddress() string {
-	address := Config("SANDBOX_GRPC_ADDRESS")
-	if address == "" {
-		address = "localhost:50051" // Default address
-	}
-	return address
-}

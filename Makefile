@@ -4,12 +4,28 @@ build:
 	go build -o server-sandbox ./cmd/sandbox-server
 
 run: build
-	./server-sandbox & \
+	./server
+
+run-sandbox: build
+	./server-sandbox
+
+run-all: build
 	./server & \
-	wait
+	./start_sandboxes.sh
 
 watch:
-	reflex -s -R '^docs/' -r '\.go$$' make run 
+	reflex -s -R '^docs/' -r '\.go$$' make run-all
 
 clean:
 	rm -r /sandbox/code/* /sandbox/repo/*
+
+proto:
+	./generate_proto.sh
+
+test-grpc:
+	go run cmd/test-grpc/main.go
+
+test-scheduler:
+	go run cmd/test-scheduler/main.go
+
+.PHONY: build run run-sandbox run-all watch clean proto test-grpc test-scheduler
