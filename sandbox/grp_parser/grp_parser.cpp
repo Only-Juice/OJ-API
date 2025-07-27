@@ -8,7 +8,7 @@ using JSON = nlohmann::json;
 using namespace std;
 
 void Writescore(double score){
-    const string file = "../score.txt";
+    const string file = "score.txt";
     double old_score = 0.0;
     if (std::filesystem::exists(file)) {
         std::ifstream infile(file);
@@ -26,6 +26,26 @@ void Writescore(double score){
         outfile.close();
     }
 }
+void WriteJsonfile(string json_path){
+    const string file = "message.txt";
+    std::string input_path = json_path;
+    std::ifstream input_file(input_path);
+    if (!input_file) {
+        std::cerr << "Failed to open input file: " << input_path << std::endl;
+    }
+
+    std::ofstream output_file("message.txt");
+    if (!output_file) {
+        std::cerr << "Failed to open output file: message.txt" << std::endl;
+    }
+
+    output_file << input_file.rdbuf(); 
+
+    input_file.close();
+    output_file.close();
+
+    std::cout << "Copied content from " << input_path << " to message.txt" << std::endl;
+}
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {
@@ -35,7 +55,7 @@ int main(int argc, char* argv[]) {
     parser.Parse();
     cout<< parser.Getscore() <<"\n";
     Writescore(parser.Getscore());
-
+    WriteJsonfile(argv[1]);
 
     return 0;
 }
