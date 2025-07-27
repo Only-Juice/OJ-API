@@ -79,7 +79,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			default:
-				conn, err := connectToScheduler(ctx, schedulerAddress, sandboxID, sandboxCount, sandboxInstance)
+				conn, err := connectToScheduler(schedulerAddress, sandboxID)
 				if err != nil {
 					utils.Errorf("Failed to connect to scheduler: %v", err)
 					select {
@@ -114,10 +114,10 @@ func main() {
 }
 
 // connectToScheduler 連接到調度器並建立流
-func connectToScheduler(ctx context.Context, schedulerAddress, sandboxID string, sandboxCount int, sandboxInstance *sandbox.Sandbox) (*grpc.ClientConn, error) {
+func connectToScheduler(schedulerAddress, sandboxID string) (*grpc.ClientConn, error) {
 	utils.Debugf("Sandbox %s connecting to scheduler at %s...", sandboxID, schedulerAddress)
 
-	conn, err := grpc.Dial(schedulerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(schedulerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial scheduler: %v", err)
 	}

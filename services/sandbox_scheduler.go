@@ -173,7 +173,7 @@ func (s *SandboxScheduler) GetBestSandbox() *SandboxInstance {
 
 	var candidates []*SandboxInstance
 	for _, instance := range s.instances {
-		if instance.Active && instance.Status != nil && instance.Status.AvailableCount > 0 {
+		if instance.Active && instance.Status != nil {
 			candidates = append(candidates, instance)
 		}
 	}
