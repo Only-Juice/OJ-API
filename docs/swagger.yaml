@@ -512,6 +512,19 @@ definitions:
       weighted_score:
         type: number
     type: object
+  handlers.ExamInfoResponse:
+    properties:
+      exam_description:
+        type: string
+      exam_end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      exam_start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      exam_title:
+        type: string
+    type: object
   handlers.ExamListData:
     properties:
       description:
@@ -528,6 +541,26 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  handlers.ExamQuestionData:
+    properties:
+      has_question:
+        type: boolean
+      point:
+        type: integer
+      question:
+        $ref: '#/definitions/models.Question'
+      top_score:
+        type: integer
+    type: object
+  handlers.ExamQuestionsResponse:
+    properties:
+      question_count:
+        type: integer
+      questions:
+        items:
+          $ref: '#/definitions/handlers.ExamQuestionData'
+        type: array
     type: object
   handlers.ExamRequest:
     properties:
@@ -1217,6 +1250,39 @@ paths:
       summary: List all exams
       tags:
       - Exam
+  /api/exams/{id}/exam:
+    get:
+      description: Retrieve basic information about an exam, including title, description,
+        start and end times
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.ExamInfoResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Get basic information about an exam
+      tags:
+      - Exam
   /api/exams/{id}/leaderboard:
     get:
       consumes:
@@ -1261,13 +1327,24 @@ paths:
       - Exam
   /api/exams/{id}/questions:
     get:
-      description: Retrieve all questions associated with a specific exam
+      consumes:
+      - application/json
+      description: Retrieve all questions associated with a specific exam with user's
+        question status and top scores (if authenticated)
       parameters:
       - description: Exam ID
         in: path
         name: id
         required: true
         type: string
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
@@ -1278,9 +1355,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/models.Question'
-                  type: array
+                  $ref: '#/definitions/handlers.ExamQuestionsResponse'
               type: object
         "404":
           description: Not Found
@@ -1292,7 +1367,7 @@ paths:
             $ref: '#/definitions/handlers.ResponseHTTP'
       security:
       - BearerAuth: []
-      summary: Get questions for an exam [Optional Authentication]
+      summary: Get questions for an exam
       tags:
       - Exam
   /api/exams/{id}/score/top:

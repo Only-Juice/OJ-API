@@ -273,24 +273,201 @@ func ListExams(c *gin.Context) {
 	})
 }
 
-// GetExamQuestions retrieves all questions for a specific exam
-// @Summary      Get questions for an exam [Optional Authentication]
-// @Description  Retrieve all questions associated with a specific exam
+type ExamQuestionsResponse struct {
+	QuestionCount int                `json:"question_count"`
+	Questions     []ExamQuestionData `json:"questions"`
+}
+
+type ExamQuestionData struct {
+	Question    models.Question `json:"question"`
+	Point       int             `json:"point"`
+	HasQuestion bool            `json:"has_question"`
+	TopScore    *int            `json:"top_score,omitempty"`
+}
+
+// GetExamQuestions retrieves all questions for a specific exam with user data
+// @Summary      Get questions for an exam
+// @Description  Retrieve all questions associated with a specific exam with user's question status and top scores (if authenticated)
 // @Tags         Exam
+// @Accept       json
 // @Produce      json
 // @Param        id path string true "Exam ID"
-// @Success      200 {object} ResponseHTTP{data=[]models.Question}
+// @Param        page query int false "page number of results to return (1-based)"
+// @Param        limit query int false "page size of results. Default is 10."
+// @Success      200 {object} ResponseHTTP{data=ExamQuestionsResponse}
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
 // @Router       /api/exams/{id}/questions [get]
-// @Security	 BearerAuth
+// @Security     BearerAuth
 func GetExamQuestions(c *gin.Context) {
-	jwtClaim, ok := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
-	var isAdmin bool
-	if ok && jwtClaim != nil {
-		isAdmin = jwtClaim.IsAdmin
+	// Check if user is authenticated (optional)
+	jwtClaims, _ := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	isAuthenticated := jwtClaims != nil
+
+	examID := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	db := database.DBConn
+	// Get total count of questions in this exam
+	var totalQuestions int64
+	countQuery := db.Model(&models.ExamQuestion{}).
+		Joins("Question").
+		Where("exam_questions.exam_id = ?", examID)
+
+	// Non-admin users can only see active questions
+	if !isAuthenticated || !jwtClaims.IsAdmin {
+		countQuery = countQuery.Where("\"Question\".is_active = ?", true)
 	}
 
+	if err := countQuery.Count(&totalQuestions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count exam questions",
+		})
+		return
+	}
+
+	// Get exam questions with pagination
+	now := time.Now()
+	orderClause := "CASE WHEN start_time <= '" + now.Format("2006-01-02 15:04:05") + "' AND end_time >= '" + now.Format("2006-01-02 15:04:05") + "' THEN 0 ELSE 1 END, start_time DESC, end_time ASC"
+	var examQuestionRelations []models.ExamQuestion
+	questionQuery := db.Where("exam_id = ?", examID).
+		Joins("Question").
+		Order(orderClause).
+		Offset(offset).
+		Limit(limit)
+
+	if !isAuthenticated || !jwtClaims.IsAdmin {
+		questionQuery = questionQuery.Where("\"Question\".is_active = ?", true)
+	}
+
+	if err := questionQuery.Find(&examQuestionRelations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve exam questions: " + err.Error(),
+		})
+		return
+	}
+
+	if len(examQuestionRelations) == 0 {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "No questions found for this exam",
+		})
+		return
+	}
+
+	var responseQuestions []ExamQuestionData
+
+	if isAuthenticated {
+		// Get question IDs for user data lookup
+		questionIDs := make([]uint, len(examQuestionRelations))
+		for i, relation := range examQuestionRelations {
+			questionIDs[i] = relation.Question.ID
+		}
+
+		// Check which questions user has
+		var userQuestions []uint
+		db.Model(&models.UserQuestionRelation{}).
+			Select("question_id").
+			Where("user_id = ? AND question_id IN ?", jwtClaims.UserID, questionIDs).
+			Pluck("question_id", &userQuestions)
+
+		userQuestionMap := make(map[uint]bool)
+		for _, qid := range userQuestions {
+			userQuestionMap[qid] = true
+		}
+
+		// Get top scores for these questions
+		var topScores []struct {
+			QuestionID uint `json:"question_id"`
+			TopScore   *int `json:"top_score"`
+		}
+
+		err := db.Raw(`
+			SELECT 
+				q.id as question_id,
+				CASE 
+					WHEN MAX(uqt.score) IS NULL THEN NULL
+					WHEN MAX(uqt.score) < 0 THEN 0
+					ELSE MAX(uqt.score)
+				END as top_score
+			FROM questions q
+			LEFT JOIN user_question_relations uqr ON q.id = uqr.question_id AND uqr.user_id = ?
+			LEFT JOIN user_question_tables uqt ON uqr.id = uqt.uqr_id
+			WHERE q.id IN ?
+			GROUP BY q.id
+		`, jwtClaims.UserID, questionIDs).Scan(&topScores).Error
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, ResponseHTTP{
+				Success: false,
+				Message: "Failed to fetch top scores",
+			})
+			return
+		}
+
+		// Create a map for easy lookup
+		scoreMap := make(map[uint]*int)
+		for _, score := range topScores {
+			scoreMap[score.QuestionID] = score.TopScore
+		}
+
+		// Convert to response format with user-specific data
+		for _, relation := range examQuestionRelations {
+			responseQ := ExamQuestionData{
+				Question:    relation.Question,
+				Point:       relation.Point,
+				HasQuestion: userQuestionMap[relation.Question.ID],
+				TopScore:    scoreMap[relation.Question.ID],
+			}
+			responseQuestions = append(responseQuestions, responseQ)
+		}
+	} else {
+		// For unauthenticated users, don't include user-specific data
+		for _, relation := range examQuestionRelations {
+			responseQ := ExamQuestionData{
+				Question:    relation.Question,
+				Point:       relation.Point,
+				HasQuestion: false,
+				TopScore:    nil,
+			}
+			responseQuestions = append(responseQuestions, responseQ)
+		}
+	}
+
+	response := ExamQuestionsResponse{
+		QuestionCount: int(totalQuestions),
+		Questions:     responseQuestions,
+	}
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Message: "Exam questions fetched successfully",
+		Data:    response,
+	})
+}
+
+type ExamInfoResponse struct {
+	ExamTitle       string    `json:"exam_title"`
+	ExamDescription string    `json:"exam_description"`
+	ExamStartTime   time.Time `json:"exam_start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	ExamEndTime     time.Time `json:"exam_end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+}
+
+// GetExamInfo retrieves basic information about an exam
+// @Summary      Get basic information about an exam
+// @Description  Retrieve basic information about an exam, including title, description, start and end times
+// @Tags         Exam
+// @Produce      json
+// @Param        id path string true "Exam ID"
+// @Success      200 {object} ResponseHTTP{data=ExamInfoResponse}
+// @Failure      404 {object} ResponseHTTP{}
+// @Failure      500 {object} ResponseHTTP{}
+// @Router       /api/exams/{id}/exam [get]
+func GetExamInfo(c *gin.Context) {
 	id := c.Param("id")
 	var exam models.Exam
 
@@ -303,32 +480,14 @@ func GetExamQuestions(c *gin.Context) {
 		return
 	}
 
-	var examQuestions []models.ExamQuestion
-
-	query := db.Where(&models.ExamQuestion{
-		ExamID: exam.ID,
-	}).Joins("Question")
-
-	if !isAdmin {
-		query = query.Where("is_active = ?", true)
-	}
-
-	if err := query.Find(&examQuestions).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, ResponseHTTP{
-			Success: false,
-			Message: "Failed to retrieve questions: " + err.Error(),
-		})
-		return
-	}
-
-	questions := make([]models.Question, len(examQuestions))
-	for i, eq := range examQuestions {
-		questions[i] = eq.Question
-	}
-
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
-		Data:    questions,
+		Data: ExamInfoResponse{
+			ExamTitle:       exam.Title,
+			ExamDescription: exam.Description,
+			ExamStartTime:   exam.StartTime,
+			ExamEndTime:     exam.EndTime,
+		},
 	})
 }
 
@@ -669,7 +828,7 @@ func GetExamLeaderboard(c *gin.Context) {
 	if err := db.Table(`(
         SELECT 
             UQR.user_id AS user_id, 
-            MAX(user_question_tables.score) / 100 * EQ.point AS max_score, 
+            GREATEST(MAX(user_question_tables.score), 0) / 100 * EQ.point AS max_score, 
             UQR.question_id
         FROM user_question_tables
         JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
@@ -719,7 +878,7 @@ func GetExamLeaderboard(c *gin.Context) {
 
 	var questionScores []QuestionScoreDetail
 	subquery := db.Model(&models.UserQuestionTable{}).
-		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url, MAX(EQ.point) AS point").
+		Select("UQR.user_id, UQR.question_id, GREATEST(MAX(user_question_tables.score), 0) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url, MAX(EQ.point) AS point").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN exam_questions EQ ON UQR.question_id = EQ.question_id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").

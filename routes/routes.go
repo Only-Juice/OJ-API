@@ -159,11 +159,12 @@ func RegisterRoutes(r *gin.Engine) {
 		api.PUT("/exams/admin/:id/exam", AuthMiddleware(), handlers.UpdateExam)
 		api.DELETE("/exams/admin/:id/exam", AuthMiddleware(), handlers.DeleteExam)
 		api.GET("/exams", handlers.ListExams)
-		api.GET("/exams/:id/questions", AuthMiddleware(false), handlers.GetExamQuestions)
 		api.POST("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.AddQuestionToExam)
 		api.DELETE("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.RemoveQuestionFromExam)
-		api.GET("/exams/:id/score/top", AuthMiddleware(), handlers.GetTopExamScore)
+		api.GET("/exams/:id/exam", handlers.GetExamInfo)
 		api.GET("/exams/:id/leaderboard", handlers.GetExamLeaderboard)
+		api.GET("/exams/:id/questions", AuthMiddleware(false), handlers.GetExamQuestions)
+		api.GET("/exams/:id/score/top", AuthMiddleware(), handlers.GetTopExamScore)
 
 		// Sandbox routes
 		api.POST("/sandbox/admin/sandbox_cmd", AuthMiddleware(), handlers.PostSandboxCmd)

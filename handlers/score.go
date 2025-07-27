@@ -816,7 +816,7 @@ func GetLeaderboard(c *gin.Context) {
 	// Get total count of users who have scores
 	var totalCount int64
 	subquery := db.Table("user_question_tables").
-		Select("UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id").
+		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
@@ -880,7 +880,7 @@ func GetLeaderboard(c *gin.Context) {
 
 	var questionScores []QuestionScoreDetail
 	subquery2 := db.Model(&models.UserQuestionTable{}).
-		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url").
+		Select("UQR.user_id, UQR.question_id, GREATEST(MAX(user_question_tables.score), 0) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
