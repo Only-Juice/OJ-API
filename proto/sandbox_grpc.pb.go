@@ -22,8 +22,6 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SandboxServiceClient interface {
-	// 執行代碼
-	ExecuteCode(ctx context.Context, in *ExecuteCodeRequest, opts ...grpc.CallOption) (*ExecuteCodeResponse, error)
 	// 獲取沙箱狀態
 	GetStatus(ctx context.Context, in *SandboxStatusRequest, opts ...grpc.CallOption) (*SandboxStatusResponse, error)
 	// 添加任務到隊列
@@ -38,15 +36,6 @@ type sandboxServiceClient struct {
 
 func NewSandboxServiceClient(cc grpc.ClientConnInterface) SandboxServiceClient {
 	return &sandboxServiceClient{cc}
-}
-
-func (c *sandboxServiceClient) ExecuteCode(ctx context.Context, in *ExecuteCodeRequest, opts ...grpc.CallOption) (*ExecuteCodeResponse, error) {
-	out := new(ExecuteCodeResponse)
-	err := c.cc.Invoke(ctx, "/sandbox.SandboxService/ExecuteCode", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *sandboxServiceClient) GetStatus(ctx context.Context, in *SandboxStatusRequest, opts ...grpc.CallOption) (*SandboxStatusResponse, error) {
@@ -80,8 +69,6 @@ func (c *sandboxServiceClient) HealthCheck(ctx context.Context, in *SandboxStatu
 // All implementations must embed UnimplementedSandboxServiceServer
 // for forward compatibility
 type SandboxServiceServer interface {
-	// 執行代碼
-	ExecuteCode(context.Context, *ExecuteCodeRequest) (*ExecuteCodeResponse, error)
 	// 獲取沙箱狀態
 	GetStatus(context.Context, *SandboxStatusRequest) (*SandboxStatusResponse, error)
 	// 添加任務到隊列
@@ -95,9 +82,6 @@ type SandboxServiceServer interface {
 type UnimplementedSandboxServiceServer struct {
 }
 
-func (UnimplementedSandboxServiceServer) ExecuteCode(context.Context, *ExecuteCodeRequest) (*ExecuteCodeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExecuteCode not implemented")
-}
 func (UnimplementedSandboxServiceServer) GetStatus(context.Context, *SandboxStatusRequest) (*SandboxStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
 }
@@ -118,24 +102,6 @@ type UnsafeSandboxServiceServer interface {
 
 func RegisterSandboxServiceServer(s grpc.ServiceRegistrar, srv SandboxServiceServer) {
 	s.RegisterService(&SandboxService_ServiceDesc, srv)
-}
-
-func _SandboxService_ExecuteCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExecuteCodeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SandboxServiceServer).ExecuteCode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sandbox.SandboxService/ExecuteCode",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SandboxServiceServer).ExecuteCode(ctx, req.(*ExecuteCodeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _SandboxService_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -199,10 +165,6 @@ var SandboxService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "sandbox.SandboxService",
 	HandlerType: (*SandboxServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ExecuteCode",
-			Handler:    _SandboxService_ExecuteCode_Handler,
-		},
 		{
 			MethodName: "GetStatus",
 			Handler:    _SandboxService_GetStatus_Handler,

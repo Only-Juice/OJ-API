@@ -54,7 +54,7 @@ func (m *SandboxClientManager) GetClient() *SandboxClient {
 }
 
 // ReserveJob 添加任務到沙箱隊列
-func (m *SandboxClientManager) ReserveJob(repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) error {
+func (m *SandboxClientManager) ReserveJob(parentGitFullName string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) error {
 	client := m.GetClient()
 	if client == nil {
 		return fmt.Errorf("sandbox client not initialized")
@@ -63,7 +63,7 @@ func (m *SandboxClientManager) ReserveJob(repo string, gitRepoURL string, gitFul
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := client.AddJob(ctx, repo, gitRepoURL, gitFullName, gitAfterHash, gitUsername, gitToken, userQuestionTableID)
+	_, err := client.AddJob(ctx, parentGitFullName, gitRepoURL, gitFullName, gitAfterHash, gitUsername, gitToken, userQuestionTableID)
 	return err
 }
 

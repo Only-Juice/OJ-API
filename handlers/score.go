@@ -448,7 +448,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 		clientManager := services.GetSandboxClientManager()
 		if err := clientManager.ReserveJob(
-			question.GitRepoURL, // repo
+			question.GitRepoURL, // parentGitFullName
 			gitRepoURL,          // gitRepoURL
 			uqr.GitUserRepoURL,  // gitFullName
 			"",                  // gitAfterHash (空字符串表示使用 HEAD)
@@ -669,7 +669,7 @@ func ReScoreQuestion(c *gin.Context) {
 				// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 				clientManager := services.GetSandboxClientManager()
 				if err := clientManager.ReserveJob(
-					question.GitRepoURL,     // repo
+					question.GitRepoURL,     // parentGitFullName
 					gitRepoURL,              // gitRepoURL
 					gitFullName,             // gitFullName
 					"",                      // gitAfterHash (空字符串表示使用 HEAD)

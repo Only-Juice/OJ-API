@@ -4,31 +4,6 @@ package sandbox;
 
 option go_package = "OJ-API/proto/sandbox";
 
-// 代碼執行請求
-message ExecuteCodeRequest {
-  string repo = 1;
-  string git_repo_url = 2;        // Git 倉庫完整 URL
-  string git_full_name = 3;       // Git 倉庫完整名稱 (owner/repo)
-  string git_after_hash = 4;      // 要 checkout 的 commit hash
-  string git_username = 5;        // Git 用戶名
-  string git_token = 6;           // Git 訪問 token
-  uint64 user_question_table_id = 7;
-  string username = 8;
-  string question_title = 9;
-  string language = 10;
-  bytes compile_command = 11;
-  bytes execute_command = 12;
-}
-
-// 代碼執行回應
-message ExecuteCodeResponse {
-  bool success = 1;
-  string message = 2;
-  int32 score = 3;
-  string judge_time = 4;
-  string execution_result = 5;
-}
-
 // 沙箱狀態請求
 message SandboxStatusRequest {}
 
@@ -42,18 +17,13 @@ message SandboxStatusResponse {
 
 // 任務管理請求
 message AddJobRequest {
-  string repo = 1;
+  string parent_git_full_name = 1;
   string git_repo_url = 2;        // Git 倉庫完整 URL
   string git_full_name = 3;       // Git 倉庫完整名稱 (owner/repo)
   string git_after_hash = 4;      // 要 checkout 的 commit hash
   string git_username = 5;        // Git 用戶名
   string git_token = 6;           // Git 訪問 token
   uint64 user_question_table_id = 7;
-  string username = 8;
-  string question_title = 9;
-  string language = 10;
-  bytes compile_command = 11;
-  bytes execute_command = 12;
 }
 
 // 任務管理回應
@@ -64,10 +34,7 @@ message AddJobResponse {
 }
 
 // 沙箱服務定義
-service SandboxService {
-  // 執行代碼
-  rpc ExecuteCode(ExecuteCodeRequest) returns (ExecuteCodeResponse);
-  
+service SandboxService {  
   // 獲取沙箱狀態
   rpc GetStatus(SandboxStatusRequest) returns (SandboxStatusResponse);
   

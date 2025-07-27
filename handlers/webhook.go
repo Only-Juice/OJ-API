@@ -134,7 +134,7 @@ func PostGiteaHook(c *gin.Context) {
 		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 		clientManager := services.GetSandboxClientManager()
 		if err := clientManager.ReserveJob(
-			existingQuestion.GitRepoURL, // repo
+			existingQuestion.GitRepoURL, // parentGitFullName
 			gitRepoURL,                  // gitRepoURL
 			payload.Repository.FullName, // gitFullName
 			payload.After,               // gitAfterHash

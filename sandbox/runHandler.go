@@ -190,6 +190,7 @@ func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 			Score:   -2,
 			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
 		})
+		s.Release(boxID)
 		return
 	}
 
@@ -243,9 +244,6 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 		"--processes=100",
 		"--open-files=0",
 		"--env=PATH",
-		"--time=1",
-		"--wall-time=1.5",
-		"--mem=131072",
 	}
 
 	if len(codePath) > 0 {

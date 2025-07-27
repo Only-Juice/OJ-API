@@ -1,14 +1,20 @@
 package services
 
 import (
+	"OJ-API/config"
 	"OJ-API/models"
 	pb "OJ-API/proto"
 	"OJ-API/sandbox"
 	"context"
 	"fmt"
 	"log"
-	"time"
+	"os"
+	"path/filepath"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -28,26 +34,6 @@ func NewSandboxServer(sandboxInstance *sandbox.Sandbox) *SandboxServer {
 	}
 }
 
-// ExecuteCode 執行代碼
-func (s *SandboxServer) ExecuteCode(ctx context.Context, req *pb.ExecuteCodeRequest) (*pb.ExecuteCodeResponse, error) {
-	log.Printf("Received ExecuteCode request for repo: %s", req.Repo)
-
-	// 創建 UserQuestionTable 模型
-	uqr := models.UserQuestionTable{
-		ID: uint(req.UserQuestionTableId),
-	}
-
-	// 將任務添加到隊列
-	s.sandbox.ReserveJob(req.Repo, req.GitRepoUrl, req.GitFullName, req.GitAfterHash, req.GitUsername, req.GitToken, uqr)
-
-	return &pb.ExecuteCodeResponse{
-		Success:   true,
-		Message:   "Code execution job queued successfully",
-		Score:     0, // 初始分數，會在實際執行後更新
-		JudgeTime: time.Now().Format(time.RFC3339),
-	}, nil
-}
-
 // GetStatus 獲取沙箱狀態
 func (s *SandboxServer) GetStatus(ctx context.Context, req *pb.SandboxStatusRequest) (*pb.SandboxStatusResponse, error) {
 	return &pb.SandboxStatusResponse{
@@ -60,23 +46,23 @@ func (s *SandboxServer) GetStatus(ctx context.Context, req *pb.SandboxStatusRequ
 
 // AddJob 添加任務到隊列
 func (s *SandboxServer) AddJob(ctx context.Context, req *pb.AddJobRequest) (*pb.AddJobResponse, error) {
-	// 驗證請求
-	if req.Repo == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "repo cannot be empty")
-	}
-
 	// 創建 UserQuestionTable 模型
 	uqr := models.UserQuestionTable{
 		ID: uint(req.UserQuestionTableId),
 	}
 
+	codePath, err := CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to clone repository: %v", err)
+	}
+
 	// 添加任務到隊列
-	s.sandbox.ReserveJob(req.Repo, req.GitRepoUrl, req.GitFullName, req.GitAfterHash, req.GitUsername, req.GitToken, uqr)
+	s.sandbox.ReserveJob(req.ParentGitFullName, []byte(codePath), uqr)
 
 	return &pb.AddJobResponse{
 		Success: true,
 		Message: "Job added to queue successfully",
-		JobId:   fmt.Sprintf("job_%d_%s", req.UserQuestionTableId, req.Repo),
+		JobId:   fmt.Sprintf("job_%d_%s", req.UserQuestionTableId, req.GitFullName),
 	}, nil
 }
 
@@ -110,21 +96,6 @@ func (c *SandboxClient) Close() error {
 	return c.conn.Close()
 }
 
-// ExecuteCode 執行代碼
-func (c *SandboxClient) ExecuteCode(ctx context.Context, repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) (*pb.ExecuteCodeResponse, error) {
-	req := &pb.ExecuteCodeRequest{
-		Repo:                repo,
-		GitRepoUrl:          gitRepoURL,
-		GitFullName:         gitFullName,
-		GitAfterHash:        gitAfterHash,
-		GitUsername:         gitUsername,
-		GitToken:            gitToken,
-		UserQuestionTableId: userQuestionTableID,
-	}
-
-	return c.client.ExecuteCode(ctx, req)
-}
-
 // GetStatus 獲取沙箱狀態
 func (c *SandboxClient) GetStatus(ctx context.Context) (*pb.SandboxStatusResponse, error) {
 	req := &pb.SandboxStatusRequest{}
@@ -132,9 +103,9 @@ func (c *SandboxClient) GetStatus(ctx context.Context) (*pb.SandboxStatusRespons
 }
 
 // AddJob 添加任務
-func (c *SandboxClient) AddJob(ctx context.Context, repo string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) (*pb.AddJobResponse, error) {
+func (c *SandboxClient) AddJob(ctx context.Context, parentGitFullName string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) (*pb.AddJobResponse, error) {
 	req := &pb.AddJobRequest{
-		Repo:                repo,
+		ParentGitFullName:   parentGitFullName,
 		GitRepoUrl:          gitRepoURL,
 		GitFullName:         gitFullName,
 		GitAfterHash:        gitAfterHash,
@@ -150,4 +121,68 @@ func (c *SandboxClient) AddJob(ctx context.Context, repo string, gitRepoURL stri
 func (c *SandboxClient) HealthCheck(ctx context.Context) (*pb.SandboxStatusResponse, error) {
 	req := &pb.SandboxStatusRequest{}
 	return c.client.HealthCheck(ctx, req)
+}
+
+// CloneRepository 執行 git clone 操作
+func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToken string) (string, error) {
+	// 生成唯一的代碼路徑
+	codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), GitFullName+"/"+uuid.New().String())
+
+	// 配置 clone 選項
+	cloneOptions := &git.CloneOptions{
+		URL: GitRepoURL,
+		Auth: &http.BasicAuth{
+			Username: GitUsername,
+			Password: GitToken,
+		},
+		Progress: nil, // 在生產環境中不輸出進度
+	}
+
+	// 執行 clone
+	repo, err := git.PlainClone(codePath, false, cloneOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to clone repository: %v", err)
+	}
+
+	// 如果有指定的 commit hash，則 checkout 到該 commit
+	if GitAfterHash != "" {
+		// 獲取 worktree 並 checkout 到指定 commit
+		worktree, err := repo.Worktree()
+		if err != nil {
+			return "", fmt.Errorf("failed to get worktree: %v", err)
+		}
+
+		// Checkout 到指定的 commit hash
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(GitAfterHash),
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to checkout to %s: %v", GitAfterHash, err)
+		}
+		log.Printf("Successfully cloned and checked out %s to %s at commit %s", GitFullName, codePath, GitAfterHash)
+	} else {
+		log.Printf("Successfully cloned %s to %s (using HEAD)", GitFullName, codePath)
+	}
+
+	// 設置目錄權限為 777 (讀寫執行權限)
+	err = os.Chmod(codePath, 0777)
+	if err != nil {
+		log.Printf("Warning: failed to set permissions for %s: %v", codePath, err)
+	}
+
+	// 遞歸設置所有子目錄和文件的權限
+	err = filepath.Walk(codePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return os.Chmod(path, 0777)
+		}
+		return os.Chmod(path, 0644)
+	})
+	if err != nil {
+		log.Printf("Warning: failed to set recursive permissions for %s: %v", codePath, err)
+	}
+
+	return codePath, nil
 }
