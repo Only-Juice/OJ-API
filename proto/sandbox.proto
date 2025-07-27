@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package sandbox;
+
+option go_package = "OJ-API/proto/sandbox";
+
+// 沙箱狀態請求
+message SandboxStatusRequest {}
+
+// 沙箱狀態回應
+message SandboxStatusResponse {
+  int32 available_count = 1;
+  int32 waiting_count = 2;
+  int32 processing_count = 3;
+  int32 total_count = 4;
+}
+
+// 任務管理請求
+message AddJobRequest {
+  string parent_git_full_name = 1;
+  string git_repo_url = 2;        // Git 倉庫完整 URL
+  string git_full_name = 3;       // Git 倉庫完整名稱 (owner/repo)
+  string git_after_hash = 4;      // 要 checkout 的 commit hash
+  string git_username = 5;        // Git 用戶名
+  string git_token = 6;           // Git 訪問 token
+  uint64 user_question_table_id = 7;
+}
+
+// 任務管理回應
+message AddJobResponse {
+  bool success = 1;
+  string message = 2;
+  string job_id = 3;
+}
+
+// 沙箱註冊請求
+message RegisterSandboxRequest {
+  string sandbox_id = 1;
+  string address = 2;
+  int32 capacity = 3;
+}
+
+// 沙箱註冊回應
+message RegisterSandboxResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 沙箱註銷請求
+message UnregisterSandboxRequest {
+  string sandbox_id = 1;
+}
+
+// 沙箱註銷回應
+message UnregisterSandboxResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 心跳請求
+message HeartbeatRequest {
+  string sandbox_id = 1;
+  SandboxStatusResponse status = 2;
+}
+
+// 心跳回應
+message HeartbeatResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 沙箱服務定義（由沙箱實例提供）
+service SandboxService {  
+  // 獲取沙箱狀態
+  rpc GetStatus(SandboxStatusRequest) returns (SandboxStatusResponse);
+  
+  // 添加任務到隊列
+  rpc AddJob(AddJobRequest) returns (AddJobResponse);
+  
+  // 健康檢查
+  rpc HealthCheck(SandboxStatusRequest) returns (SandboxStatusResponse);
+}
+
+// 沙箱連接請求
+message SandboxConnectRequest {
+  string sandbox_id = 1;
+  int32 capacity = 2;
+}
+
+// 沙箱消息（從沙箱到調度器）
+message SandboxMessage {
+  string sandbox_id = 1;
+  oneof message_type {
+    SandboxConnectRequest connect = 2;
+    SandboxStatusResponse status = 3;
+    AddJobResponse job_response = 4;
+  }
+}
+
+// 調度器消息（從調度器到沙箱）
+message SchedulerMessage {
+  string sandbox_id = 1;
+  oneof message_type {
+    RegisterSandboxResponse connect_response = 2;
+    AddJobRequest job_request = 3;
+    SandboxStatusRequest status_request = 4;
+  }
+}
+
+// 調度器服務定義（由 API Server 提供）
+service SchedulerService {
+  // 註冊沙箱實例（舊接口，保留兼容性）
+  rpc RegisterSandbox(RegisterSandboxRequest) returns (RegisterSandboxResponse);
+  
+  // 註銷沙箱實例
+  rpc UnregisterSandbox(UnregisterSandboxRequest) returns (UnregisterSandboxResponse);
+  
+  // 發送心跳
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  
+  // 沙箱雙向流連接（新接口）
+  rpc SandboxStream(stream SandboxMessage) returns (stream SchedulerMessage);
+}

@@ -30,7 +30,9 @@ func Connect() (err error) {
 		return err
 	}
 	// Set the logger to log SQL queries
-	DBConn = DBConn.Debug()
+	if config.Config("LOG_LEVEL") == "debug" {
+		DBConn = DBConn.Debug()
+	}
 
 	sqlDB, err := DBConn.DB()
 	if err != nil {

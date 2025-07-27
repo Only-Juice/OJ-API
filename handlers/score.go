@@ -3,20 +3,17 @@ package handlers
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-git/go-git/v5"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
-	"OJ-API/sandbox"
+	"OJ-API/services"
 	"OJ-API/utils"
 )
 
@@ -83,7 +80,8 @@ func GetScoreByRepo(c *gin.Context) {
 	var totalCount int64
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
-		Where("git_user_repo_url = ?", repoURL).
+		Joins("JOIN questions Q ON question_id = Q.id").
+		Where("git_user_repo_url = ? AND Q.is_active = ?", repoURL, true).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -95,7 +93,8 @@ func GetScoreByRepo(c *gin.Context) {
 	var _scores []models.UserQuestionTable
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
-		Where("git_user_repo_url = ?", repoURL).
+		Joins("JOIN questions Q ON question_id = Q.id").
+		Where("git_user_repo_url = ? AND Q.is_active = ?", repoURL, true).
 		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
@@ -147,7 +146,7 @@ func GetScoreByRepo(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/{UQR_ID} [get]
+//	@Router			/api/score/uqr/{UQR_ID}/score [get]
 //	@Security		BearerAuth
 func GetScoreByUQRID(c *gin.Context) {
 	db := database.DBConn
@@ -181,6 +180,23 @@ func GetScoreByUQRID(c *gin.Context) {
 		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
+		})
+		return
+	}
+
+	// Question is not active
+	var question models.Question
+	if err := db.Where("id = ? AND is_active = ?", UQR.QuestionID, true).First(&question).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Question not found or is not active",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get question by UQR ID",
 		})
 		return
 	}
@@ -254,7 +270,7 @@ func GetScoreByUQRID(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/question/{question_id} [get]
+//	@Router			/api/score/{question_id}/question [get]
 //	@Security		BearerAuth
 func GetScoreByQuestionID(c *gin.Context) {
 	db := database.DBConn
@@ -265,6 +281,23 @@ func GetScoreByQuestionID(c *gin.Context) {
 		c.JSON(400, ResponseHTTP{
 			Success: false,
 			Message: "Question ID is required",
+		})
+		return
+	}
+
+	// Check if the question is active
+	var question models.Question
+	if err := db.Where("id = ? AND is_active = ?", questionID, true).First(&question).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: "Question not found or is not active",
+			})
+			return
+		}
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get question by ID",
 		})
 		return
 	}
@@ -344,7 +377,7 @@ func GetScoreByQuestionID(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/user/rescore/{question_id} [post]
+//	@Router			/api/score/{question_id}/question/user_rescore [post]
 //	@Security		BearerAuth
 func ReScoreUserQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -360,7 +393,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 	}
 
 	var question models.Question
-	if err := db.Where("id = ?", questionID).First(&question).Error; err != nil {
+	if err := db.Where("id = ? AND is_active = ?", questionID, true).First(&question).Error; err != nil {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -399,23 +432,35 @@ func ReScoreUserQuestion(c *gin.Context) {
 	})
 
 	go func() {
-		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
-		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-			URL:      "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL,
-			Progress: os.Stdout,
-		})
+		// 獲取用戶 token
+		token, err := utils.GetToken(jwtClaims.UserID)
 		if err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: "Failed to clone repository",
+				Message: fmt.Sprintf("Failed to get token: %v", err),
 			})
 			return
 		}
-		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-		defer os.RemoveAll(codePath)
+		// 構建 Git 倉庫 URL
+		gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL
 
-		sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScore)
+		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
+		clientManager := services.GetSandboxClientManager()
+		if err := clientManager.ReserveJob(
+			question.GitRepoURL, // parentGitFullName
+			gitRepoURL,          // gitRepoURL
+			uqr.GitUserRepoURL,  // gitFullName
+			"",                  // gitAfterHash (空字符串表示使用 HEAD)
+			jwtClaims.Username,  // gitUsername
+			token,               // gitToken
+			uint64(newScore.ID), // userQuestionTableID
+		); err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to queue job: %v", err),
+			})
+		}
 	}()
 }
 
@@ -461,6 +506,8 @@ func GetTopScore(c *gin.Context) {
 	subQuery := db.Model(&models.UserQuestionTable{}).
 		Select("DISTINCT question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Where("UQR.user_id = ?", jwtClaims.UserID)
 
@@ -477,6 +524,8 @@ func GetTopScore(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Select("DISTINCT ON (question_id) question_id, git_user_repo_url, score, message, judge_time").
+		Joins("JOIN questions Q ON question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Where("user_id = ?", jwtClaims.UserID).
 		Order("question_id, score DESC").
@@ -529,7 +578,7 @@ func GetTopScore(c *gin.Context) {
 //	@Failure		401
 //	@Failure		404
 //	@Failure		503
-//	@Router			/api/score/question/{question_id}/rescore [post]
+//	@Router			/api/score/admin/{question_id}/question/rescore [post]
 //	@Security		BearerAuth
 func ReScoreQuestion(c *gin.Context) {
 	db := database.DBConn
@@ -598,27 +647,42 @@ func ReScoreQuestion(c *gin.Context) {
 		var wg sync.WaitGroup
 
 		for i, u := range uqr {
-			codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), u.GitUserRepoURL+"/"+uuid.New().String())
-			_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-				URL:      "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL,
-				Progress: os.Stdout,
-			})
+			var existingUser models.User
+			db.Where(&models.User{ID: u.UserID}).First(&existingUser)
+
+			// 獲取用戶 token
+			token, err := utils.GetToken(existingUser.ID)
 			if err != nil {
 				db.Model(&newScores[i]).Updates(models.UserQuestionTable{
 					Score:   -2,
-					Message: "Failed to clone repository",
+					Message: fmt.Sprintf("Failed to get token: %v", err),
 				})
-				return
+				continue
 			}
-			os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-			defer os.RemoveAll(codePath)
+			// 構建 Git 倉庫 URL
+			gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL
 
 			wg.Add(1)
-			go func(i int, codePath string) {
+			go func(i int, gitRepoURL string, gitFullName string, username string, token string) {
 				defer wg.Done()
-				sandbox.SandboxPtr.RunShellCommandByRepo(question.GitRepoURL, []byte(codePath), newScores[i])
-			}(i, codePath)
+				// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
+				clientManager := services.GetSandboxClientManager()
+				if err := clientManager.ReserveJob(
+					question.GitRepoURL,     // parentGitFullName
+					gitRepoURL,              // gitRepoURL
+					gitFullName,             // gitFullName
+					"",                      // gitAfterHash (空字符串表示使用 HEAD)
+					username,                // gitUsername
+					token,                   // gitToken
+					uint64(newScores[i].ID), // userQuestionTableID
+				); err != nil {
+					db.Model(&newScores[i]).Updates(models.UserQuestionTable{
+						Score:   -2,
+						Message: fmt.Sprintf("Failed to queue job: %v", err),
+					})
+				}
+			}(i, gitRepoURL, u.GitUserRepoURL, existingUser.UserName, token)
 		}
 
 		wg.Wait()
@@ -653,6 +717,8 @@ func GetAllScore(c *gin.Context) {
 
 	subQuery := db.Model(&models.UserQuestionTable{}).
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Where("UQR.user_id = ?", jwtClaims.UserID)
 
 	if err := db.Table("(?) AS sub", subQuery).
@@ -667,6 +733,8 @@ func GetAllScore(c *gin.Context) {
 	var scores []TopScore
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
+		Joins("JOIN questions Q ON question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Select("question_id, git_user_repo_url, score, message, judge_time").
 		Where("user_id = ?", jwtClaims.UserID).
 		Order("question_id, judge_time DESC").
@@ -747,10 +815,15 @@ func GetLeaderboard(c *gin.Context) {
 
 	// Get total count of users who have scores
 	var totalCount int64
-	if err := db.Table("(SELECT DISTINCT user_id FROM user_question_relations " +
-		"JOIN user_question_tables ON user_question_relations.id = user_question_tables.uqr_id " +
-		"WHERE question_id NOT IN (SELECT question_id FROM exam_questions)) AS t").
-		Count(&totalCount).Error; err != nil {
+	subquery := db.Table("user_question_tables").
+		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Where("Q.is_active = ?", true).
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
+		Group("UQR.user_id, UQR.question_id")
+
+	if err := db.Table("(?) AS t", subquery).Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to count users with scores",
@@ -767,11 +840,7 @@ func GetLeaderboard(c *gin.Context) {
 	}
 
 	var usersWithScores []UserWithTotalScore
-	if err := db.Table("(SELECT UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id " +
-		"FROM user_question_tables " +
-		"JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id " +
-		"WHERE question_id NOT IN (SELECT question_id FROM exam_questions) " +
-		"GROUP BY UQR.user_id, UQR.question_id) AS subquery").
+	if err := db.Table("(?) AS subquery", subquery).
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
@@ -810,14 +879,16 @@ func GetLeaderboard(c *gin.Context) {
 	}
 
 	var questionScores []QuestionScoreDetail
-	subquery := db.Model(&models.UserQuestionTable{}).
-		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, UQR.git_user_repo_url").
+	subquery2 := db.Model(&models.UserQuestionTable{}).
+		Select("UQR.user_id, UQR.question_id, GREATEST(MAX(user_question_tables.score), 0) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Where("Q.is_active = ?", true).
 		Where("UQR.user_id IN ?", userIDs).
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
-		Group("UQR.user_id, UQR.question_id, UQR.git_user_repo_url")
+		Group("UQR.user_id, UQR.question_id")
 
-	if err := db.Table("(?) AS sq", subquery).
+	if err := db.Table("(?) AS sq", subquery2).
 		Joins("JOIN questions ON questions.id = sq.question_id").
 		Select("sq.user_id, sq.question_id, questions.title AS question_title, sq.git_user_repo_url AS git_user_repo_url, sq.score").
 		Find(&questionScores).Error; err != nil {

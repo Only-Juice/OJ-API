@@ -1,17 +1,17 @@
 package sandbox
 
 import (
+	"OJ-API/database"
+	"OJ-API/models"
+	"OJ-API/utils"
+	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
-
-	"OJ-API/database"
-	"OJ-API/models"
 )
 
 const execTimeoutDuration = time.Second * 60
@@ -19,14 +19,40 @@ const execTimeoutDuration = time.Second * 60
 // SandboxPtr is a pointer to Sandbox
 var SandboxPtr *Sandbox
 
-func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
+func (s *Sandbox) WorkerLoop(ctx context.Context) {
+	ticker := time.NewTicker(300 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			utils.Info("WorkerLoop received cancel signal, stopping...")
+			return
+		case <-ticker.C:
+			s.assignJob()
+		}
+	}
+}
+
+func (s *Sandbox) assignJob() {
+	for s.AvailableCount() > 0 && !s.IsJobEmpty() {
+		job := s.ReleaseJob()
+		boxID, ok := s.Reserve(1 * time.Second)
+		if !ok {
+			s.ReserveJob(job.Repo, job.CodePath, job.UQR)
+			continue
+		}
+		go s.runShellCommandByRepo(boxID, job)
+	}
+}
+
+func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		JudgeTime: time.Now().UTC(),
 	})
 
-	boxID := s.Reserve()
 	defer s.Release(boxID)
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -38,8 +64,8 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQues
 	defer cancel()
 
 	// saving code as file
-	shellCommand = append(shellCommand, []byte("\nrm build -rf")...)
-	codeID, err := WriteToTempFile(shellCommand)
+	compileScript := compileCommand
+	codeID, err := WriteToTempFile(compileScript)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -49,28 +75,14 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQues
 	}
 	defer os.Remove(shellFilename(codeID))
 
-	// running the code
-	cmdArgs := []string{
-		fmt.Sprintf("--box-id=%v", boxID),
-		"--fsize=5120",
-		fmt.Sprintf("--dir=%v", CodeStorageFolder),
-		"--wait",
-		"--processes=100",
-		"--open-files=0",
-		"--env=PATH",
-		"--stderr-to-stdout",
-	}
-
 	if len(codePath) > 0 {
-		cmdArgs = append(cmdArgs,
-			fmt.Sprintf("--chdir=%v", string(codePath)),
-			fmt.Sprintf("--dir=%v:rw", string(codePath)),
-			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
-
 		// copy python code(./sandbox/python/grp_parser.py) to code path
-		os.Mkdir(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
+		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
 		copy := exec.CommandContext(ctx, "cp", "./sandbox/python/grp_parser.py", fmt.Sprintf("%v/%s", string(codePath), "utils"))
+		var stderr bytes.Buffer
+		copy.Stderr = &stderr
 		if err := copy.Run(); err != nil {
+			utils.Debug(copy.String())
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to copy python code: %v", err),
@@ -79,20 +91,49 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQues
 		}
 	}
 
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellFilename(codeID))
+	/*
+		Compile the code
+	*/
 
-	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID), codePath)
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: fmt.Sprintf("Failed to run command: %v", err),
+	if !success {
+		db.Model(&userQuestion).Updates(map[string]interface{}{
+			"score":   0,
+			"message": "Compilation Failed:\n" + compileOut,
 		})
 		return
 	}
 
-	log.Printf("Command output: %s", string(out))
+	/*
+
+		Execute the code
+
+	*/
+
+	LogWithLocation("Start Execute")
+
+	executeScript := append(executeCommand, []byte("\nrm build -rf")...)
+	execodeID, err := WriteToTempFile(executeScript)
+	if err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+		})
+		return
+	}
+	defer os.Remove(shellFilename(execodeID))
+
+	s.runExecute(boxID, ctx, shellFilename(execodeID), codePath)
+
+	/*
+
+		Part for result.
+
+	*/
+
+	utils.Debug("Compilation and execution finished successfully.")
+	utils.Debug("Ready to proceed to the next step or return output.")
 
 	// read score from file
 	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
@@ -133,20 +174,96 @@ func (s *Sandbox) RunShellCommand(shellCommand []byte, codePath []byte, userQues
 		})
 		return
 	}
+
+	defer os.RemoveAll(string(codePath))
+	utils.Debug("Done for judge!")
 }
 
-func (s *Sandbox) RunShellCommandByRepo(parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable) {
-	db := database.DBConn
+func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
+	// parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable
 
+	db := database.DBConn
 	var cmd models.QuestionTestScript
 	if err := db.Joins("Question").
-		Where("git_repo_url = ?", parentsRepo).Take(&cmd).Error; err != nil {
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+		Where("git_repo_url = ?", work.Repo).Take(&cmd).Error; err != nil {
+		db.Model(&work.UQR).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to find shell command for %v: %v", parentsRepo, err),
+			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
 		})
+		s.Release(boxID)
 		return
 	}
 
-	s.RunShellCommand([]byte(cmd.TestScript), codePath, userQuestion)
+	s.runShellCommand(boxID, []byte(cmd.TestScript), []byte(cmd.ExecuteScript), work.CodePath, work.UQR)
+}
+
+func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
+
+	cmdArgs := []string{
+		fmt.Sprintf("--box-id=%v", box),
+		"--fsize=5120",
+		fmt.Sprintf("--dir=%v:rw", CodeStorageFolder),
+		"--wait",
+		"--processes",
+		"--open-files=0",
+		"--env=PATH",
+		"--stderr-to-stdout",
+	}
+
+	if len(codePath) > 0 {
+		cmdArgs = append(cmdArgs,
+			fmt.Sprintf("--chdir=%v", string(codePath)),
+			fmt.Sprintf("--dir=%v:rw", string(codePath)),
+			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+	}
+	scriptFile := shellCommand
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", scriptFile)
+
+	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+	// ✅ [Debug] Run and capture output
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		return false, err.Error() + "\n" + string(out)
+	}
+
+	if strings.Contains(string(out), "error:") {
+		return false, string(out)
+	}
+
+	return true, string(out)
+}
+
+func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
+	cmdArgs := []string{
+		fmt.Sprintf("--box-id=%v", box),
+		"--fsize=5120",
+		fmt.Sprintf("--dir=%v", CodeStorageFolder),
+		"--wait",
+		"--processes=100",
+		"--open-files=0",
+		"--env=PATH",
+	}
+
+	if len(codePath) > 0 {
+		cmdArgs = append(cmdArgs,
+			fmt.Sprintf("--chdir=%v", string(codePath)),
+			fmt.Sprintf("--dir=%v:rw", string(codePath)),
+			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+	}
+
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellCommand)
+
+	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
+	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		utils.Errorf("Failed to run command: %v", err)
+		return "Execute with Error!", false
+	}
+
+	return string(out), true
 }

@@ -1,5 +1,5 @@
 # Stage 1: Build the Go app
-FROM golang:1.24.1-bookworm AS builder
+FROM golang:1.24.5-alpine3.22 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -20,30 +20,13 @@ ENV GIN_MODE=release
 RUN go build -o OJ_API .
 
 # Stage 2: Create a smaller image for running the Go app
-FROM debian:bookworm
-
-# Install isolate from the official repository
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git pkg-config libcap-dev libsystemd-dev ca-certificates make gcc g++ cmake python3 python3-pip python3-venv ninja-build libgtest-dev valgrind && \
-    git clone https://github.com/ioi/isolate.git /isolate && \
-    cd /isolate && \
-    make install && \
-    rm -rf /isolate && \
-    mkdir -p /sandbox /sandbox/code /sandbox/repo && \
-    chmod 777 /sandbox /sandbox/code /sandbox/repo && \
-    apt-get remove -y git pkg-config libcap-dev libsystemd-dev && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN pip install art --break-system-packages
+FROM alpine:3.22
 
 RUN mkdir -p /app
 WORKDIR /app
 
 # Copy the built Go app from the builder stage
 COPY --from=builder /app/.env.local /app/.env.local
-COPY --from=builder /app/sandbox/python /app/sandbox/python
 COPY --from=builder /app/OJ_API /app/OJ_API
 
 RUN chmod +x /app/OJ_API

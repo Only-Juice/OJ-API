@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # 主API服務
+  api-server:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:3001"
+    environment:
+      - DB_HOST=192.168.2.123
+      - LOG_LEVEL=info
+    # networks:
+    #   - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://api-server:3001/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 10s
+
+  # Sandbox gRPC服務
+  sandbox-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+    privileged: true  # isolate需要特權模式
+    volumes:
+      - /tmp:/tmp
+    environment:
+      - SANDBOX_COUNT=4
+      - DB_HOST=192.168.2.123
+      - OJ_HOST=api-server:3001
+      - LOG_LEVEL=info
+    depends_on:
+      api-server:
+        condition: service_healthy
+    # networks:
+    #   - app-network
+
+  # PostgreSQL數據庫
+#   postgres:
+#     image: postgres:15
+#     environment:
+#       POSTGRES_DB: ojapi
+#       POSTGRES_USER: ojapi
+#       POSTGRES_PASSWORD: ojapi123
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - app-network
+
+# volumes:
+#   postgres_data:
+
+# networks:
+#   app-network:
+#     driver: bridge

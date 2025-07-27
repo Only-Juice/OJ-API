@@ -123,6 +123,16 @@ definitions:
       push:
         type: boolean
     type: object
+  gitea.ProjectsMode:
+    enum:
+    - repo
+    - owner
+    - all
+    type: string
+    x-enum-varnames:
+    - ProjectsModeRepo
+    - ProjectsModeOwner
+    - ProjectsModeAll
   gitea.RepoCommit:
     properties:
       author:
@@ -140,6 +150,8 @@ definitions:
     type: object
   gitea.Repository:
     properties:
+      allow_fast_forward_only_merge:
+        type: boolean
       allow_merge_commits:
         type: boolean
       allow_rebase:
@@ -158,6 +170,8 @@ definitions:
         type: string
       default_branch:
         type: string
+      default_delete_branch_after_merge:
+        type: boolean
       default_merge_style:
         $ref: '#/definitions/gitea.MergeStyle'
       description:
@@ -206,6 +220,8 @@ definitions:
         type: string
       name:
         type: string
+      object_format_name:
+        type: string
       open_issues_count:
         type: integer
       open_pr_counter:
@@ -220,6 +236,8 @@ definitions:
         $ref: '#/definitions/gitea.Permission'
       private:
         type: boolean
+      projects_mode:
+        $ref: '#/definitions/gitea.ProjectsMode'
       release_counter:
         type: integer
       size:
@@ -324,11 +342,15 @@ definitions:
         type: boolean
       id:
         type: integer
+      is_active:
+        type: boolean
       start_time:
         example: 2006-01-02T15:04:05Z07:00
         type: string
       title:
         type: string
+      top_score:
+        type: integer
     type: object
   handlers._GetUsersQuestionsResponseData:
     properties:
@@ -363,6 +385,9 @@ definitions:
       git_repo_url:
         example: user_name/repo_name
         type: string
+      is_active:
+        example: true
+        type: boolean
       start_time:
         example: "2006-01-02T15:04:05Z"
         type: string
@@ -405,6 +430,31 @@ definitions:
     - default_password
     - email_domain
     - usernames
+    type: object
+  handlers.BulkCreateUserItem:
+    properties:
+      email:
+        example: username1@example.com
+        type: string
+      password:
+        example: password
+        type: string
+      username:
+        example: username1
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handlers.BulkCreateUserRequest:
+    properties:
+      user:
+        items:
+          $ref: '#/definitions/handlers.BulkCreateUserItem'
+        type: array
+    required:
+    - user
     type: object
   handlers.BulkCreateUserResponse:
     properties:
@@ -480,6 +530,19 @@ definitions:
       weighted_score:
         type: number
     type: object
+  handlers.ExamInfoResponse:
+    properties:
+      exam_description:
+        type: string
+      exam_end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      exam_start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      exam_title:
+        type: string
+    type: object
   handlers.ExamListData:
     properties:
       description:
@@ -496,6 +559,26 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  handlers.ExamQuestionData:
+    properties:
+      has_question:
+        type: boolean
+      point:
+        type: integer
+      question:
+        $ref: '#/definitions/models.Question'
+      top_score:
+        type: integer
+    type: object
+  handlers.ExamQuestionsResponse:
+    properties:
+      question_count:
+        type: integer
+      questions:
+        items:
+          $ref: '#/definitions/handlers.ExamQuestionData'
+        type: array
     type: object
   handlers.ExamRequest:
     properties:
@@ -673,6 +756,27 @@ definitions:
         type: string
       username:
         example: username
+        type: string
+    type: object
+  handlers.PatchQuestionRequest:
+    properties:
+      description:
+        example: Question Description
+        type: string
+      end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      git_repo_url:
+        example: user_name/repo_name
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      title:
+        example: Question Title
         type: string
     type: object
   handlers.QuestionScore:
@@ -874,6 +978,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       start_time:
         example: 2006-01-02T15:04:05Z07:00
         type: string
@@ -882,6 +988,8 @@ definitions:
     type: object
   models.QuestionTestScript:
     properties:
+      execute_script:
+        type: string
       id:
         type: integer
       question:
@@ -916,48 +1024,7 @@ info:
   title: OJ-PoC API
   version: "1.0"
 paths:
-  /api/admin/user:
-    get:
-      consumes:
-      - application/json
-      description: Get all user information
-      parameters:
-      - description: page number of results to return (1-based)
-        in: query
-        name: page
-        type: integer
-      - description: page size of results. Default is 10.
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.User'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Get all user information
-      tags:
-      - admin
-  /api/admin/user/{id}:
+  /api/admin/{id}/user:
     get:
       consumes:
       - application/json
@@ -1033,7 +1100,7 @@ paths:
       summary: Update user information
       tags:
       - admin
-  /api/admin/user/{id}/reset_password:
+  /api/admin/{id}/user/reset_password:
     post:
       consumes:
       - application/json
@@ -1067,6 +1134,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Reset user password
+      tags:
+      - admin
+  /api/admin/user:
+    get:
+      consumes:
+      - application/json
+      description: Get all user information
+      parameters:
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.User'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Get all user information
       tags:
       - admin
   /api/auth/login:
@@ -1160,6 +1268,170 @@ paths:
       summary: List all exams
       tags:
       - Exam
+  /api/exams/{id}/exam:
+    get:
+      description: Retrieve basic information about an exam, including title, description,
+        start and end times
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.ExamInfoResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Get basic information about an exam
+      tags:
+      - Exam
+  /api/exams/{id}/leaderboard:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the leaderboard for a specific exam
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: Page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.EnhancedGetLeaderboardResponseData'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      summary: Get the leaderboard for an exam
+      tags:
+      - Exam
+  /api/exams/{id}/questions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all questions associated with a specific exam with user's
+        question status and top scores (if authenticated)
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.ExamQuestionsResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
+      summary: Get questions for an exam
+      tags:
+      - Exam
+  /api/exams/{id}/score/top:
+    get:
+      description: Retrieve the top scores for each question in a specific exam for
+        a user
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetTopExamScoreResponseData'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get top scores for each question in an exam
+      tags:
+      - Exam
+  /api/exams/admin:
     post:
       consumes:
       - application/json
@@ -1196,7 +1468,7 @@ paths:
       summary: Create a new exam
       tags:
       - Exam
-  /api/exams/{id}:
+  /api/exams/admin/{id}/exam:
     delete:
       description: Delete an exam using its ID
       parameters:
@@ -1299,83 +1571,7 @@ paths:
       summary: Update an existing exam
       tags:
       - Exam
-  /api/exams/{id}/leaderboard:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve the leaderboard for a specific exam
-      parameters:
-      - description: Exam ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Page number of results to return (1-based)
-        in: query
-        name: page
-        type: integer
-      - description: Page size of results. Default is 10.
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.EnhancedGetLeaderboardResponseData'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      summary: Get the leaderboard for an exam
-      tags:
-      - Exam
-  /api/exams/{id}/questions:
-    get:
-      description: Retrieve all questions associated with a specific exam
-      parameters:
-      - description: Exam ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.Question'
-                  type: array
-              type: object
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-      summary: Get questions for an exam
-      tags:
-      - Exam
-  /api/exams/{id}/questions/{question_id}:
+  /api/exams/admin/{id}/questions/{question_id}/question:
     delete:
       description: Disassociate a question from a specific exam
       parameters:
@@ -1450,49 +1646,6 @@ paths:
       summary: Add a question to an exam
       tags:
       - Exam
-  /api/exams/{id}/score/top:
-    get:
-      description: Retrieve the top scores for each question in a specific exam for
-        a user
-      parameters:
-      - description: Exam ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: page number of results to return (1-based)
-        in: query
-        name: page
-        type: integer
-      - description: page size of results. Default is 10.
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.GetTopExamScoreResponseData'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Get top scores for each question in an exam
-      tags:
-      - Exam
   /api/gitea:
     post:
       consumes:
@@ -1532,31 +1685,7 @@ paths:
       summary: Receive Gitea hook
       tags:
       - Gitea
-  /api/gitea/auth:
-    post:
-      consumes:
-      - application/json
-      description: Use basic authentication to access the Gitea API
-      parameters:
-      - description: Basic Authentication
-        in: body
-        name: BasicAuthentication
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.BasicAuthentication'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Return access token
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-        "503":
-          description: Service Unavailable
-      summary: Use basic authentication to access the Gitea API
-      tags:
-      - Gitea
-  /api/gitea/question/{question_id}:
+  /api/gitea/{question_id}/question:
     post:
       consumes:
       - application/json
@@ -1587,37 +1716,7 @@ paths:
       summary: Take a question and create a repository in Gitea
       tags:
       - Gitea
-  /api/gitea/user:
-    get:
-      consumes:
-      - application/json
-      description: Get User Profile
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/gitea.User'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Get User Profile
-      tags:
-      - Gitea
-  /api/gitea/user/bulk:
+  /api/gitea/admin/user/bulk:
     post:
       consumes:
       - application/json
@@ -1654,6 +1753,97 @@ paths:
       summary: Bulk create User
       tags:
       - Gitea
+  /api/gitea/admin/user/bulk_v2:
+    post:
+      consumes:
+      - application/json
+      description: Bulk create User v2
+      parameters:
+      - description: User Email, Username, Password
+        in: body
+        name: BulkCreateUserRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkCreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return successful and failed users
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.BulkCreateUserResponse'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Bulk create User v2
+      tags:
+      - Gitea
+  /api/gitea/auth:
+    post:
+      consumes:
+      - application/json
+      description: Use basic authentication to access the Gitea API
+      parameters:
+      - description: Basic Authentication
+        in: body
+        name: BasicAuthentication
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BasicAuthentication'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return access token
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+      summary: Use basic authentication to access the Gitea API
+      tags:
+      - Gitea
+  /api/gitea/user:
+    get:
+      consumes:
+      - application/json
+      description: Get User Profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/gitea.User'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get User Profile
+      tags:
+      - Gitea
   /api/gitea/user/keys:
     post:
       consumes:
@@ -1686,12 +1876,12 @@ paths:
       summary: Create a public key in Gitea
       tags:
       - Gitea
-  /api/question:
+  /api/questions:
     get:
       consumes:
       - application/json
       description: Get a list of questions. Authentication is optional - if authenticated,
-        shows user's question status.
+        shows user's question status and top score.
       parameters:
       - description: page number of results to return (1-based)
         in: query
@@ -1729,6 +1919,150 @@ paths:
       summary: Get a list of questions [Optional Authentication]
       tags:
       - Question
+  /api/questions/{ID}/question:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve only public questions
+      parameters:
+      - description: ID of the Question to get
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetQuestionResponseData'
+              type: object
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      summary: Get a question by ID
+      tags:
+      - Question
+  /api/questions/admin/{ID}/question:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a question
+      parameters:
+      - description: ID of the Question to delete
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Question'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Delete a question
+      tags:
+      - Question
+    patch:
+      consumes:
+      - application/json
+      description: Update a question
+      parameters:
+      - description: Question object
+        in: body
+        name: question
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PatchQuestionRequest'
+      - description: ID of the Question to update
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Question'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Update a question
+      tags:
+      - Question
+  /api/questions/admin/{ID}/test_script:
+    get:
+      consumes:
+      - application/json
+      description: Get the test script for a question
+      parameters:
+      - description: ID of the Question to get the test script for
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.QuestionTestScript'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get the test script for a question
+      tags:
+      - Question
+  /api/questions/admin/question:
     post:
       consumes:
       - application/json
@@ -1765,7 +2099,7 @@ paths:
       summary: Add a question
       tags:
       - Question
-  /api/question/{UQR_ID}:
+  /api/questions/uqr/{UQR_ID}/question:
     get:
       consumes:
       - application/json
@@ -1801,149 +2135,7 @@ paths:
       summary: Get a question by UQR_ID
       tags:
       - Question
-  /api/question/id/{ID}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a question
-      parameters:
-      - description: ID of the Question to delete
-        in: path
-        name: ID
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.Question'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Delete a question
-      tags:
-      - Question
-    get:
-      consumes:
-      - application/json
-      description: Retrieve only public questions
-      parameters:
-      - description: ID of the Question to get
-        in: path
-        name: ID
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.GetQuestionResponseData'
-              type: object
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      summary: Get a question by ID
-      tags:
-      - Question
-    patch:
-      consumes:
-      - application/json
-      description: Update a question
-      parameters:
-      - description: Question object
-        in: body
-        name: question
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.AddQuestionRequest'
-      - description: ID of the Question to update
-        in: path
-        name: ID
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.Question'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Update a question
-      tags:
-      - Question
-  /api/question/test_script/{ID}:
-    get:
-      consumes:
-      - application/json
-      description: Get the test script for a question
-      parameters:
-      - description: ID of the Question to get the test script for
-        in: path
-        name: ID
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.QuestionTestScript'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Get the test script for a question
-      tags:
-      - Question
-  /api/question/user:
+  /api/questions/user:
     get:
       consumes:
       - application/json
@@ -1984,7 +2176,7 @@ paths:
       summary: Get a list of questions by user
       tags:
       - Question
-  /api/question/user/id/{ID}:
+  /api/questions/user/{ID}/question:
     get:
       consumes:
       - application/json
@@ -2021,7 +2213,7 @@ paths:
       summary: Get a user's question by Question ID
       tags:
       - Question
-  /api/sandbox:
+  /api/sandbox/admin/sandbox_cmd:
     post:
       consumes:
       - application/json
@@ -2129,15 +2321,15 @@ paths:
       summary: Get a score by repo
       tags:
       - Score
-  /api/score/{UQR_ID}:
+  /api/score/{question_id}/question:
     get:
       consumes:
       - application/json
-      description: Get a score by UQR ID
+      description: Get a score by question ID
       parameters:
-      - description: UQR ID
+      - description: question ID
         in: path
-        name: UQR_ID
+        name: question_id
         required: true
         type: integer
       - description: page number of results to return (1-based)
@@ -2170,7 +2362,69 @@ paths:
           description: Service Unavailable
       security:
       - BearerAuth: []
-      summary: Get a score by UQR ID
+      summary: Get a score by question ID
+      tags:
+      - Score
+  /api/score/{question_id}/question/user_rescore:
+    post:
+      consumes:
+      - application/json
+      description: Re-score a specific user's question by question ID
+      parameters:
+      - description: question ID
+        in: path
+        name: question_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Re-score a specific user's question
+      tags:
+      - Score
+  /api/score/admin/{question_id}/question/rescore:
+    post:
+      consumes:
+      - application/json
+      description: Re-score a specific question by question ID
+      parameters:
+      - description: question ID
+        in: path
+        name: question_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Re-score a specific question
       tags:
       - Score
   /api/score/all:
@@ -2249,81 +2503,6 @@ paths:
       summary: Get the leaderboard
       tags:
       - Score
-  /api/score/question/{question_id}:
-    get:
-      consumes:
-      - application/json
-      description: Get a score by question ID
-      parameters:
-      - description: question ID
-        in: path
-        name: question_id
-        required: true
-        type: integer
-      - description: page number of results to return (1-based)
-        in: query
-        name: page
-        type: integer
-      - description: page size of results. Default is 10.
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.Score'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Get a score by question ID
-      tags:
-      - Score
-  /api/score/question/{question_id}/rescore:
-    post:
-      consumes:
-      - application/json
-      description: Re-score a specific question by question ID
-      parameters:
-      - description: question ID
-        in: path
-        name: question_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Re-score a specific question
-      tags:
-      - Score
   /api/score/top:
     get:
       consumes:
@@ -2363,16 +2542,24 @@ paths:
       summary: Get the top score of each question for user
       tags:
       - Score
-  /api/score/user/rescore/{question_id}:
-    post:
+  /api/score/uqr/{UQR_ID}/score:
+    get:
       consumes:
       - application/json
-      description: Re-score a specific user's question by question ID
+      description: Get a score by UQR ID
       parameters:
-      - description: question ID
+      - description: UQR ID
         in: path
-        name: question_id
+        name: UQR_ID
         required: true
+        type: integer
+      - description: page number of results to return (1-based)
+        in: query
+        name: page
+        type: integer
+      - description: page size of results. Default is 10.
+        in: query
+        name: limit
         type: integer
       produces:
       - application/json
@@ -2380,7 +2567,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.Score'
+              type: object
         "400":
           description: Bad Request
         "401":
@@ -2391,7 +2583,7 @@ paths:
           description: Service Unavailable
       security:
       - BearerAuth: []
-      summary: Re-score a specific user's question
+      summary: Get a score by UQR ID
       tags:
       - Score
   /api/user:

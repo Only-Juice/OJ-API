@@ -5,7 +5,7 @@ import (
 
 	"OJ-API/database"
 	"OJ-API/models"
-	"OJ-API/sandbox"
+	"OJ-API/services"
 	"OJ-API/utils"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +28,7 @@ type Sandbox struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/sandbox [post]
+// @Router			/api/sandbox/admin/sandbox_cmd [post]
 // @Security		BearerAuth
 func PostSandboxCmd(c *gin.Context) {
 	db := database.DBConn
@@ -63,11 +63,11 @@ func PostSandboxCmd(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		// If we get here, the question exists but doesn't have a test script
 		existingCmd = models.QuestionTestScript{
-			QuestionID:  question.ID,
-			TestScript:  cmd.Script,
+			QuestionID: question.ID,
+			TestScript: cmd.Script,
 		}
 		db.Create(&existingCmd)
 	} else {
@@ -99,18 +99,21 @@ type StatusResponse struct {
 // @Failure		500		{object}	ResponseHTTP{}
 // @Router /api/sandbox/status [get]
 func GetSandboxStatus(c *gin.Context) {
-	if sandbox.SandboxPtr == nil {
+	// 使用客戶端管理器獲取狀態
+	clientManager := services.GetSandboxClientManager()
+	statusResp, err := clientManager.GetStatus()
+	if err != nil {
 		c.JSON(500, ResponseHTTP{
 			Success: false,
-			Message: "Sandbox instance not initialized",
+			Message: fmt.Sprintf("Failed to get sandbox status: %v", err),
 		})
 		return
 	}
 
 	status := StatusResponse{
-		AvailableCount:  sandbox.SandboxPtr.AvailableCount(),
-		WaitingCount:    sandbox.SandboxPtr.WaitingCount(),
-		ProcessingCount: sandbox.SandboxPtr.ProcessingCount(),
+		AvailableCount:  int(statusResp.AvailableCount),
+		WaitingCount:    int(statusResp.WaitingCount),
+		ProcessingCount: int(statusResp.ProcessingCount),
 	}
 
 	c.JSON(200, ResponseHTTP{

@@ -1,10 +1,11 @@
 package sandbox
 
 import (
+	"OJ-API/utils"
 	"errors"
 	"fmt"
-	"log"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -19,10 +20,10 @@ func WriteToTempFile(b []byte) (string, error) {
 		// may be the folder absent. so trying to create it
 		err = os.Mkdir(CodeStorageFolder, os.ModePerm)
 		if err != nil {
-			log.Println("failed creating folder:", CodeStorageFolder)
+			utils.Error("failed creating folder:", CodeStorageFolder)
 			return id, err
 		}
-		log.Println("created folder:", CodeStorageFolder)
+		utils.Info("created folder:", CodeStorageFolder)
 		// second attempt
 		err = os.WriteFile(shellFilename(id), b, 0777)
 	}
@@ -32,4 +33,14 @@ func WriteToTempFile(b []byte) (string, error) {
 
 func shellFilename(timestamp string) string {
 	return fmt.Sprintf("%v/%v.sh", CodeStorageFolder, timestamp)
+}
+
+func LogWithLocation(msg string) {
+	// skip=1 表示上一層呼叫者
+	if pc, file, line, ok := runtime.Caller(1); ok {
+		fn := runtime.FuncForPC(pc)
+		utils.Debugf("%s:%d [%s] → %s\n", file, line, fn.Name(), msg)
+	} else {
+		utils.Debugf("unknown location → %s\n", msg)
+	}
 }

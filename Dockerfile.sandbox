@@ -1,0 +1,65 @@
+# Sandbox gRPC Server Dockerfile
+FROM golang:1.23-bookworm AS builder
+
+WORKDIR /app
+
+# 複製go.mod和go.sum
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 複製源代碼
+COPY . .
+
+# 編譯sandbox服務器
+RUN go build -o sandbox-server ./cmd/sandbox-server
+
+FROM debian:bookworm-slim
+
+# 更新套件列表並安裝必要依賴
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    make \
+    gcc \
+    g++ \
+    cmake \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ninja-build \
+    libgtest-dev \
+    valgrind \
+    && rm -rf /var/lib/apt/lists/*
+
+# 創建 keyring 目錄並安裝 isolate 公鑰
+RUN mkdir -p /etc/apt/keyrings && \
+    curl https://www.ucw.cz/isolate/debian/signing-key.asc > /etc/apt/keyrings/isolate.asc
+
+# 添加 isolate 套件源
+RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ bookworm-isolate main" >> /etc/apt/sources.list
+
+# 安裝 isolate
+RUN apt-get update && apt-get install -y isolate && rm -rf /var/lib/apt/lists/*
+
+# 創建isolate所需的目錄
+RUN mkdir -p /var/local/lib/isolate
+
+RUN mkdir -p /sandbox /sandbox/code /sandbox/repo && \
+    chmod 777 /sandbox /sandbox/code /sandbox/repo
+
+RUN pip install art --break-system-packages
+
+WORKDIR /app
+
+# 複製編譯的二進制文件
+COPY --from=builder /app/sandbox-server .
+
+# 複製sandbox相關文件
+COPY --from=builder /app/.env.local /app/.env.local
+COPY --from=builder /app/sandbox ./sandbox
+
+# 暴露gRPC端口
+EXPOSE 50051
+
+# 運行sandbox服務器
+CMD ["./sandbox-server"]

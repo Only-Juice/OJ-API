@@ -172,7 +172,7 @@ type BulkCreateUserResponse struct {
 // @Failure		404
 // @Failure		503
 // @Security	BearerAuth
-// @Router		/api/gitea/user/bulk [post]
+// @Router		/api/gitea/admin/user/bulk [post]
 func PostBulkCreateUserGitea(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
@@ -240,6 +240,98 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 	})
 }
 
+type BulkCreateUserItem struct {
+	Email    string `json:"email" validate:"required" example:"username1@example.com"`
+	Username string `json:"username" validate:"required" example:"username1"`
+	Password string `json:"password" validate:"required" example:"password"`
+}
+
+type BulkCreateUserRequest struct {
+	User []BulkCreateUserItem `json:"user" validate:"required"`
+}
+
+// Bulk create User v2
+// @Summary	Bulk create User v2
+// @Description Bulk create User v2
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			BulkCreateUserRequest	body		BulkCreateUserRequest	true	"User Email, Username, Password"
+// @Success		200		{object}	ResponseHTTP{data=BulkCreateUserResponse} "Return successful and failed users"
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/admin/user/bulk_v2 [post]
+func PostBulkCreateUserGiteav2(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+
+	bulkUsers := new(BulkCreateUserRequest)
+	if err := c.ShouldBindJSON(bulkUsers); err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to parse bulk users",
+		})
+		return
+	}
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	successfulUsers := []string{}
+	failedUsers := map[string]string{}
+
+	for _, user := range bulkUsers.User {
+		if _, _, err := client.AdminCreateUser(gitea.CreateUserOption{
+			Email:              user.Email,
+			Username:           user.Username,
+			Password:           user.Password,
+			MustChangePassword: func(b bool) *bool { return &b }(false),
+		}); err != nil {
+			failedUsers[user.Username] = err.Error()
+			continue
+		}
+
+		db.Create(&models.User{
+			UserName: user.Username,
+			Email:    user.Email,
+		})
+
+		successfulUsers = append(successfulUsers, user.Username)
+	}
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Data: BulkCreateUserResponse{
+			SuccessfulUsers: successfulUsers,
+			FailedUsers:     failedUsers,
+		},
+		Message: "Bulk user creation completed",
+	})
+}
+
 // take a question and create a repository in Gitea
 // @Summary	Take a question and create a repository in Gitea
 // @Description Take a question and create a repository in Gitea
@@ -253,7 +345,7 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 // @Failure		404
 // @Failure		503
 // @Security	BearerAuth
-// @Router		/api/gitea/question/{question_id} [post]
+// @Router		/api/gitea/{question_id}/question [post]
 func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	db := database.DBConn
 	questionIDStr := c.Param("question_id")
@@ -287,7 +379,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	}
 
 	var existingQuestion models.Question
-	if err := db.Where(&models.Question{ID: uint(questionID)}).First(&existingQuestion).Error; err != nil {
+	if err := db.Where("id = ? AND is_active = ?", questionID, true).First(&existingQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
