@@ -4224,6 +4224,12 @@ const docTemplate = `{
                 "question_id": {
                     "type": "integer"
                 },
+                "score_script": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "test_script": {
                     "type": "string"
                 }

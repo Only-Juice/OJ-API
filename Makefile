@@ -2,6 +2,7 @@ build:
 	swag init --parseDependency --parseInternal
 	go build -o server main.go
 	go build -o server-sandbox ./cmd/sandbox-server
+	cd sandbox/grp_parser/ && cmake . && cmake --build .
 
 run: build
 	./server

@@ -996,6 +996,10 @@ definitions:
         $ref: '#/definitions/models.Question'
       question_id:
         type: integer
+      score_script:
+        items:
+          type: integer
+        type: array
       test_script:
         type: string
     type: object
