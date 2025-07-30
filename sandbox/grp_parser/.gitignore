@@ -19,3 +19,8 @@ CMakeUserPresets.json
 #cmake-build-*
 
 grp_parser
+
+# Ninja build files
+*.ninja_deps
+*.ninja_log
+*.ninja

@@ -1,6 +1,13 @@
 # Sandbox gRPC Server Dockerfile
 FROM golang:1.23-bookworm AS builder
 
+# 安裝CMake和其他依賴
+RUN apt-get update && apt-get install -y \
+    cmake \
+    ninja-build \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # 複製go.mod和go.sum
@@ -13,6 +20,12 @@ COPY . .
 # 編譯sandbox服務器
 RUN go build -o sandbox-server ./cmd/sandbox-server
 
+# build grp_parser
+RUN cd ./sandbox/grp_parser && \
+    rm -rf CMakeCache.txt CMakeFiles cmake_install.cmake _deps Makefile && \
+    cmake -G "Ninja" . && \
+    cmake --build . 
+
 FROM debian:bookworm-slim
 
 # 更新套件列表並安裝必要依賴
@@ -23,9 +36,6 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     cmake \
-    python3 \
-    python3-pip \
-    python3-venv \
     ninja-build \
     libgtest-dev \
     valgrind \
@@ -47,8 +57,6 @@ RUN mkdir -p /var/local/lib/isolate
 RUN mkdir -p /sandbox /sandbox/code /sandbox/repo && \
     chmod 777 /sandbox /sandbox/code /sandbox/repo
 
-RUN pip install art --break-system-packages
-
 WORKDIR /app
 
 # 複製編譯的二進制文件
@@ -56,7 +64,7 @@ COPY --from=builder /app/sandbox-server .
 
 # 複製sandbox相關文件
 COPY --from=builder /app/.env.local /app/.env.local
-COPY --from=builder /app/sandbox ./sandbox
+COPY --from=builder /app/sandbox/grp_parser/grp_parser ./sandbox/grp_parser/grp_parser
 
 # 暴露gRPC端口
 EXPOSE 50051

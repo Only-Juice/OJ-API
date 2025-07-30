@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 主API服務
   api-server:
@@ -7,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:3001"
+      - "8886:3001"
     environment:
       - DB_HOST=192.168.2.123
       - LOG_LEVEL=info
@@ -31,7 +29,7 @@ services:
     environment:
       - SANDBOX_COUNT=4
       - DB_HOST=192.168.2.123
-      - OJ_HOST=api-server:3001
+      - SCHEDULER_ADDRESS=api-server:3001
       - LOG_LEVEL=info
     depends_on:
       api-server:
