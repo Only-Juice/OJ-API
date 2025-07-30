@@ -1,13 +1,6 @@
 # Sandbox gRPC Server Dockerfile
 FROM golang:1.24.5-bookworm AS builder
 
-# 安裝CMake和其他依賴
-RUN apt-get update && apt-get install -y \
-    cmake \
-    ninja-build \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # 複製go.mod和go.sum
@@ -22,9 +15,7 @@ RUN go build -o sandbox-server ./cmd/sandbox-server
 
 # build grp_parser
 RUN cd ./sandbox/grp_parser && \
-    rm -rf CMakeCache.txt CMakeFiles cmake_install.cmake _deps Makefile && \
-    cmake -G "Ninja" . && \
-    cmake --build . 
+    go build -o grp_parser main.go
 
 FROM debian:bookworm-slim
 
