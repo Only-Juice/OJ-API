@@ -1,5 +1,5 @@
 # Sandbox gRPC Server Dockerfile
-FROM golang:1.23-bookworm AS builder
+FROM golang:1.24.5-bookworm AS builder
 
 # 安裝CMake和其他依賴
 RUN apt-get update && apt-get install -y \
