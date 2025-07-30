@@ -6,9 +6,12 @@ import (
 	"OJ-API/utils"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -46,7 +49,7 @@ func (s *Sandbox) assignJob() {
 	}
 }
 
-func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeCommand []byte, codePath []byte, userQuestion models.UserQuestionTable) {
+func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -64,7 +67,7 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 	defer cancel()
 
 	// saving code as file
-	compileScript := compileCommand
+	compileScript := []byte(cmd.TestScript)
 	codeID, err := WriteToTempFile(compileScript)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -76,19 +79,32 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 	defer os.Remove(shellFilename(codeID))
 
 	if len(codePath) > 0 {
-		// copy python code(./sandbox/python/grp_parser.py) to code path
+		// copy grp_parser to code path
 		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
-		copy := exec.CommandContext(ctx, "cp", "./sandbox/python/grp_parser.py", fmt.Sprintf("%v/%s", string(codePath), "utils"))
+		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(codePath), "utils"))
+		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(codePath), "utils"), cmd)
+		//copyJSON := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/score.json", fmt.Sprintf("%v/%s", string(codePath), "utils"))
+
 		var stderr bytes.Buffer
 		copy.Stderr = &stderr
 		if err := copy.Run(); err != nil {
 			utils.Debug(copy.String())
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: fmt.Sprintf("Failed to copy python code: %v", err),
+				Message: fmt.Sprintf("Failed to copy score parser: %v", err),
 			})
 			return
 		}
+		/*
+			if err := copyJSON.Run(); err != nil {
+				fmt.Println(copy.String())
+				db.Model(&userQuestion).Updates(models.UserQuestionTable{
+					Score:   -2,
+					Message: fmt.Sprintf("Failed to copy score test JSON: %v", err),
+				})
+				return
+			}
+		*/
 	}
 
 	/*
@@ -106,14 +122,12 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 	}
 
 	/*
-
 		Execute the code
-
 	*/
 
 	LogWithLocation("Start Execute")
 
-	executeScript := append(executeCommand, []byte("\nrm build -rf")...)
+	executeScript := append([]byte(cmd.ExecuteScript), []byte("\nrm build -rf")...)
 	execodeID, err := WriteToTempFile(executeScript)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -180,7 +194,6 @@ func (s *Sandbox) runShellCommand(boxID int, compileCommand []byte, executeComma
 }
 
 func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
-	// parentsRepo string, codePath []byte, userQuestion models.UserQuestionTable
 
 	db := database.DBConn
 	var cmd models.QuestionTestScript
@@ -193,8 +206,7 @@ func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 		s.Release(boxID)
 		return
 	}
-
-	s.runShellCommand(boxID, []byte(cmd.TestScript), []byte(cmd.ExecuteScript), work.CodePath, work.UQR)
+	s.runShellCommand(boxID, cmd, work.CodePath, work.UQR)
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
@@ -221,7 +233,6 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
 
-	// ✅ [Debug] Run and capture output
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -266,4 +277,26 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 	}
 
 	return string(out), true
+}
+
+func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
+	filename := "score.json"
+	filepath := filepath.Join(path, filename)
+	fmt.Println("Final Path: ", filepath)
+	var prettyJSON []byte
+	var tmp interface{}
+	if err := json.Unmarshal(row.ScoreScript, &tmp); err != nil {
+		prettyJSON = row.ScoreScript
+	} else {
+		prettyJSON, err = json.MarshalIndent(tmp, "", "  ")
+		if err != nil {
+			return
+		}
+	}
+
+	if err := ioutil.WriteFile(filepath, prettyJSON, 0644); err != nil {
+		fmt.Println("WriteFile error:", err)
+		return
+	}
+
 }

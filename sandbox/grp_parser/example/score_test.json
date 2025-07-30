@@ -1,0 +1,26 @@
+{
+    "homework_name": "HW3",
+    "semester": "2024f",
+    "testsuites": [
+        {
+            "testsuite": "MAINDISH_TEST",
+            "score": 20
+        },
+        {
+            "testsuite": "SIDEDISH_TEST",
+            "score": 20
+        },
+        {
+            "testsuite": "DRINK_TEST",
+            "score": 10
+        },
+	{
+            "testsuite": "PACKAGE_TEST",
+            "score": 30
+        },
+        {
+            "testsuite": "OISHIIPAPA_TEST",
+            "score": 20
+        }
+    ]
+}

@@ -1,0 +1,765 @@
+{
+  "tests": 57,
+  "failures": 9,
+  "disabled": 0,
+  "errors": 0,
+  "timestamp": "2025-07-27T16:11:45Z",
+  "time": "0.011s",
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "TICKETSYSTEM_SYSTEM_TEST",
+      "tests": 10,
+      "failures": 5,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "BUYTICKET_ADULT_Train",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 7,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:18\nExpected equality of these values:\n  ticket.vehicle->GetModel()\n    Which is: \"Toyota\"\n  \"Shinkansen\"",
+              "type": ""
+            },
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:27\nExpected equality of these values:\n  tick01.vehicle->GetModel()\n    Which is: \"Toyota\"\n  \"Shinkansen\"",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "BUYTICKET_ADULT_Plane",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 34,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST"
+        },
+        {
+          "name": "BUYTICKET_ADULT_Bus",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 61,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:72\nExpected equality of these values:\n  ticket.vehicle->GetModel()\n    Which is: \"Yamaha\"\n  \"Toyota\"",
+              "type": ""
+            },
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:81\nExpected equality of these values:\n  tick01.vehicle->GetModel()\n    Which is: \"Yamaha\"\n  \"Toyota\"",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "BUYTICKET_ADULT_Boat",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 88,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:99\nExpected equality of these values:\n  ticket.vehicle->GetModel()\n    Which is: \"Shinkansen\"\n  \"Yamaha\"",
+              "type": ""
+            },
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:108\nExpected equality of these values:\n  tick01.vehicle->GetModel()\n    Which is: \"Shinkansen\"\n  \"Yamaha\"",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "BUYTICKET_CHILD",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 115,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:126\nExpected equality of these values:\n  ticket.vehicle->GetModel()\n    Which is: \"Toyota\"\n  \"Shinkansen\"",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "BUYTICKET_OLDER",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 133,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp:144\nExpected equality of these values:\n  ticket.vehicle->GetModel()\n    Which is: \"Toyota\"\n  \"Shinkansen\"",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "Depart",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 151,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST"
+        },
+        {
+          "name": "Boat_Full",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 196,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST"
+        },
+        {
+          "name": "Plane_Full",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 222,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST"
+        },
+        {
+          "name": "Train_Full",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_TicketSystem.cpp",
+          "line": 248,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TICKETSYSTEM_SYSTEM_TEST"
+        }
+      ]
+    },
+    {
+      "name": "ENERGYSTATION_SYSTEM_HPP",
+      "tests": 5,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "INITIALIZER",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_EnergyStation.cpp",
+          "line": 45,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "ENERGYSTATION_SYSTEM_HPP"
+        },
+        {
+          "name": "Adder_Fuel",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_EnergyStation.cpp",
+          "line": 52,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "ENERGYSTATION_SYSTEM_HPP"
+        },
+        {
+          "name": "Adder_Power",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_EnergyStation.cpp",
+          "line": 64,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "ENERGYSTATION_SYSTEM_HPP"
+        },
+        {
+          "name": "ChargeVehicle_Energy",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_EnergyStation.cpp",
+          "line": 76,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "ENERGYSTATION_SYSTEM_HPP"
+        },
+        {
+          "name": "ChargeVehicle_Fuel",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_EnergyStation.cpp",
+          "line": 95,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "ENERGYSTATION_SYSTEM_HPP"
+        }
+      ]
+    },
+    {
+      "name": "MAINTENANCE_SYSTEM_TEST",
+      "tests": 1,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "RepairVehicle",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_MaintenceSystem.cpp",
+          "line": 26,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "MAINTENANCE_SYSTEM_TEST"
+        }
+      ]
+    },
+    {
+      "name": "FACTORYUSA_SYSTEM_TEST",
+      "tests": 1,
+      "failures": 1,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0.002s",
+      "testsuite": [
+        {
+          "name": "FactoryUSA_Bus",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryUSA.cpp",
+          "line": 6,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0.002s",
+          "classname": "FACTORYUSA_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryUSA.cpp:10\nExpected equality of these values:\n  v->GetModel()\n    Which is: \"Yamaha\"\n  \"Ford\"",
+              "type": ""
+            },
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryUSA.cpp:12\nExpected equality of these values:\n  v->GetWheel()\n    Which is: 12\n  4",
+              "type": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FACTORYJAPAN_SYSTEM_TEST",
+      "tests": 4,
+      "failures": 3,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "FactoryJapn_Bus",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp",
+          "line": 6,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "FACTORYJAPAN_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp:10\nExpected equality of these values:\n  v->GetModel()\n    Which is: \"Yamaha\"\n  \"Toyota\"",
+              "type": ""
+            },
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp:12\nExpected equality of these values:\n  v->GetWheel()\n    Which is: 12\n  4",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "FactoryJapn_Plane",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp",
+          "line": 17,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "FACTORYJAPAN_SYSTEM_TEST"
+        },
+        {
+          "name": "FactoryJapn_Boat",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp",
+          "line": 28,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "FACTORYJAPAN_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp:32\nExpected equality of these values:\n  v->GetModel()\n    Which is: \"Shinkansen\"\n  \"Yamaha\"",
+              "type": ""
+            }
+          ]
+        },
+        {
+          "name": "FactoryJapn_Train",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp",
+          "line": 38,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "FACTORYJAPAN_SYSTEM_TEST",
+          "failures": [
+            {
+              "failure": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_FactoryJapan.cpp:42\nExpected equality of these values:\n  v->GetModel()\n    Which is: \"Toyota\"\n  \"Shinkansen\"",
+              "type": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BOAT_SYSTEM_TEST",
+      "tests": 7,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "Boat_Constructor",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 7,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        },
+        {
+          "name": "BOAT_MAXSPEED",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 31,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        },
+        {
+          "name": "BOAT_SAILING",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 47,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        },
+        {
+          "name": "Boat_ConsumeDurability_Other",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 61,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        },
+        {
+          "name": "Boat_ConsumeDurability_USA",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 75,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        },
+        {
+          "name": "Boat_ConsumeDurability_Japan",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 84,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        },
+        {
+          "name": "Constructor_exception",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Boat.cpp",
+          "line": 101,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BOAT_SYSTEM_TEST"
+        }
+      ]
+    },
+    {
+      "name": "BUS_SYSTEM_TEST",
+      "tests": 7,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "Bus_Constructor",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 7,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        },
+        {
+          "name": "Bus_Wheel",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 32,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        },
+        {
+          "name": "Bus_Speed",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 49,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        },
+        {
+          "name": "Bus_ConsumeDurability_Other",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 66,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        },
+        {
+          "name": "Bus_ConsumeDurability_USA",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 81,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        },
+        {
+          "name": "Bus_ConsumeDurability_Japan",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 96,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        },
+        {
+          "name": "Constructor_exception",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Bus.cpp",
+          "line": 112,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "BUS_SYSTEM_TEST"
+        }
+      ]
+    },
+    {
+      "name": "PLANE_SYSTEM_TEST",
+      "tests": 7,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0.007s",
+      "testsuite": [
+        {
+          "name": "Plane_Constructor",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 7,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        },
+        {
+          "name": "PLANE_MAXALTITUDE",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 32,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        },
+        {
+          "name": "PLANE_CURRENTALTITUDE",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 49,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        },
+        {
+          "name": "Plane_ConsumeDurability_Other",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 66,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        },
+        {
+          "name": "Plane_ConsumeDurability_Japan",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 83,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        },
+        {
+          "name": "Plane_ConsumeDurability_USA",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 98,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        },
+        {
+          "name": "Constructor_exception",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Plane.cpp",
+          "line": 113,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "PLANE_SYSTEM_TEST"
+        }
+      ]
+    },
+    {
+      "name": "TRAIN_SYSTEM_TEST",
+      "tests": 7,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "Train_Constructor",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 6,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        },
+        {
+          "name": "Train_Carriage",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 31,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        },
+        {
+          "name": "Train_MaxCarriage",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 49,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        },
+        {
+          "name": "Train_ConsumeDurability_Other",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 67,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        },
+        {
+          "name": "Train_ConsumeDurability_Japan",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 82,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        },
+        {
+          "name": "Train_ConsumeDurability_USA",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 100,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        },
+        {
+          "name": "Constructor_exception",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Train.cpp",
+          "line": 115,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "TRAIN_SYSTEM_TEST"
+        }
+      ]
+    },
+    {
+      "name": "VEHICLE_SYSTEM_TEST",
+      "tests": 8,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2025-07-27T16:11:45Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "Vehicle_Constructor",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 33,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Vehicle_IsDurabilityZero",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 47,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Vehicle_AddDurability",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 54,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Vehicle_AddDurability_Exception",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 63,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Vehicle_AddEnergy",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 70,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Vehicle_AddEnergy_Exception",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 79,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Vehicle_ConsumeDurability",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 86,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        },
+        {
+          "name": "Durability_exception_01",
+          "file": "D:\/Nick_Chang\/NTUT\/3rd\/OOPTA\/Midterm\/test\/ut_Vehicle.cpp",
+          "line": 97,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2025-07-27T16:11:45Z",
+          "time": "0s",
+          "classname": "VEHICLE_SYSTEM_TEST"
+        }
+      ]
+    }
+  ]
+}
