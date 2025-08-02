@@ -12,7 +12,7 @@ func Config(key string) string {
 	// load .env file
 	err := godotenv.Load(".env.local")
 	if err != nil {
-		fmt.Print("Error loading .env file")
+		fmt.Print("Error loading .env.local file")
 	}
 	// Return the value of the variable
 	return os.Getenv(key)

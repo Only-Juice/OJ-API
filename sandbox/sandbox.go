@@ -2,8 +2,8 @@ package sandbox
 
 import (
 	"OJ-API/models"
+	"OJ-API/utils"
 	"fmt"
-	"log"
 	"os/exec"
 	"time"
 
@@ -113,7 +113,7 @@ func (s *Sandbox) ReleaseJob() *Job {
 
 	job, ok := item.(*Job)
 	if !ok {
-		log.Println("[Sandbox] Dequeued item is not of type *Job")
+		utils.Warn("[Sandbox] Dequeued item is not of type *Job")
 		return nil
 	}
 
@@ -123,10 +123,10 @@ func (s *Sandbox) ReleaseJob() *Job {
 func (s *Sandbox) Cleanup() {
 	for i := 0; i < s.sandboxCount; i++ {
 		cmd := exec.Command("isolate", "-b", fmt.Sprintf("%v", i), "--cleanup")
-		fmt.Printf("Cleaning up box %v\n", i)
+		utils.Debugf("Cleaning up box %v", i)
 		err := cmd.Run()
 		if err != nil {
-			fmt.Printf("Error cleaning up box %v: %v\n", i, err)
+			utils.Errorf("Error cleaning up box %v: %v", i, err)
 		}
 
 	}

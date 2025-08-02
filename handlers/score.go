@@ -3,20 +3,17 @@ package handlers
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-git/go-git/v5"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
-	"OJ-API/sandbox"
+	"OJ-API/services"
 	"OJ-API/utils"
 )
 
@@ -435,21 +432,35 @@ func ReScoreUserQuestion(c *gin.Context) {
 	})
 
 	go func() {
-		codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), uqr.GitUserRepoURL+"/"+uuid.New().String())
-		_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-			URL:      "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL,
-			Progress: os.Stdout,
-		})
+		// 獲取用戶 token
+		token, err := utils.GetToken(jwtClaims.UserID)
 		if err != nil {
 			db.Model(&newScore).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: "Failed to clone repository",
+				Message: fmt.Sprintf("Failed to get token: %v", err),
 			})
 			return
 		}
-		os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-		sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScore)
+		// 構建 Git 倉庫 URL
+		gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL
+
+		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
+		clientManager := services.GetSandboxClientManager()
+		if err := clientManager.ReserveJob(
+			question.GitRepoURL, // parentGitFullName
+			gitRepoURL,          // gitRepoURL
+			uqr.GitUserRepoURL,  // gitFullName
+			"",                  // gitAfterHash (空字符串表示使用 HEAD)
+			jwtClaims.Username,  // gitUsername
+			token,               // gitToken
+			uint64(newScore.ID), // userQuestionTableID
+		); err != nil {
+			db.Model(&newScore).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to queue job: %v", err),
+			})
+		}
 	}()
 }
 
@@ -636,27 +647,42 @@ func ReScoreQuestion(c *gin.Context) {
 		var wg sync.WaitGroup
 
 		for i, u := range uqr {
-			codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), u.GitUserRepoURL+"/"+uuid.New().String())
-			_, err := git.PlainClone(codePath, false, &git.CloneOptions{
-				URL:      "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL,
-				Progress: os.Stdout,
-			})
+			var existingUser models.User
+			db.Where(&models.User{ID: u.UserID}).First(&existingUser)
+
+			// 獲取用戶 token
+			token, err := utils.GetToken(existingUser.ID)
 			if err != nil {
 				db.Model(&newScores[i]).Updates(models.UserQuestionTable{
 					Score:   -2,
-					Message: "Failed to clone repository",
+					Message: fmt.Sprintf("Failed to get token: %v", err),
 				})
-				return
+				continue
 			}
-			os.Chmod(codePath, 0777) // Need to confirm if this is necessary
 
-			defer os.RemoveAll(codePath)
+			// 構建 Git 倉庫 URL
+			gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL
 
 			wg.Add(1)
-			go func(i int, codePath string) {
+			go func(i int, gitRepoURL string, gitFullName string, username string, token string) {
 				defer wg.Done()
-				sandbox.SandboxPtr.ReserveJob(question.GitRepoURL, []byte(codePath), newScores[i])
-			}(i, codePath)
+				// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
+				clientManager := services.GetSandboxClientManager()
+				if err := clientManager.ReserveJob(
+					question.GitRepoURL,     // parentGitFullName
+					gitRepoURL,              // gitRepoURL
+					gitFullName,             // gitFullName
+					"",                      // gitAfterHash (空字符串表示使用 HEAD)
+					username,                // gitUsername
+					token,                   // gitToken
+					uint64(newScores[i].ID), // userQuestionTableID
+				); err != nil {
+					db.Model(&newScores[i]).Updates(models.UserQuestionTable{
+						Score:   -2,
+						Message: fmt.Sprintf("Failed to queue job: %v", err),
+					})
+				}
+			}(i, gitRepoURL, u.GitUserRepoURL, existingUser.UserName, token)
 		}
 
 		wg.Wait()
@@ -790,7 +816,7 @@ func GetLeaderboard(c *gin.Context) {
 	// Get total count of users who have scores
 	var totalCount int64
 	subquery := db.Table("user_question_tables").
-		Select("UQR.user_id AS user_id, MAX(score) AS max_score, UQR.question_id").
+		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
@@ -854,7 +880,7 @@ func GetLeaderboard(c *gin.Context) {
 
 	var questionScores []QuestionScoreDetail
 	subquery2 := db.Model(&models.UserQuestionTable{}).
-		Select("UQR.user_id, UQR.question_id, MAX(user_question_tables.score) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url").
+		Select("UQR.user_id, UQR.question_id, GREATEST(MAX(user_question_tables.score), 0) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).

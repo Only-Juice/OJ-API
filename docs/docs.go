@@ -764,6 +764,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/exams/{id}/exam": {
+            "get": {
+                "description": "Retrieve basic information about an exam, including title, description, start and end times",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Exam"
+                ],
+                "summary": "Get basic information about an exam",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exam ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.ExamInfoResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    }
+                }
+            }
+        },
         "/api/exams/{id}/leaderboard": {
             "get": {
                 "description": "Retrieve the leaderboard for a specific exam",
@@ -839,14 +892,17 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all questions associated with a specific exam",
+                "description": "Retrieve all questions associated with a specific exam with user's question status and top scores (if authenticated)",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Exam"
                 ],
-                "summary": "Get questions for an exam [Optional Authentication]",
+                "summary": "Get questions for an exam",
                 "parameters": [
                     {
                         "type": "string",
@@ -854,6 +910,18 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number of results to return (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size of results. Default is 10.",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -868,10 +936,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.Question"
-                                            }
+                                            "$ref": "#/definitions/handlers.ExamQuestionsResponse"
                                         }
                                     }
                                 }
@@ -2895,6 +2960,19 @@ const docTemplate = `{
                 }
             }
         },
+        "gitea.ProjectsMode": {
+            "type": "string",
+            "enum": [
+                "repo",
+                "owner",
+                "all"
+            ],
+            "x-enum-varnames": [
+                "ProjectsModeRepo",
+                "ProjectsModeOwner",
+                "ProjectsModeAll"
+            ]
+        },
         "gitea.RepoCommit": {
             "type": "object",
             "properties": {
@@ -2921,6 +2999,9 @@ const docTemplate = `{
         "gitea.Repository": {
             "type": "object",
             "properties": {
+                "allow_fast_forward_only_merge": {
+                    "type": "boolean"
+                },
                 "allow_merge_commits": {
                     "type": "boolean"
                 },
@@ -2947,6 +3028,9 @@ const docTemplate = `{
                 },
                 "default_branch": {
                     "type": "string"
+                },
+                "default_delete_branch_after_merge": {
+                    "type": "boolean"
                 },
                 "default_merge_style": {
                     "$ref": "#/definitions/gitea.MergeStyle"
@@ -3020,6 +3104,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "object_format_name": {
+                    "type": "string"
+                },
                 "open_issues_count": {
                     "type": "integer"
                 },
@@ -3040,6 +3127,9 @@ const docTemplate = `{
                 },
                 "private": {
                     "type": "boolean"
+                },
+                "projects_mode": {
+                    "$ref": "#/definitions/gitea.ProjectsMode"
                 },
                 "release_counter": {
                     "type": "integer"
@@ -3396,6 +3486,25 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ExamInfoResponse": {
+            "type": "object",
+            "properties": {
+                "exam_description": {
+                    "type": "string"
+                },
+                "exam_end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "exam_start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "exam_title": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.ExamListData": {
             "type": "object",
             "required": [
@@ -3418,6 +3527,37 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.ExamQuestionData": {
+            "type": "object",
+            "properties": {
+                "has_question": {
+                    "type": "boolean"
+                },
+                "point": {
+                    "type": "integer"
+                },
+                "question": {
+                    "$ref": "#/definitions/models.Question"
+                },
+                "top_score": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.ExamQuestionsResponse": {
+            "type": "object",
+            "properties": {
+                "question_count": {
+                    "type": "integer"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.ExamQuestionData"
+                    }
                 }
             }
         },
@@ -4072,6 +4212,9 @@ const docTemplate = `{
         "models.QuestionTestScript": {
             "type": "object",
             "properties": {
+                "execute_script": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -4080,6 +4223,12 @@ const docTemplate = `{
                 },
                 "question_id": {
                     "type": "integer"
+                },
+                "score_script": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "test_script": {
                     "type": "string"

@@ -3,12 +3,12 @@ package sandbox
 import (
 	"OJ-API/database"
 	"OJ-API/models"
+	"OJ-API/utils"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +29,7 @@ func (s *Sandbox) WorkerLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("WorkerLoop received cancel signal, stopping...")
+			utils.Info("WorkerLoop received cancel signal, stopping...")
 			return
 		case <-ticker.C:
 			s.assignJob()
@@ -88,7 +88,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		var stderr bytes.Buffer
 		copy.Stderr = &stderr
 		if err := copy.Run(); err != nil {
-			fmt.Println(copy.String())
+			utils.Debug(copy.String())
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to copy score parser: %v", err),
@@ -146,8 +146,8 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 
 	*/
 
-	fmt.Println("Compilation and execution finished successfully.")
-	fmt.Println("Ready to proceed to the next step or return output.")
+	utils.Debug("Compilation and execution finished successfully.")
+	utils.Debug("Ready to proceed to the next step or return output.")
 
 	// read score from file
 	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
@@ -190,7 +190,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	}
 
 	defer os.RemoveAll(string(codePath))
-	fmt.Printf("Done for judge!\n")
+	utils.Debug("Done for judge!")
 }
 
 func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
@@ -204,7 +204,6 @@ func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
 		})
 		s.Release(boxID)
-		s.ReserveJob(work.Repo, work.CodePath, work.UQR)
 		return
 	}
 	s.runShellCommand(boxID, cmd, work.CodePath, work.UQR)
@@ -256,9 +255,6 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 		"--processes=100",
 		"--open-files=0",
 		"--env=PATH",
-		"--time=1",
-		"--wall-time=2",
-		"--mem=131072",
 	}
 
 	if len(codePath) > 0 {
@@ -270,13 +266,13 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 
 	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellCommand)
 
-	log.Printf("Command: isolate %s", strings.Join(cmdArgs, " "))
+	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
 
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Printf("Failed to run command: %v", err)
+		utils.Errorf("Failed to run command: %v", err)
 		return "Execute with Error!", false
 	}
 

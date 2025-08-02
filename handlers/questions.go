@@ -140,7 +140,11 @@ func GetQuestionList(c *gin.Context) {
 		err := db.Raw(`
 			SELECT 
 				q.id as question_id,
-				COALESCE(MAX(uqt.score), NULL) as top_score
+				CASE 
+					WHEN MAX(uqt.score) IS NULL THEN NULL
+					WHEN MAX(uqt.score) < 0 THEN 0
+					ELSE MAX(uqt.score)
+				END as top_score
 			FROM questions q
 			LEFT JOIN user_question_relations uqr ON q.id = uqr.question_id AND uqr.user_id = ?
 			LEFT JOIN user_question_tables uqt ON uqr.id = uqt.uqr_id
@@ -599,14 +603,16 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
-	if err := db.Create(&models.Question{
+	newQuestion := models.Question{
 		Title:       question.Title,
 		Description: question.Description,
 		GitRepoURL:  question.GitRepoURL,
 		StartTime:   question.StartTime,
 		EndTime:     question.EndTime,
 		IsActive:    question.IsActive,
-	}).Error; err != nil {
+	}
+
+	if err := db.Create(&newQuestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to create question",
@@ -617,17 +623,17 @@ func AddQuestion(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question created successfully",
-		Data:    question,
+		Data:    newQuestion,
 	})
 }
 
 type PatchQuestionRequest struct {
-	Title       string    `json:"title" example:"Question Title"`
-	Description string    `json:"description" example:"Question Description"`
-	GitRepoURL  string    `json:"git_repo_url" example:"user_name/repo_name"`
-	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
-	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
-	IsActive    bool      `json:"is_active" example:"true"`
+	Title       *string    `json:"title" example:"Question Title"`
+	Description *string    `json:"description" example:"Question Description"`
+	GitRepoURL  *string    `json:"git_repo_url" example:"user_name/repo_name"`
+	StartTime   *time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	EndTime     *time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	IsActive    *bool      `json:"is_active" example:"true"`
 }
 
 // PatchQuestion is a function to update a question
@@ -684,23 +690,23 @@ func PatchQuestion(c *gin.Context) {
 		return
 	}
 
-	if updateQuestion.Title != "" {
-		question.Title = updateQuestion.Title
+	if updateQuestion.Title != nil {
+		question.Title = *updateQuestion.Title
 	}
-	if updateQuestion.Description != "" {
-		question.Description = updateQuestion.Description
+	if updateQuestion.Description != nil {
+		question.Description = *updateQuestion.Description
 	}
-	if updateQuestion.GitRepoURL != "" {
-		question.GitRepoURL = updateQuestion.GitRepoURL
+	if updateQuestion.GitRepoURL != nil {
+		question.GitRepoURL = *updateQuestion.GitRepoURL
 	}
-	if !updateQuestion.StartTime.IsZero() {
-		question.StartTime = updateQuestion.StartTime
+	if updateQuestion.StartTime != nil {
+		question.StartTime = *updateQuestion.StartTime
 	}
-	if !updateQuestion.EndTime.IsZero() {
-		question.EndTime = updateQuestion.EndTime
+	if updateQuestion.EndTime != nil {
+		question.EndTime = *updateQuestion.EndTime
 	}
-	if updateQuestion.IsActive {
-		question.IsActive = updateQuestion.IsActive
+	if updateQuestion.IsActive != nil {
+		question.IsActive = *updateQuestion.IsActive
 	}
 
 	if err := db.Save(&question).Error; err != nil {
