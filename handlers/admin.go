@@ -173,10 +173,19 @@ func GetAllUserInfo(c *gin.Context) {
 	}
 	db := database.DBConn
 	var users []models.User
+	var total int64
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
 	offset := (page - 1) * limit
+
+	if err := db.Model(&models.User{}).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count users",
+		})
+		return
+	}
 
 	if err := db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
@@ -193,7 +202,10 @@ func GetAllUserInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
-		Data:    users,
+		Data: PaginatedData{
+			TotalCount: total,
+			Items:      users,
+		},
 		Message: "User info retrieved successfully",
 	})
 }

@@ -6,3 +6,8 @@ type ResponseHTTP struct {
 	Data    interface{} `json:"data"`
 	Message string      `json:"message"`
 }
+
+type PaginatedData struct {
+	Items      interface{} `json:"items"`
+	TotalCount int64       `json:"totalCount"`
+}
