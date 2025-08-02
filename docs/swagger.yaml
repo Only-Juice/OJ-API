@@ -635,7 +635,7 @@ definitions:
     - count
     - scores
     type: object
-  handlers.PaginatedData:
+  handlers.GetAllUserInfoResponse:
     properties:
       items:
         items:
@@ -1202,7 +1202,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/handlers.PaginatedData'
+                    $ref: '#/definitions/handlers.GetAllUserInfoResponse'
                   type: array
               type: object
         "400":
