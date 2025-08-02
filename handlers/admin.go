@@ -147,6 +147,11 @@ func GetUserInfo(c *gin.Context) {
 	})
 }
 
+type PaginatedData struct {
+	Items      []models.User `json:"items"`
+	TotalCount int64         `json:"totalCount"`
+}
+
 // GetAllUserInfo shows all user information
 // @Summary Get all user information
 // @Description Get all user information
@@ -155,7 +160,7 @@ func GetUserInfo(c *gin.Context) {
 // @Produce json
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
-// @Success      200 {object} ResponseHTTP{data=[]models.User}
+// @Success      200 {object} ResponseHTTP{data=PaginatedData}
 // @Failure      400
 // @Failure      401
 // @Failure      403
@@ -200,12 +205,14 @@ func GetAllUserInfo(c *gin.Context) {
 		users[i].GiteaToken = ""
 	}
 
+	response := PaginatedData{
+		TotalCount: total,
+		Items:      users,
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
-		Data: PaginatedData{
-			TotalCount: total,
-			Items:      users,
-		},
+		Data:    response,
 		Message: "User info retrieved successfully",
 	})
 }
