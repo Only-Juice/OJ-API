@@ -399,6 +399,34 @@ definitions:
     - git_repo_url
     - title
     type: object
+  handlers.AddQuestionResponse:
+    properties:
+      description:
+        example: Question Description
+        type: string
+      end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      git_repo_url:
+        example: user_name/repo_name
+        type: string
+      id:
+        example: 123
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      title:
+        example: Question Title
+        type: string
+    required:
+    - description
+    - git_repo_url
+    - title
+    type: object
   handlers.BasicAuthentication:
     properties:
       password:
@@ -606,6 +634,15 @@ definitions:
     required:
     - count
     - scores
+    type: object
+  handlers.PaginatedData:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+      totalCount:
+        type: integer
     type: object
   handlers.GetQuestionListResponseData:
     properties:
@@ -1165,7 +1202,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/models.User'
+                    $ref: '#/definitions/handlers.PaginatedData'
                   type: array
               type: object
         "400":
