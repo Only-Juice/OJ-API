@@ -4058,6 +4058,7 @@ const docTemplate = `{
                 "judge_time",
                 "message",
                 "question_id",
+                "question_title",
                 "score"
             ],
             "properties": {
@@ -4076,6 +4077,10 @@ const docTemplate = `{
                 "question_id": {
                     "type": "integer",
                     "example": 1
+                },
+                "question_title": {
+                    "type": "string",
+                    "example": "Two Sum"
                 },
                 "score": {
                     "type": "number",

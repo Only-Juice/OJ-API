@@ -940,6 +940,9 @@ definitions:
       question_id:
         example: 1
         type: integer
+      question_title:
+        example: Two Sum
+        type: string
       score:
         example: 100
         type: number
@@ -948,6 +951,7 @@ definitions:
     - judge_time
     - message
     - question_id
+    - question_title
     - score
     type: object
   handlers.UpdateUserInfoDTO:
