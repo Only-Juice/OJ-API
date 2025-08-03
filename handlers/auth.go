@@ -183,7 +183,7 @@ func AuthBasic(c *gin.Context) {
 		Message: "Login successfully",
 		Data: gin.H{
 			"access_token":  accessToken,
-			"refresh_token": refreshToken,
+			"refresh_token": "",
 		},
 	})
 }

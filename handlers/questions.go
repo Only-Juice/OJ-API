@@ -581,7 +581,7 @@ type AddQuestionResponse struct {
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			api/questions/admin/question [post]
+// @Router			/api/questions/admin/question [post]
 // @Security		BearerAuth
 func AddQuestion(c *gin.Context) {
 	db := database.DBConn

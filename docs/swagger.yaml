@@ -623,6 +623,12 @@ definitions:
     required:
     - title
     type: object
+  handlers.GetAllUserInfoResponse:
+    properties:
+      items: {}
+      totalCount:
+        type: integer
+    type: object
   handlers.GetLeaderboardResponseData:
     properties:
       count:
@@ -634,15 +640,6 @@ definitions:
     required:
     - count
     - scores
-    type: object
-  handlers.GetAllUserInfoResponse:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/models.User'
-        type: array
-      totalCount:
-        type: integer
     type: object
   handlers.GetQuestionListResponseData:
     properties:
@@ -1201,9 +1198,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/handlers.GetAllUserInfoResponse'
-                  type: array
+                  $ref: '#/definitions/handlers.GetAllUserInfoResponse'
               type: object
         "400":
           description: Bad Request
@@ -2125,7 +2120,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/models.Question'
+                  $ref: '#/definitions/handlers.AddQuestionResponse'
               type: object
         "400":
           description: Bad Request
