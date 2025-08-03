@@ -203,6 +203,7 @@ func GetAllUserInfo(c *gin.Context) {
 	// Remove sensitive gitea_token field from all users
 	for i := range users {
 		users[i].GiteaToken = ""
+		users[i].RefreshToken = ""
 	}
 
 	response := GetAllUserInfoResponse{
@@ -287,7 +288,9 @@ func UpdateUserInfo(c *gin.Context) {
 		return
 	}
 
-	user.GiteaToken = "" // Remove sensitive gitea_token field
+	// Remove sensitive gitea_token and refresh_token field
+	user.GiteaToken = ""
+	user.RefreshToken = ""
 
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
