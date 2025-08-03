@@ -559,6 +559,16 @@ type AddQuestionRequest struct {
 	IsActive    bool      `json:"is_active" example:"true"`
 }
 
+type AddQuestionResponse struct {
+	Id          uint      `json:"id" example:"123"`
+	Title       string    `json:"title" validate:"required" example:"Question Title"`
+	Description string    `json:"description" validate:"required" example:"Question Description"`
+	GitRepoURL  string    `json:"git_repo_url" validate:"required" example:"user_name/repo_name"`
+	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	IsActive    bool      `json:"is_active" example:"true"`
+}
+
 // AddQuestion is a function to add a question
 // @Summary		Add a question
 // @Description	Add a question
@@ -566,7 +576,7 @@ type AddQuestionRequest struct {
 // @Accept			json
 // @Produce		json
 // @Param			question	body		AddQuestionRequest	true	"Question object"
-// @Success		200		{object}	ResponseHTTP{data=models.Question}
+// @Success		200		{object}	ResponseHTTP{data=AddQuestionResponse}
 // @Failure		400
 // @Failure		401
 // @Failure		404
@@ -584,8 +594,8 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
-	var question AddQuestionRequest
-	if err := c.ShouldBindJSON(&question); err != nil {
+	var req AddQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to parse question",
@@ -593,9 +603,16 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
-	// Check if question with same GitRepoURL already exists
+	newquestion := models.Question{
+		Title:       req.Title,
+		Description: req.Description,
+		GitRepoURL:  req.GitRepoURL,
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+	}
+
 	var existingQuestion models.Question
-	if err := db.Where("git_repo_url = ?", question.GitRepoURL).First(&existingQuestion).Error; err == nil {
+	if err := db.Where("git_repo_url = ?", newquestion.GitRepoURL).First(&existingQuestion).Error; err == nil {
 		c.JSON(400, ResponseHTTP{
 			Success: false,
 			Message: "Question with this GitRepoURL already exists",
@@ -603,16 +620,7 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
-	newQuestion := models.Question{
-		Title:       question.Title,
-		Description: question.Description,
-		GitRepoURL:  question.GitRepoURL,
-		StartTime:   question.StartTime,
-		EndTime:     question.EndTime,
-		IsActive:    question.IsActive,
-	}
-
-	if err := db.Create(&newQuestion).Error; err != nil {
+	if err := db.Create(&newquestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to create question",
@@ -620,10 +628,20 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
+	response := AddQuestionResponse{
+		Id:          newquestion.ID,
+		Title:       newquestion.Title,
+		Description: newquestion.Description,
+		GitRepoURL:  newquestion.GitRepoURL,
+		StartTime:   newquestion.StartTime,
+		EndTime:     newquestion.EndTime,
+		IsActive:    req.IsActive,
+	}
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question created successfully",
-		Data:    newQuestion,
+		Data:    response,
 	})
 }
 

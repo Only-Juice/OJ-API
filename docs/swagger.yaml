@@ -399,6 +399,34 @@ definitions:
     - git_repo_url
     - title
     type: object
+  handlers.AddQuestionResponse:
+    properties:
+      description:
+        example: Question Description
+        type: string
+      end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      git_repo_url:
+        example: user_name/repo_name
+        type: string
+      id:
+        example: 123
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      title:
+        example: Question Title
+        type: string
+    required:
+    - description
+    - git_repo_url
+    - title
+    type: object
   handlers.BasicAuthentication:
     properties:
       password:
@@ -594,6 +622,15 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  handlers.GetAllUserInfoResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+      totalCount:
+        type: integer
     type: object
   handlers.GetLeaderboardResponseData:
     properties:
@@ -1164,9 +1201,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/models.User'
-                  type: array
+                  $ref: '#/definitions/handlers.GetAllUserInfoResponse'
               type: object
         "400":
           description: Bad Request
@@ -2088,7 +2123,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/models.Question'
+                  $ref: '#/definitions/handlers.AddQuestionResponse'
               type: object
         "400":
           description: Bad Request

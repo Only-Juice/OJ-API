@@ -147,6 +147,11 @@ func GetUserInfo(c *gin.Context) {
 	})
 }
 
+type GetAllUserInfoResponse struct {
+	Items      []models.User `json:"items"`
+	TotalCount int64         `json:"totalCount"`
+}
+
 // GetAllUserInfo shows all user information
 // @Summary Get all user information
 // @Description Get all user information
@@ -155,7 +160,7 @@ func GetUserInfo(c *gin.Context) {
 // @Produce json
 // @Param			page	query	int		false	"page number of results to return (1-based)"
 // @Param			limit	query	int		false	"page size of results. Default is 10."
-// @Success      200 {object} ResponseHTTP{data=[]models.User}
+// @Success      200 {object} ResponseHTTP{data=GetAllUserInfoResponse}
 // @Failure      400
 // @Failure      401
 // @Failure      403
@@ -173,10 +178,19 @@ func GetAllUserInfo(c *gin.Context) {
 	}
 	db := database.DBConn
 	var users []models.User
+	var total int64
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
 	offset := (page - 1) * limit
+
+	if err := db.Model(&models.User{}).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to count users",
+		})
+		return
+	}
 
 	if err := db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
@@ -189,11 +203,17 @@ func GetAllUserInfo(c *gin.Context) {
 	// Remove sensitive gitea_token field from all users
 	for i := range users {
 		users[i].GiteaToken = ""
+		users[i].RefreshToken = ""
+	}
+
+	response := GetAllUserInfoResponse{
+		TotalCount: total,
+		Items:      users,
 	}
 
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
-		Data:    users,
+		Data:    response,
 		Message: "User info retrieved successfully",
 	})
 }
@@ -268,7 +288,9 @@ func UpdateUserInfo(c *gin.Context) {
 		return
 	}
 
-	user.GiteaToken = "" // Remove sensitive gitea_token field
+	// Remove sensitive gitea_token and refresh_token field
+	user.GiteaToken = ""
+	user.RefreshToken = ""
 
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,

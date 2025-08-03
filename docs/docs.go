@@ -59,10 +59,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.User"
-                                            }
+                                            "$ref": "#/definitions/handlers.GetAllUserInfoResponse"
                                         }
                                     }
                                 }
@@ -1517,7 +1514,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Question"
+                                            "$ref": "#/definitions/handlers.AddQuestionResponse"
                                         }
                                     }
                                 }
@@ -3294,6 +3291,44 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.AddQuestionResponse": {
+            "type": "object",
+            "required": [
+                "description",
+                "git_repo_url",
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Question Description"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "git_repo_url": {
+                    "type": "string",
+                    "example": "user_name/repo_name"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 123
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Question Title"
+                }
+            }
+        },
         "handlers.BasicAuthentication": {
             "type": "object",
             "required": [
@@ -3580,6 +3615,20 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.GetAllUserInfoResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.User"
+                    }
+                },
+                "totalCount": {
+                    "type": "integer"
                 }
             }
         },
