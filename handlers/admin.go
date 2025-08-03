@@ -148,8 +148,8 @@ func GetUserInfo(c *gin.Context) {
 }
 
 type GetAllUserInfoResponse struct {
-	Items      interface{} `json:"items"`
-	TotalCount int64       `json:"totalCount"`
+	Items      []models.User `json:"items"`
+	TotalCount int64         `json:"totalCount"`
 }
 
 // GetAllUserInfo shows all user information

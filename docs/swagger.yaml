@@ -625,7 +625,10 @@ definitions:
     type: object
   handlers.GetAllUserInfoResponse:
     properties:
-      items: {}
+      items:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
       totalCount:
         type: integer
     type: object
