@@ -81,9 +81,9 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	if len(codePath) > 0 {
 		// copy grp_parser to code path
 		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
+		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "build"), 0755)
 		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(codePath), "utils"))
 		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(codePath), "utils"), cmd)
-		//copyJSON := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/score.json", fmt.Sprintf("%v/%s", string(codePath), "utils"))
 
 		var stderr bytes.Buffer
 		copy.Stderr = &stderr
@@ -95,18 +95,8 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 			})
 			return
 		}
-		/*
-			if err := copyJSON.Run(); err != nil {
-				fmt.Println(copy.String())
-				db.Model(&userQuestion).Updates(models.UserQuestionTable{
-					Score:   -2,
-					Message: fmt.Sprintf("Failed to copy score test JSON: %v", err),
-				})
-				return
-			}
-		*/
 	}
-
+	defer os.RemoveAll(string(codePath))
 	/*
 		Compile the code
 	*/
@@ -128,7 +118,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	LogWithLocation("Start Execute")
 
 	executeScript := append([]byte(cmd.ExecuteScript), []byte("\nrm build -rf")...)
-	execodeID, err := WriteToTempFile(executeScript)
+	execodeID, err := WriteToTempFile([]byte(executeScript))
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
