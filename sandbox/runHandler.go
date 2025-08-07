@@ -76,12 +76,14 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		})
 		return
 	}
+
 	defer os.Remove(shellFilename(codeID))
 
 	if len(codePath) > 0 {
-		// copy grp_parser to code path
+		// make utils dir at code path
 		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
-		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "build"), 0755)
+
+		// copy grp_parser to code path
 		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(codePath), "utils"))
 		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(codePath), "utils"), cmd)
 
@@ -97,6 +99,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		}
 	}
 	defer os.RemoveAll(string(codePath))
+
 	/*
 		Compile the code
 	*/
@@ -104,6 +107,21 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID), codePath)
 
 	if !success {
+
+		// remove build file
+
+		script := "#!/bin/bash\nrm build -rf"
+		scriptID, err := WriteToTempFile([]byte(script))
+		defer os.Remove(shellFilename(scriptID))
+		if err != nil {
+			db.Model(&userQuestion).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: fmt.Sprintf("Failed to save remove script as file: %v", err),
+			})
+			return
+		}
+		s.runCompile(boxID, ctx, shellFilename(scriptID), codePath)
+
 		db.Model(&userQuestion).Updates(map[string]interface{}{
 			"score":   0,
 			"message": "Compilation Failed:\n" + compileOut,
@@ -179,7 +197,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		return
 	}
 
-	defer os.RemoveAll(string(codePath))
+	//defer os.RemoveAll(string(codePath))
 	utils.Debug("Done for judge!")
 }
 
