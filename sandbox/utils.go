@@ -4,7 +4,9 @@ import (
 	"OJ-API/utils"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 )
@@ -43,4 +45,51 @@ func LogWithLocation(msg string) {
 	} else {
 		utils.Debugf("unknown location → %s\n", msg)
 	}
+}
+
+func CopyCodeToBox(boxID int, codePath string) (string, error) {
+	boxRoot := fmt.Sprintf("/var/local/lib/isolate/%d/box", boxID)
+
+	err := filepath.Walk(codePath, func(src string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(codePath, src)
+		if err != nil {
+			return err
+		}
+
+		dst := filepath.Join(boxRoot, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dst, info.Mode())
+		}
+
+		// For files
+		srcFile, err := os.Open(src)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		dstFile, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer dstFile.Close()
+
+		if _, err := io.Copy(dstFile, srcFile); err != nil {
+			return err
+		}
+
+		// Set permission same as source
+		return os.Chmod(dst, info.Mode())
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to copy code to box: %v", err)
+	}
+
+	return boxRoot, nil
 }
