@@ -418,7 +418,7 @@ func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToke
 	}
 
 	// 如果有指定的 commit hash，則 checkout 到該 commit
-	if GitAfterHash != "" {
+	if GitAfterHash != "" && GitAfterHash != "0000000000000000000000000000000000000000" {
 		// 獲取 worktree 並 checkout 到指定 commit
 		worktree, err := repo.Worktree()
 		if err != nil {
