@@ -56,6 +56,8 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		JudgeTime: time.Now().UTC(),
 	})
 
+	boxRoot, _ := CopyCodeToBox(boxID, string(codePath))
+
 	defer s.Release(boxID)
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -81,11 +83,11 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 
 	if len(codePath) > 0 {
 		// make utils dir at code path
-		os.MkdirAll(fmt.Sprintf("%v/%s", string(codePath), "utils"), 0755)
+		os.MkdirAll(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), 0755)
 
 		// copy grp_parser to code path
-		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(codePath), "utils"))
-		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(codePath), "utils"), cmd)
+		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(boxRoot), "utils"))
+		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), cmd)
 
 		var stderr bytes.Buffer
 		copy.Stderr = &stderr
@@ -104,24 +106,9 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		Compile the code
 	*/
 
-	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID), codePath)
+	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID), []byte(boxRoot))
 
 	if !success {
-
-		// remove build file
-
-		script := "#!/bin/bash\nrm build -rf"
-		scriptID, err := WriteToTempFile([]byte(script))
-		defer os.Remove(shellFilename(scriptID))
-		if err != nil {
-			db.Model(&userQuestion).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: fmt.Sprintf("Failed to save remove script as file: %v", err),
-			})
-			return
-		}
-		s.runCompile(boxID, ctx, shellFilename(scriptID), codePath)
-
 		db.Model(&userQuestion).Updates(map[string]interface{}{
 			"score":   0,
 			"message": "Compilation Failed:\n" + compileOut,
@@ -146,7 +133,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	}
 	defer os.Remove(shellFilename(execodeID))
 
-	s.runExecute(boxID, ctx, shellFilename(execodeID), codePath)
+	s.runExecute(boxID, ctx, shellFilename(execodeID), []byte(boxRoot))
 
 	/*
 
@@ -158,7 +145,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	utils.Debug("Ready to proceed to the next step or return output.")
 
 	// read score from file
-	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", codePath))
+	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", []byte(boxRoot)))
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -177,7 +164,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	}
 
 	// read message from file
-	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", codePath))
+	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", []byte(boxRoot)))
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -197,7 +184,6 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		return
 	}
 
-	//defer os.RemoveAll(string(codePath))
 	utils.Debug("Done for judge!")
 }
 
@@ -236,6 +222,7 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 			fmt.Sprintf("--dir=%v:rw", string(codePath)),
 			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
 	}
+
 	scriptFile := shellCommand
 	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", scriptFile)
 
@@ -290,7 +277,6 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 	filename := "score.json"
 	filepath := filepath.Join(path, filename)
-	fmt.Println("Final Path: ", filepath)
 	var prettyJSON []byte
 	var tmp interface{}
 	if err := json.Unmarshal(row.ScoreScript, &tmp); err != nil {
