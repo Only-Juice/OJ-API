@@ -128,7 +128,7 @@ func PostGiteaHook(c *gin.Context) {
 		}
 
 		// 構建 Git 倉庫 URL
-		gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + payload.Repository.FullName
+		gitRepoURL := config.GetGiteaBaseURL() + "/" + payload.Repository.FullName
 
 		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 		clientManager := services.GetSandboxClientManager()
