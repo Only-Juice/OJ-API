@@ -27,3 +27,6 @@ go.work.sum
 server
 .DS_Store
 server-sandbox
+
+cert.pem
+key.pem

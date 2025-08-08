@@ -8,6 +8,7 @@ import (
 	"OJ-API/sandbox"
 	"OJ-API/utils"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
@@ -117,7 +119,48 @@ func main() {
 func connectToScheduler(schedulerAddress, sandboxID string) (*grpc.ClientConn, error) {
 	utils.Debugf("Sandbox %s connecting to scheduler at %s...", sandboxID, schedulerAddress)
 
-	conn, err := grpc.NewClient(schedulerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 檢查是否使用 HTTPS
+	useTLS := config.Config("USE_TLS")
+	var creds credentials.TransportCredentials
+
+	if useTLS == "true" {
+		// 載入 TLS 憑證
+		certFile := config.Config("TLS_CERT_FILE")
+		keyFile := config.Config("TLS_KEY_FILE")
+
+		if certFile == "" {
+			certFile = "cert.pem"
+		}
+		if keyFile == "" {
+			keyFile = "key.pem"
+		}
+
+		// 載入客戶端憑證
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load TLS certificates: %v", err)
+		}
+
+		// 配置 TLS
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ServerName:   config.Config("TLS_SERVER_NAME"), // 如果需要指定服務器名稱
+		}
+
+		// 如果設定跳過憑證驗證（僅用於開發環境）
+		if config.Config("TLS_SKIP_VERIFY") == "true" {
+			tlsConfig.InsecureSkipVerify = true
+			utils.Warnf("TLS certificate verification is disabled - only use in development!")
+		}
+
+		creds = credentials.NewTLS(tlsConfig)
+		utils.Debugf("Using HTTPS connection with TLS certificates")
+	} else {
+		creds = insecure.NewCredentials()
+		utils.Debugf("Using HTTP connection without TLS")
+	}
+
+	conn, err := grpc.NewClient(schedulerAddress, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial scheduler: %v", err)
 	}
