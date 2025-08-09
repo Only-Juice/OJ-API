@@ -332,9 +332,9 @@ func PostBulkCreateUserGiteav2(c *gin.Context) {
 	})
 }
 
-// take a question and create a repository in Gitea
-// @Summary	Take a question and create a repository in Gitea
-// @Description Take a question and create a repository in Gitea
+// take a question and migrate it to a private repository in Gitea
+// @Summary	Take a question and migrate it to a private repository in Gitea
+// @Description Take a question and migrate it to a private repository in Gitea (migrates the entire repo content to a new private repo)
 // @Tags			Gitea
 // @Accept			json
 // @Produce			json
@@ -391,18 +391,26 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	parentRepoUsername := parentRepoURLParts[0]
 	parentRepoName := parentRepoURLParts[1]
 
+	// Check if user already has this repository
 	repo, _, err := client.GetRepo(jwtClaims.Username, parentRepoName)
 	if err != nil {
-		if _, _, err := client.CreateFork(parentRepoUsername, parentRepoName, gitea.CreateForkOption{
-			Name: &parentRepoName,
-		}); err != nil {
+		// Use migrate to create a private copy of the repository
+		migrateRepo, _, err := client.MigrateRepo(gitea.MigrateRepoOption{
+			RepoName:    parentRepoName,
+			CloneAddr:   config.GetGiteaBaseURL() + "/" + parentRepoUsername + "/" + parentRepoName + ".git",
+			Service:     gitea.GitServiceType("git"),
+			Private:     true,
+			Description: "Private copy of " + parentRepoUsername + "/" + parentRepoName,
+			Mirror:      false, // Set to false to create an independent copy
+		})
+		if err != nil {
 			c.JSON(503, ResponseHTTP{
 				Success: false,
-				Message: err.Error(),
+				Message: "Failed to migrate repository: " + err.Error(),
 			})
 			return
 		}
-		repo = nil
+		repo = migrateRepo
 	}
 
 	hooks, _, err := client.ListRepoHooks(jwtClaims.Username, parentRepoName, gitea.ListHooksOptions{})
@@ -467,7 +475,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
-		Message: "Repository created",
+		Message: "Repository migrated to private copy successfully",
 	})
 }
 

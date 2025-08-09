@@ -1777,7 +1777,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Take a question and create a repository in Gitea
+      description: Take a question and migrate it to a private repository in Gitea
+        (migrates the entire repo content to a new private repo)
       parameters:
       - description: Question ID
         in: path
@@ -1801,7 +1802,7 @@ paths:
           description: Service Unavailable
       security:
       - BearerAuth: []
-      summary: Take a question and create a repository in Gitea
+      summary: Take a question and migrate it to a private repository in Gitea
       tags:
       - Gitea
   /api/gitea/admin/user/bulk:
