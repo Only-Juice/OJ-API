@@ -26,3 +26,12 @@ func GetGiteaBaseURL() string {
 	}
 	return gitBaseURL
 }
+
+// GetOJBaseURL returns the complete OJ base URL with configurable scheme
+func GetOJBaseURL() string {
+	ojBaseURL := Config("OJ_BASE_URL")
+	if ojBaseURL == "" {
+		ojBaseURL = "http://" + Config("OJ_HOST") // Default to http if not provided
+	}
+	return ojBaseURL
+}

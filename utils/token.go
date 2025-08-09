@@ -6,8 +6,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"OJ-API/config"
 	"OJ-API/database"
@@ -120,4 +122,31 @@ func GetToken(userID uint) (string, error) {
 	}
 
 	return DecryptToken(user.GiteaToken, getEncryptionKey())
+}
+
+func GenerateResetToken(userID uint) (string, error) {
+	token := fmt.Sprintf("%d:%d", userID, time.Now().Unix())
+	return EncryptToken(token, getEncryptionKey())
+}
+
+func ValidateResetToken(encryptedToken string) (uint, error) {
+	decryptedToken, err := DecryptToken(encryptedToken, getEncryptionKey())
+	if err != nil {
+		return 0, err
+	}
+
+	var userID uint
+	var timestamp int64
+	_, err = fmt.Sscanf(decryptedToken, "%d:%d", &userID, &timestamp)
+	if err != nil {
+		return 0, errors.New("invalid token format")
+	}
+
+	// Check if token has expired (24 hours)
+	expirationTime := time.Unix(timestamp, 0).Add(24 * time.Hour)
+	if time.Now().After(expirationTime) {
+		return 0, errors.New("reset token has expired")
+	}
+
+	return userID, nil
 }

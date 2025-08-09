@@ -623,6 +623,14 @@ definitions:
     required:
     - title
     type: object
+  handlers.ForgetPasswordRequest:
+    properties:
+      email:
+        example: username@example.com
+        type: string
+    required:
+    - email
+    type: object
   handlers.GetAllUserInfoResponse:
     properties:
       items:
@@ -842,6 +850,14 @@ definitions:
         type: string
     required:
     - test_script
+    type: object
+  handlers.ResetPasswordRequest:
+    properties:
+      new_password:
+        minLength: 6
+        type: string
+    required:
+    - new_password
     type: object
   handlers.ResetUserPasswordDTO:
     properties:
@@ -2699,6 +2715,36 @@ paths:
       summary: Change user password
       tags:
       - User
+  /api/user/forget_password:
+    post:
+      consumes:
+      - application/json
+      description: Forget password
+      parameters:
+      - description: ForgetPasswordRequest
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ForgetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      summary: Forget password
+      tags:
+      - User
   /api/user/is_public:
     post:
       consumes:
@@ -2742,6 +2788,63 @@ paths:
       security:
       - BearerAuth: []
       summary: Set user is_public
+      tags:
+      - User
+  /api/user/reset_password:
+    get:
+      consumes:
+      - text/html
+      description: Show password reset form page
+      parameters:
+      - description: Reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+      summary: Show password reset page
+      tags:
+      - User
+    post:
+      consumes:
+      - application/json
+      description: Handle password reset with token
+      parameters:
+      - description: Reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Reset password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      summary: Reset password
       tags:
       - User
 securityDefinitions:

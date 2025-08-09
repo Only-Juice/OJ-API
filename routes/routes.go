@@ -203,5 +203,8 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/user", AuthMiddleware(), handlers.GetUser)
 		api.POST("/user/is_public", AuthMiddleware(), handlers.PostUserIsPublic)
 		api.POST("/user/change_password", AuthMiddleware(), handlers.ChangeUserPassword)
+		api.POST("/user/forget_password", handlers.ForgetPassword)
+		api.GET("/user/reset_password", handlers.ResetPasswordPage)
+		api.POST("/user/reset_password", handlers.ResetPassword)
 	}
 }
