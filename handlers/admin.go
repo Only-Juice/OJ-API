@@ -46,6 +46,21 @@ func ResetUserPassword(c *gin.Context) {
 	}
 	db := database.DBConn
 	id := c.Param("id")
+	userID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid user ID",
+		})
+		return
+	}
+	if jwtClaims.UserID == uint(userID) {
+		c.JSON(http.StatusForbidden, ResponseHTTP{
+			Success: false,
+			Message: "Cannot reset your own password",
+		})
+		return
+	}
 	var user models.User
 	if err := db.First(&user, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
@@ -93,6 +108,12 @@ func ResetUserPassword(c *gin.Context) {
 		LoginName: user.UserName,
 		Password:  passwordHash,
 	})
+
+	// Send password reset notification email
+	if err := utils.SendPasswordResetNotification(user.Email, user.UserName, passwordHash); err != nil {
+		// Log error but don't fail the request
+		utils.Warnf("Failed to send password reset notification email to %s: %v", user.Email, err)
+	}
 
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
@@ -267,9 +288,26 @@ func UpdateUserInfo(c *gin.Context) {
 		return
 	}
 
+	// Check if admin is trying to modify their own account
+	userID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid user ID",
+		})
+		return
+	}
+
 	// Only update fields that are present in the request
 	if enable, ok := updateUserInfoDTO["enable"]; ok {
 		if enableBool, ok := enable.(bool); ok {
+			if jwtClaims.UserID == uint(userID) && user.Enable != enableBool {
+				c.JSON(http.StatusForbidden, ResponseHTTP{
+					Success: false,
+					Message: "Cannot modify your own account enable status",
+				})
+				return
+			}
 			user.Enable = enableBool
 		}
 	}

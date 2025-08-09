@@ -330,7 +330,7 @@ func GetExamQuestions(c *gin.Context) {
 	}
 
 	// Get exam questions with pagination
-	now := time.Now()
+	now := time.Now().UTC()
 	orderClause := "CASE WHEN start_time <= '" + now.Format("2006-01-02 15:04:05") + "' AND end_time >= '" + now.Format("2006-01-02 15:04:05") + "' THEN 0 ELSE 1 END, start_time DESC, end_time ASC"
 	var examQuestionRelations []models.ExamQuestion
 	questionQuery := db.Where("exam_id = ?", examID).

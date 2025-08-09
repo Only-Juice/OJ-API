@@ -66,7 +66,7 @@ func GetQuestionList(c *gin.Context) {
 	}
 
 	// Add status filter
-	now := time.Now()
+	now := time.Now().UTC()
 	switch status {
 	case "active":
 		baseQuery = baseQuery.Where("start_time <= ? AND end_time >= ?", now, now)
