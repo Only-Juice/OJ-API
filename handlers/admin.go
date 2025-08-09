@@ -94,6 +94,12 @@ func ResetUserPassword(c *gin.Context) {
 		Password:  passwordHash,
 	})
 
+	// Send password reset notification email
+	if err := utils.SendPasswordResetNotification(user.Email, user.UserName, passwordHash); err != nil {
+		// Log error but don't fail the request
+		utils.Warnf("Failed to send password reset notification email to %s: %v", user.Email, err)
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Data: ResetUserPasswordDTO{

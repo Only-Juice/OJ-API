@@ -221,6 +221,17 @@ func ChangeUserPassword(c *gin.Context) {
 		})
 		return
 	}
+
+	// Get user email for notification
+	var user models.User
+	if err := db.First(&user, models.User{UserName: jwtClaims.Username}).Error; err == nil {
+		// Send password change notification email
+		if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
+			// Log error but don't fail the request
+			utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+		}
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password changed successfully",
