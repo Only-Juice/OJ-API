@@ -71,7 +71,7 @@ func PostGiteaHook(c *gin.Context) {
 	}
 
 	// Check if current time is within the allowed testing period
-	now := time.Now()
+	now := time.Now().UTC()
 	if !existingQuestion.StartTime.IsZero() && now.Before(existingQuestion.StartTime) {
 		c.JSON(403, ResponseHTTP{
 			Success: false,
