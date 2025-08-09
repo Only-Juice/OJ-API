@@ -443,7 +443,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 		}
 
 		// 構建 Git 倉庫 URL
-		gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + uqr.GitUserRepoURL
+		gitRepoURL := config.GetGiteaBaseURL() + "/" + uqr.GitUserRepoURL
 
 		// 使用 gRPC 客戶端添加任務，Git clone 將在沙箱端完成
 		clientManager := services.GetSandboxClientManager()
@@ -657,7 +657,7 @@ func ReScoreQuestion(c *gin.Context) {
 			}
 
 			// 構建 Git 倉庫 URL
-			gitRepoURL := "http://" + config.Config("GIT_HOST") + "/" + u.GitUserRepoURL
+			gitRepoURL := config.GetGiteaBaseURL() + "/" + u.GitUserRepoURL
 
 			wg.Add(1)
 			go func(i int, gitRepoURL string, gitFullName string, username string, token string) {
