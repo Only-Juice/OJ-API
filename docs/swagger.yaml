@@ -133,6 +133,27 @@ definitions:
     - ProjectsModeRepo
     - ProjectsModeOwner
     - ProjectsModeAll
+  gitea.PublicKey:
+    properties:
+      created_at:
+        type: string
+      fingerprint:
+        type: string
+      id:
+        type: integer
+      key:
+        type: string
+      key_type:
+        type: string
+      read_only:
+        type: boolean
+      title:
+        type: string
+      url:
+        type: string
+      user:
+        $ref: '#/definitions/gitea.User'
+    type: object
   gitea.RepoCommit:
     properties:
       author:
@@ -524,6 +545,14 @@ definitions:
     - key
     - read_only
     - title
+    type: object
+  handlers.DeletePublicKey:
+    properties:
+      id:
+        example: 1
+        type: integer
+    required:
+    - id
     type: object
   handlers.EnhancedGetLeaderboardResponseData:
     properties:
@@ -1904,6 +1933,68 @@ paths:
       tags:
       - Gitea
   /api/gitea/user/keys:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a public key
+      parameters:
+      - description: Public Key ID
+        in: body
+        name: DeletePublicKey
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DeletePublicKey'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Delete a public key
+      tags:
+      - Gitea
+    get:
+      consumes:
+      - application/json
+      description: List all public keys
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/gitea.PublicKey'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: List all public keys
+      tags:
+      - Gitea
     post:
       consumes:
       - application/json

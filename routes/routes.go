@@ -177,6 +177,8 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/gitea/admin/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
 		api.POST("/gitea/admin/user/bulk_v2", AuthMiddleware(), handlers.PostBulkCreateUserGiteav2)
 		api.POST("/gitea/user/keys", AuthMiddleware(), handlers.PostCreatePublicKeyGitea)
+		api.GET("/gitea/user/keys", AuthMiddleware(), handlers.ListMyPublicKeysGitea)
+		api.DELETE("/gitea/user/keys", AuthMiddleware(), handlers.DeletePublicKeyGitea)
 
 		// Questions routes
 		api.GET("/questions", AuthMiddleware(false), handlers.GetQuestionList)

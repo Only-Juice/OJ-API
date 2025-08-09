@@ -583,3 +583,116 @@ func PostCreatePublicKeyGitea(c *gin.Context) {
 		Message: "Public key created successfully",
 	})
 }
+
+// ListMyPublicKeys list all the public keys of current user
+// @Summary	List all public keys
+// @Description List all public keys
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Success		200		{object}	ResponseHTTP{data=[]gitea.PublicKey}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/user/keys [get]
+func ListMyPublicKeysGitea(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	keys, _, err := client.ListMyPublicKeys(gitea.ListPublicKeysOptions{})
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Data:    keys,
+		Message: "Public keys retrieved successfully",
+	})
+}
+
+type DeletePublicKey struct {
+	ID int64 `json:"id" validate:"required" example:"1"`
+}
+
+// DeletePublicKey delete public key with key id
+// @Summary	Delete a public key
+// @Description Delete a public key
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			DeletePublicKey	body		DeletePublicKey	true	"Public Key ID"
+// @Success		200		{object}	ResponseHTTP{}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/user/keys [delete]
+func DeletePublicKeyGitea(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	deleteKey := new(DeletePublicKey)
+	if err := c.ShouldBindJSON(deleteKey); err != nil {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Failed to parse request body",
+		})
+		return
+	}
+
+	_, err = client.DeletePublicKey(deleteKey.ID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Public key deleted successfully",
+	})
+}
