@@ -414,21 +414,26 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		return
 	}
 
+	scheme := "http"
+	if config.Config("USE_TLS") == "true" {
+		scheme = "https"
+	}
 	hookExists := false
 	for _, hook := range hooks {
-		if hook.Config["url"] == "http://"+config.Config("OJ_HOST")+"/api/gitea" {
+		if hook.Config["url"] == scheme+"://"+config.Config("OJ_HOST")+"/api/gitea" {
 			hookExists = true
 			break
 		}
 	}
 
 	if !hookExists {
+
 		if _, _, err := client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
 			Type:   "gitea",
 			Active: true,
 			Events: []string{"push"},
 			Config: map[string]string{
-				"url":          "http://" + config.Config("OJ_HOST") + "/api/gitea",
+				"url":          scheme + "://" + config.Config("OJ_HOST") + "/api/gitea",
 				"content_type": "json",
 			},
 		}); err != nil {
