@@ -1464,7 +1464,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Take a question and create a repository in Gitea",
+                "description": "Take a question and migrate it to a private repository in Gitea (migrates the entire repo content to a new private repo)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1474,7 +1474,7 @@ const docTemplate = `{
                 "tags": [
                     "Gitea"
                 ],
-                "summary": "Take a question and create a repository in Gitea",
+                "summary": "Take a question and migrate it to a private repository in Gitea",
                 "parameters": [
                     {
                         "type": "integer",
