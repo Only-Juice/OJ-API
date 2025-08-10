@@ -168,12 +168,9 @@ func (s *SandboxScheduler) sendJobsToSandbox(instance *SandboxInstance) {
 
 // GetBestSandbox 根據負載選擇最佳的沙箱實例
 func (s *SandboxScheduler) GetBestSandbox() *SandboxInstance {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-
 	var candidates []*SandboxInstance
 	for _, instance := range s.instances {
-		if instance.Active && instance.Status != nil {
+		if instance.Active && instance.Status != nil && instance.Status.AvailableCount > 0 {
 			candidates = append(candidates, instance)
 		}
 	}
@@ -192,10 +189,21 @@ func (s *SandboxScheduler) GetBestSandbox() *SandboxInstance {
 
 // ReserveJob 添加任務到最佳沙箱
 func (s *SandboxScheduler) ReserveJob(parentGitFullName string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) error {
+	s.mutex.Lock()
 	instance := s.GetBestSandbox()
 	if instance == nil {
+		s.mutex.Unlock()
 		return fmt.Errorf("no available sandbox instances")
 	}
+
+	// 先假設任務會成功，立即增加 waiting count，避免過多請求進入
+	if instance.Status != nil {
+		instance.Status.WaitingCount++
+		instance.Status.AvailableCount--
+		utils.Debugf("Pre-incremented waiting count for sandbox %s (waiting: %d, available: %d)",
+			instance.ID, instance.Status.WaitingCount, instance.Status.AvailableCount)
+	}
+	s.mutex.Unlock()
 
 	jobReq := &pb.AddJobRequest{
 		ParentGitFullName:   parentGitFullName,
@@ -213,6 +221,15 @@ func (s *SandboxScheduler) ReserveJob(parentGitFullName string, gitRepoURL strin
 		utils.Debugf("Job queued for sandbox %s", instance.ID)
 		return nil
 	default:
+		// 如果任務無法加入隊列，需要回滾之前的假設
+		s.mutex.Lock()
+		if instance.Status != nil {
+			instance.Status.WaitingCount--
+			instance.Status.AvailableCount++
+			utils.Debugf("Rolled back waiting count for sandbox %s due to queue full (waiting: %d, available: %d)",
+				instance.ID, instance.Status.WaitingCount, instance.Status.AvailableCount)
+		}
+		s.mutex.Unlock()
 		return fmt.Errorf("sandbox %s job queue is full", instance.ID)
 	}
 }
