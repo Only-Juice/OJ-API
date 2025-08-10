@@ -36,6 +36,7 @@ import (
 func main() {
 	// 初始化日誌
 	utils.InitLog()
+	utils.SetServerSource("api-server")
 
 	// 檢查 TLS 憑證文件
 	certFile := config.Config("TLS_CERT_FILE")

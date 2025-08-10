@@ -34,6 +34,7 @@ import (
 func main() {
 	// 初始化日誌
 	utils.InitLog()
+	utils.SetServerSource("sandbox-server")
 
 	// 加載環境變數
 	if err := godotenv.Load(".env.local"); err != nil {
