@@ -816,7 +816,9 @@ func GetLeaderboard(c *gin.Context) {
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
 		Group("UQR.user_id, UQR.question_id")
 
-	if err := db.Table("(?) AS t", subquery).Count(&totalCount).Error; err != nil {
+	if err := db.Table("(?) AS t", subquery).
+		Select("COUNT(DISTINCT user_id)").
+		Scan(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to count users with scores",
