@@ -74,8 +74,9 @@ func (s *Sandbox) Release(boxID int) {
 		}
 	}
 	/* Release Isolate resource */
-	//cmd := exec.Command("isolate", "--init", fmt.Sprintf("-b %v", boxID))
-	//cmd.Run()
+
+	cmd := exec.Command("isolate", "--init", fmt.Sprintf("-b %v", boxID))
+	cmd.Run()
 
 	s.AvailableBoxIDs.Enqueue(boxID)
 }
