@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +11,8 @@ import (
 // TestSuite represents a test suite structure from the input JSON
 type TestSuite struct {
 	Name      string     `json:"name"`
+	MaxScore  int        `json:"maxscore"`
+	GetScore  float64    `json:"getscore"`
 	Tests     int        `json:"tests"`
 	Failures  int        `json:"failures"`
 	Disabled  int        `json:"disabled"`
@@ -125,12 +126,12 @@ func (jp *JSONParser) parseScore() {
 
 // Parse calculates the score based on test results
 func (jp *JSONParser) Parse() {
-	for _, test := range jp.inputFile.TestSuites {
-		name := test.Name
+	for i := range jp.inputFile.TestSuites {
+		name := jp.inputFile.TestSuites[i].Name
 		ac := 0.0 // accepted count
 		wa := 0.0 // wrong answer count
 
-		for _, suite := range test.TestSuite {
+		for _, suite := range jp.inputFile.TestSuites[i].TestSuite {
 			// Check if individual test case has failures or errors
 			// This matches the original C++ logic: suite.contains("failures") || suite.contains("errors")
 			if len(suite.Failures) > 0 || len(suite.Errors) > 0 {
@@ -141,6 +142,8 @@ func (jp *JSONParser) Parse() {
 		}
 
 		if maxScore, exists := jp.task[name]; exists && (ac+wa) > 0 {
+			jp.inputFile.TestSuites[i].MaxScore = maxScore
+			jp.inputFile.TestSuites[i].GetScore = (ac / (ac + wa)) * float64(maxScore)
 			jp.score += (ac / (ac + wa)) * float64(maxScore)
 		}
 	}
@@ -184,22 +187,20 @@ func writeScore(score float64) error {
 }
 
 // writeJSONFile copies the JSON file content to message.txt
-func writeJSONFile(jsonPath string) error {
-	inputFile, err := os.Open(jsonPath)
-	if err != nil {
-		return fmt.Errorf("failed to open input file %s: %v", jsonPath, err)
-	}
-	defer inputFile.Close()
-
+func (jp *JSONParser) writeJSONFile(jsonPath string) error {
 	outputFile, err := os.Create("message.txt")
 	if err != nil {
 		return fmt.Errorf("failed to create output file message.txt: %v", err)
 	}
 	defer outputFile.Close()
 
-	_, err = io.Copy(outputFile, inputFile)
+	newJSONfile, err := json.MarshalIndent(jp.inputFile, " ", " ")
 	if err != nil {
-		return fmt.Errorf("failed to copy content: %v", err)
+		return fmt.Errorf("failed to parse json file: %v", err)
+	}
+
+	if _, err := outputFile.Write(newJSONfile); err != nil {
+		return fmt.Errorf("failed to write output file: %w", err)
 	}
 
 	fmt.Printf("Copied content from %s to message.txt\n", jsonPath)
@@ -227,7 +228,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := writeJSONFile(os.Args[1]); err != nil {
+	if err := parser.writeJSONFile(os.Args[1]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing JSON file: %v\n", err)
 		os.Exit(1)
 	}
