@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 )
 
 func SendResetEmail(email, token string) error {
-	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJBaseURL(), token)
+	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJBaseURL(), url.QueryEscape(token))
 	subject := "[橘測評OJ] 密碼重置 - Password Reset"
 
 	body := fmt.Sprintf(`
