@@ -31,6 +31,7 @@ services:
       - DB_HOST=192.168.2.123
       - SCHEDULER_ADDRESS=api-server:3001
       - LOG_LEVEL=info
+      - ISOLATE_PATH=/var/lib/isolate
     depends_on:
       api-server:
         condition: service_healthy

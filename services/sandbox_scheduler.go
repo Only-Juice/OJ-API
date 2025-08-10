@@ -8,6 +8,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"golang.design/x/lockfree"
 )
 
 // SandboxInstance 表示一個沙箱實例
@@ -26,6 +28,7 @@ type SandboxScheduler struct {
 	pb.UnimplementedSchedulerServiceServer
 	instances map[string]*SandboxInstance
 	mutex     sync.RWMutex
+	jobQueue  *lockfree.Queue // Storing Unjudge job
 }
 
 var (
@@ -38,9 +41,12 @@ func GetSandboxScheduler() *SandboxScheduler {
 	schedulerOnce.Do(func() {
 		globalScheduler = &SandboxScheduler{
 			instances: make(map[string]*SandboxInstance),
+			jobQueue:  lockfree.NewQueue(),
 		}
 		// 啟動清理 goroutine
 		go globalScheduler.cleanupInactiveInstances()
+		// 啟動任務隊列處理 goroutine
+		go globalScheduler.processJobQueue()
 	})
 	return globalScheduler
 }
@@ -168,12 +174,9 @@ func (s *SandboxScheduler) sendJobsToSandbox(instance *SandboxInstance) {
 
 // GetBestSandbox 根據負載選擇最佳的沙箱實例
 func (s *SandboxScheduler) GetBestSandbox() *SandboxInstance {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-
 	var candidates []*SandboxInstance
 	for _, instance := range s.instances {
-		if instance.Active && instance.Status != nil {
+		if instance.Active && instance.Status != nil && instance.Status.AvailableCount > 0 {
 			candidates = append(candidates, instance)
 		}
 	}
@@ -190,13 +193,8 @@ func (s *SandboxScheduler) GetBestSandbox() *SandboxInstance {
 	return candidates[0]
 }
 
-// ReserveJob 添加任務到最佳沙箱
+// ReserveJob 添加任務到最佳沙箱或隊列
 func (s *SandboxScheduler) ReserveJob(parentGitFullName string, gitRepoURL string, gitFullName string, gitAfterHash string, gitUsername string, gitToken string, userQuestionTableID uint64) error {
-	instance := s.GetBestSandbox()
-	if instance == nil {
-		return fmt.Errorf("no available sandbox instances")
-	}
-
 	jobReq := &pb.AddJobRequest{
 		ParentGitFullName:   parentGitFullName,
 		GitRepoUrl:          gitRepoURL,
@@ -207,14 +205,9 @@ func (s *SandboxScheduler) ReserveJob(parentGitFullName string, gitRepoURL strin
 		UserQuestionTableId: userQuestionTableID,
 	}
 
-	// 非阻塞發送到任務通道
-	select {
-	case instance.JobChan <- jobReq:
-		utils.Debugf("Job queued for sandbox %s", instance.ID)
-		return nil
-	default:
-		return fmt.Errorf("sandbox %s job queue is full", instance.ID)
-	}
+	// 將任務加入全局隊列
+	s.jobQueue.Enqueue(jobReq)
+	return nil
 }
 
 // GetGlobalStatus 獲取所有沙箱的全局狀態
@@ -232,6 +225,9 @@ func (s *SandboxScheduler) GetGlobalStatus() *pb.SandboxStatusResponse {
 			totalCount += instance.Status.TotalCount
 		}
 	}
+
+	// 加上隊列中的任務數量到等待計數
+	totalWaiting += int32(s.jobQueue.Length())
 
 	return &pb.SandboxStatusResponse{
 		AvailableCount:  totalAvailable,
@@ -292,4 +288,70 @@ func (s *SandboxScheduler) Close() {
 		close(instance.JobChan)
 	}
 	s.instances = make(map[string]*SandboxInstance)
+}
+
+// processJobQueue 處理任務隊列中的任務
+func (s *SandboxScheduler) processJobQueue() {
+	ticker := time.NewTicker(300 * time.Millisecond)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// 檢查是否有待處理的任務
+		for {
+			jobReq := s.jobQueue.Dequeue()
+			if jobReq == nil {
+				break // 隊列為空，退出內層循環
+			}
+
+			// 轉換回正確的類型
+			if addJobReq, ok := jobReq.(*pb.AddJobRequest); ok {
+				// 嘗試分配任務到可用的沙箱
+				if err := s.assignJobToSandbox(addJobReq); err != nil {
+					// 如果無法分配，重新放回隊列
+					s.jobQueue.Enqueue(addJobReq)
+
+					// utils.Debugf("Job reassigned to queue: %v", err)
+					break // 退出內層循環，等待下次檢查
+				} else {
+					utils.Infof("Job from queue assigned successfully (parentGitFullName: %s, userQuestionTableId: %d)",
+						addJobReq.ParentGitFullName, addJobReq.UserQuestionTableId)
+				}
+			}
+		}
+	}
+}
+
+// assignJobToSandbox 將任務分配給可用的沙箱
+func (s *SandboxScheduler) assignJobToSandbox(jobReq *pb.AddJobRequest) error {
+	s.mutex.Lock()
+	instance := s.GetBestSandbox()
+	if instance == nil {
+		s.mutex.Unlock()
+		return fmt.Errorf("no available sandbox instances")
+	}
+
+	// 更新沙箱狀態
+	if instance.Status != nil {
+		instance.Status.WaitingCount++
+		instance.Status.AvailableCount--
+		utils.Debugf("Assigned job from queue to sandbox %s (waiting: %d, available: %d)",
+			instance.ID, instance.Status.WaitingCount, instance.Status.AvailableCount)
+	}
+	s.mutex.Unlock()
+
+	// 非阻塞發送到任務通道
+	select {
+	case instance.JobChan <- jobReq:
+		utils.Debugf("Job from queue assigned to sandbox %s", instance.ID)
+		return nil
+	default:
+		// 如果任務無法加入隊列，需要回滾之前的假設
+		s.mutex.Lock()
+		if instance.Status != nil {
+			instance.Status.WaitingCount--
+			instance.Status.AvailableCount++
+		}
+		s.mutex.Unlock()
+		return fmt.Errorf("sandbox %s job queue is full", instance.ID)
+	}
 }

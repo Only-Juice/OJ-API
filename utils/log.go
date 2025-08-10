@@ -17,6 +17,7 @@ const (
 )
 
 var currentLogLevel LogLevel
+var serverSource string = "main"
 
 // Logger wrapper
 type Logger struct {
@@ -32,16 +33,33 @@ func GetCurrentLogLevel() LogLevel {
 	return currentLogLevel
 }
 
+// SetServerSource sets the server source for logging
+func SetServerSource(source string) {
+	serverSource = source
+	// Update logger prefixes if logger is already initialized
+	if logger != nil {
+		logger.debugLogger.SetPrefix(fmt.Sprintf("[%s][DEBUG] ", serverSource))
+		logger.infoLogger.SetPrefix(fmt.Sprintf("[%s][INFO] ", serverSource))
+		logger.warnLogger.SetPrefix(fmt.Sprintf("[%s][WARN] ", serverSource))
+		logger.errorLogger.SetPrefix(fmt.Sprintf("[%s][ERROR] ", serverSource))
+	}
+}
+
+// GetServerSource returns the current server source
+func GetServerSource() string {
+	return serverSource
+}
+
 // InitLog initializes the logger with the specified log level.
 func InitLog() {
 	logLevel := config.Config("LOG_LEVEL")
 
-	// Create loggers with different prefixes
+	// Create loggers with different prefixes including server source
 	logger = &Logger{
-		debugLogger: log.New(os.Stdout, "[DEBUG] ", log.LstdFlags|log.Lshortfile),
-		infoLogger:  log.New(os.Stdout, "[INFO] ", log.LstdFlags),
-		warnLogger:  log.New(os.Stdout, "[WARN] ", log.LstdFlags),
-		errorLogger: log.New(os.Stderr, "[ERROR] ", log.LstdFlags|log.Lshortfile),
+		debugLogger: log.New(os.Stdout, fmt.Sprintf("[%s][DEBUG] ", serverSource), log.LstdFlags|log.Lshortfile),
+		infoLogger:  log.New(os.Stdout, fmt.Sprintf("[%s][INFO] ", serverSource), log.LstdFlags),
+		warnLogger:  log.New(os.Stdout, fmt.Sprintf("[%s][WARN] ", serverSource), log.LstdFlags),
+		errorLogger: log.New(os.Stderr, fmt.Sprintf("[%s][ERROR] ", serverSource), log.LstdFlags|log.Lshortfile),
 	}
 
 	switch logLevel {

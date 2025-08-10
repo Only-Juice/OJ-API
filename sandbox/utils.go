@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"OJ-API/config"
 	"OJ-API/utils"
 	"errors"
 	"fmt"
@@ -11,12 +12,13 @@ import (
 	"time"
 )
 
-const CodeStorageFolder = "/sandbox/code"
+func WriteToTempFile(b []byte, boxID int) (string, error) {
+	boxRoot := fmt.Sprintf("%s/%d/box", config.GetIsolatePath(), boxID)
+	CodeStorageFolder := fmt.Sprintf("%s/code", boxRoot)
 
-func WriteToTempFile(b []byte) (string, error) {
 	// using nano second to avoid filename collision in highly concurrent requests
 	id := fmt.Sprintf("%v", time.Now().UnixNano())
-	err := os.WriteFile(shellFilename(id), b, 0777)
+	err := os.WriteFile(shellFilename(id, boxID), b, 0777)
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// may be the folder absent. so trying to create it
@@ -27,13 +29,16 @@ func WriteToTempFile(b []byte) (string, error) {
 		}
 		utils.Info("created folder:", CodeStorageFolder)
 		// second attempt
-		err = os.WriteFile(shellFilename(id), b, 0777)
+		err = os.WriteFile(shellFilename(id, boxID), b, 0777)
 	}
 
 	return id, err
 }
 
-func shellFilename(timestamp string) string {
+func shellFilename(timestamp string, boxID int) string {
+	boxRoot := fmt.Sprintf("%s/%d/box", config.GetIsolatePath(), boxID)
+	CodeStorageFolder := fmt.Sprintf("%s/code", boxRoot)
+
 	return fmt.Sprintf("%v/%v.sh", CodeStorageFolder, timestamp)
 }
 
@@ -48,7 +53,7 @@ func LogWithLocation(msg string) {
 }
 
 func CopyCodeToBox(boxID int, codePath string) (string, error) {
-	boxRoot := fmt.Sprintf("/var/local/lib/isolate/%d/box", boxID)
+	boxRoot := fmt.Sprintf("%s/%d/box", config.GetIsolatePath(), boxID)
 
 	err := filepath.Walk(codePath, func(src string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -92,4 +97,38 @@ func CopyCodeToBox(boxID int, codePath string) (string, error) {
 	}
 
 	return boxRoot, nil
+}
+
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	// Get source file info to preserve permissions
+	sourceInfo, err := sourceFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get source file info: %w", err)
+	}
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	// Copy file content
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy file content: %w", err)
+	}
+
+	// Preserve file permissions
+	err = os.Chmod(dst, sourceInfo.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to set file permissions: %w", err)
+	}
+
+	return nil
 }
