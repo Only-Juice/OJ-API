@@ -4,11 +4,9 @@ import (
 	"OJ-API/database"
 	"OJ-API/models"
 	"OJ-API/utils"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,9 +16,6 @@ import (
 )
 
 const execTimeoutDuration = time.Second * 60
-
-// SandboxPtr is a pointer to Sandbox
-var SandboxPtr *Sandbox
 
 func (s *Sandbox) WorkerLoop(ctx context.Context) {
 	ticker := time.NewTicker(300 * time.Millisecond)
@@ -32,25 +27,51 @@ func (s *Sandbox) WorkerLoop(ctx context.Context) {
 			utils.Info("WorkerLoop received cancel signal, stopping...")
 			return
 		case <-ticker.C:
-			s.assignJob()
+			s.assignJob(ctx)
 		}
 	}
 }
 
-func (s *Sandbox) assignJob() {
+func (s *Sandbox) assignJob(ctx context.Context) {
+	// 檢查系統是否正在關機，如果是則停止分配新任務
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
 	for s.AvailableCount() > 0 && !s.IsJobEmpty() {
+		// 在每次循環時再次檢查系統狀態
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		job := s.ReleaseJob()
 		boxID, ok := s.Reserve(1 * time.Second)
 		if !ok {
 			s.ReserveJob(job.Repo, job.CodePath, job.UQR)
 			continue
 		}
-		go s.runShellCommandByRepo(boxID, job)
+		go s.runShellCommandByRepo(ctx, boxID, job)
 	}
 }
 
-func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, codePath []byte, userQuestion models.UserQuestionTable) {
+func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd models.QuestionTestScript, codePath []byte, userQuestion models.UserQuestionTable) {
 	db := database.DBConn
+
+	// 檢查父 context 是否已經被取消，如果是則不開始新任務
+	select {
+	case <-parentCtx.Done():
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: "Job cancelled due to server shutdown",
+		})
+		s.Release(boxID)
+		return
+	default:
+	}
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		JudgeTime: time.Now().UTC(),
@@ -65,6 +86,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		Message: "Judging...",
 	})
 
+	// 使用獨立的 context，不會被父 context 取消影響，讓任務完整執行
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeoutDuration)
 	defer cancel()
 
@@ -85,20 +107,20 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 		// make utils dir at code path
 		os.MkdirAll(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), 0755)
 
-		// copy grp_parser to code path
-		copy := exec.CommandContext(ctx, "cp", "./sandbox/grp_parser/grp_parser", fmt.Sprintf("%v/%s", string(boxRoot), "utils"))
-		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), cmd)
+		// copy grp_parser to code path using efficient Go file operations
+		srcPath := "./sandbox/grp_parser/grp_parser"
+		dstPath := fmt.Sprintf("%v/%s/grp_parser", string(boxRoot), "utils")
 
-		var stderr bytes.Buffer
-		copy.Stderr = &stderr
-		if err := copy.Run(); err != nil {
-			utils.Debug(copy.String())
+		if err := copyFile(srcPath, dstPath); err != nil {
+			utils.Debug(fmt.Sprintf("Failed to copy grp_parser: %v", err))
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
 				Message: fmt.Sprintf("Failed to copy score parser: %v", err),
 			})
 			return
 		}
+
+		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), cmd)
 	}
 	defer os.RemoveAll(string(codePath))
 
@@ -187,7 +209,7 @@ func (s *Sandbox) runShellCommand(boxID int, cmd models.QuestionTestScript, code
 	utils.Debug("Done for judge!")
 }
 
-func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
+func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Job) {
 
 	db := database.DBConn
 	var cmd models.QuestionTestScript
@@ -200,7 +222,7 @@ func (s *Sandbox) runShellCommandByRepo(boxID int, work *Job) {
 		s.Release(boxID)
 		return
 	}
-	s.runShellCommand(boxID, cmd, work.CodePath, work.UQR)
+	s.runShellCommand(ctx, boxID, cmd, work.CodePath, work.UQR)
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
@@ -288,7 +310,7 @@ func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 		}
 	}
 
-	if err := ioutil.WriteFile(filepath, prettyJSON, 0644); err != nil {
+	if err := os.WriteFile(filepath, prettyJSON, 0644); err != nil {
 		fmt.Println("WriteFile error:", err)
 		return
 	}

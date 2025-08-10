@@ -113,6 +113,45 @@ func main() {
 	<-sigChan
 	utils.Info("Shutting down sandbox server...")
 	cancel() // 停止工作循環
+
+	// 等待所有任務完成，但設置超時限制
+	utils.Info("Waiting for all jobs to complete...")
+	shutdownTimeoutStr := config.Config("SHUTDOWN_TIMEOUT")
+	shutdownTimeout := 30 * time.Second
+	if shutdownTimeoutStr != "" {
+		if timeout, err := time.ParseDuration(shutdownTimeoutStr); err == nil {
+			shutdownTimeout = timeout
+		}
+	}
+
+	shutdownStart := time.Now()
+	lastReportTime := time.Now()
+
+	for {
+		waitingCount := sandboxInstance.WaitingCount()
+		processingCount := sandboxInstance.ProcessingCount()
+
+		if waitingCount == 0 && processingCount == 0 {
+			utils.Info("All jobs completed, shutting down...")
+			break
+		}
+
+		// 每10秒報告一次進度
+		if time.Since(lastReportTime) > 10*time.Second {
+			utils.Infof("Still waiting for jobs to complete - Waiting: %d, Processing: %d",
+				waitingCount, processingCount)
+			lastReportTime = time.Now()
+		}
+
+		// 檢查是否超時
+		if time.Since(shutdownStart) > shutdownTimeout {
+			utils.Warnf("Shutdown timeout reached (%v), forcing shutdown with %d jobs still processing...",
+				shutdownTimeout, processingCount)
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // connectToScheduler 連接到調度器並建立流
