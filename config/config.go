@@ -35,3 +35,11 @@ func GetOJBaseURL() string {
 	}
 	return ojBaseURL
 }
+
+func GetIsolatePath() string {
+	isolatePath := Config("ISOLATE_PATH")
+	if isolatePath == "" {
+		isolatePath = "/var/local/lib/isolate" // Default path if not provided
+	}
+	return isolatePath
+}

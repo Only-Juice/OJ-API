@@ -92,7 +92,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 
 	// saving code as file
 	compileScript := []byte(cmd.TestScript)
-	codeID, err := WriteToTempFile(compileScript)
+	codeID, err := WriteToTempFile(compileScript, boxID)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -101,7 +101,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		return
 	}
 
-	defer os.Remove(shellFilename(codeID))
+	defer os.Remove(shellFilename(codeID, boxID))
 
 	if len(codePath) > 0 {
 		// make utils dir at code path
@@ -128,7 +128,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		Compile the code
 	*/
 
-	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID), []byte(boxRoot))
+	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
 
 	if !success {
 		db.Model(&userQuestion).Updates(map[string]interface{}{
@@ -145,7 +145,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	LogWithLocation("Start Execute")
 
 	executeScript := append([]byte(cmd.ExecuteScript), []byte("\nrm build -rf")...)
-	execodeID, err := WriteToTempFile([]byte(executeScript))
+	execodeID, err := WriteToTempFile([]byte(executeScript), boxID)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -153,9 +153,9 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		})
 		return
 	}
-	defer os.Remove(shellFilename(execodeID))
+	defer os.Remove(shellFilename(execodeID, boxID))
 
-	s.runExecute(boxID, ctx, shellFilename(execodeID), []byte(boxRoot))
+	s.runExecute(boxID, ctx, shellFilename(execodeID, boxID), []byte(boxRoot))
 
 	/*
 
@@ -226,11 +226,9 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
-
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
 		"--fsize=5120",
-		fmt.Sprintf("--dir=%v:rw", CodeStorageFolder),
 		"--wait",
 		"--processes",
 		"--open-files=0",
@@ -267,7 +265,6 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
 		"--fsize=5120",
-		fmt.Sprintf("--dir=%v", CodeStorageFolder),
 		"--wait",
 		"--processes=100",
 		"--open-files=0",
