@@ -1,0 +1,286 @@
+{
+  "tests": 21,
+  "failures": 0,
+  "disabled": 0,
+  "errors": 0,
+  "timestamp": "2025-07-26T17:28:02Z",
+  "time": "0s",
+  "name": "AllTests",
+  "testsuites": [
+   {
+    "name": "MAINDISH_TEST",
+    "maxscore": 20,
+    "getscore": 20,
+    "tests": 7,
+    "failures": 0,
+    "disabled": 0,
+    "errors": 0,
+    "timestamp": "2025-07-26T17:28:02Z",
+    "time": "0s",
+    "testsuite": [
+     {
+      "name": "check_maindish_should_have_correct_id",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 7,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     },
+     {
+      "name": "check_maindish_should_have_correct_money",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 14,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     },
+     {
+      "name": "check_maindish_should_have_correct_ingredients",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 21,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     },
+     {
+      "name": "check_maindish_should_throw_invalid_argument_for_additional_food",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 31,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     },
+     {
+      "name": "check_maindish_should_throw_invalid_argument_for_additional_food_two",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 38,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     },
+     {
+      "name": "check_maindish_should_have_correct_money_after_get_addtional_food",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 52,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     },
+     {
+      "name": "check_maindish_should_have_correct_money_after_get_addtional_food_two",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 61,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "MAINDISH_TEST"
+     }
+    ]
+   },
+   {
+    "name": "SIDEDISH_TEST",
+    "maxscore": 20,
+    "getscore": 20,
+    "tests": 4,
+    "failures": 0,
+    "disabled": 0,
+    "errors": 0,
+    "timestamp": "2025-07-26T17:28:02Z",
+    "time": "0s",
+    "testsuite": [
+     {
+      "name": "check_sidedish_should_have_correct_id",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 75,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "SIDEDISH_TEST"
+     },
+     {
+      "name": "check_sidedish_is_small",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 82,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "SIDEDISH_TEST"
+     },
+     {
+      "name": "check_sidedish_can_make_larger",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 90,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "SIDEDISH_TEST"
+     },
+     {
+      "name": "check_sidedish_make_larger_maintain_same",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 99,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "SIDEDISH_TEST"
+     }
+    ]
+   },
+   {
+    "name": "DRINK_TEST",
+    "maxscore": 10,
+    "getscore": 10,
+    "tests": 3,
+    "failures": 0,
+    "disabled": 0,
+    "errors": 0,
+    "timestamp": "2025-07-26T17:28:02Z",
+    "time": "0s",
+    "testsuite": [
+     {
+      "name": "check_drink_have_correct_id",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 107,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "DRINK_TEST"
+     },
+     {
+      "name": "check_drink_have_correct_price",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 114,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "DRINK_TEST"
+     },
+     {
+      "name": "check_drink_make_larger",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Food.cpp",
+      "line": 121,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "DRINK_TEST"
+     }
+    ]
+   },
+   {
+    "name": "PACKAGE_TEST",
+    "maxscore": 30,
+    "getscore": 30,
+    "tests": 3,
+    "failures": 0,
+    "disabled": 0,
+    "errors": 0,
+    "timestamp": "2025-07-26T17:28:02Z",
+    "time": "0s",
+    "testsuite": [
+     {
+      "name": "check_package_should_have_correct_money",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Package.cpp",
+      "line": 5,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "PACKAGE_TEST"
+     },
+     {
+      "name": "check_package_should_have_correct_money_for_pack",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Package.cpp",
+      "line": 19,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "PACKAGE_TEST"
+     },
+     {
+      "name": "check_package_should_have_correct_money_for_only_a_thing",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Package.cpp",
+      "line": 39,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "PACKAGE_TEST"
+     }
+    ]
+   },
+   {
+    "name": "OISHIIPAPA_TEST",
+    "maxscore": 20,
+    "getscore": 20,
+    "tests": 4,
+    "failures": 0,
+    "disabled": 0,
+    "errors": 0,
+    "timestamp": "2025-07-26T17:28:02Z",
+    "time": "0s",
+    "testsuite": [
+     {
+      "name": "check_papa_should_throw_exception_for_chest",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Oishiipapa.cpp",
+      "line": 6,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "OISHIIPAPA_TEST"
+     },
+     {
+      "name": "check_papa_should_throw_exception_for_pipeline",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Oishiipapa.cpp",
+      "line": 11,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "OISHIIPAPA_TEST"
+     },
+     {
+      "name": "check_papa_should_take_care_of_pickup",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Oishiipapa.cpp",
+      "line": 16,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "OISHIIPAPA_TEST"
+     },
+     {
+      "name": "check_papa_should_take_care_of_pickup_part2",
+      "file": "/sandbox/repo/kesshoban3310/OOP2024f_111590028_HW/acc323be-5c21-45b8-b0b0-eb01d25969bb/test/ut_Oishiipapa.cpp",
+      "line": 108,
+      "status": "RUN",
+      "result": "COMPLETED",
+      "timestamp": "2025-07-26T17:28:02Z",
+      "time": "0s",
+      "classname": "OISHIIPAPA_TEST"
+     }
+    ]
+   }
+  ]
+ }

@@ -14,7 +14,7 @@
             "testsuite": "DRINK_TEST",
             "score": 10
         },
-	{
+	    {
             "testsuite": "PACKAGE_TEST",
             "score": 30
         },
