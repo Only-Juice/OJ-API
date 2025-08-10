@@ -416,6 +416,7 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 
 // AddJob 添加任務到隊列
 func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJobRequest) (*pb.AddJobResponse, error) {
+	sandboxInstance.SubtractAvailableCount()
 	// 創建 UserQuestionTable 模型
 	uqr := models.UserQuestionTable{
 		ID: uint(req.UserQuestionTableId),
@@ -426,6 +427,7 @@ func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJo
 		return nil, status.Errorf(codes.Internal, "failed to clone repository: %v", err)
 	}
 
+	sandboxInstance.AddAvailableCount()
 	// 添加任務到隊列
 	sandboxInstance.ReserveJob(req.ParentGitFullName, []byte(codePath), uqr)
 

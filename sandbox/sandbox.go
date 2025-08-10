@@ -5,16 +5,19 @@ import (
 	"OJ-API/utils"
 	"fmt"
 	"os/exec"
+	"sync"
 	"time"
 
 	"golang.design/x/lockfree"
 )
 
 type Sandbox struct {
-	AvailableBoxIDs *lockfree.Queue // Sandbox that can use
-	waitingQueue    *lockfree.Queue // Sandbox that executing code
-	jobQueue        *lockfree.Queue // Storing Unjudge job
-	sandboxCount    int             // How many sandbox
+	AvailableBoxIDs     *lockfree.Queue // Sandbox that can use
+	waitingQueue        *lockfree.Queue // Sandbox that executing code
+	jobQueue            *lockfree.Queue // Storing Unjudge job
+	sandboxCount        int             // How many sandbox
+	availableCount      int             // How many sandbox can use
+	availableCountMutex sync.RWMutex    // Mutex for availableCount
 }
 
 type Job struct {
@@ -35,16 +38,19 @@ func NewSandbox(count int) *Sandbox {
 		}
 	}
 	s := &Sandbox{
-		AvailableBoxIDs: availableBoxIDs,
-		sandboxCount:    count,
-		waitingQueue:    lockfree.NewQueue(),
-		jobQueue:        lockfree.NewQueue(),
+		AvailableBoxIDs:     availableBoxIDs,
+		sandboxCount:        count,
+		waitingQueue:        lockfree.NewQueue(),
+		jobQueue:            lockfree.NewQueue(),
+		availableCount:      count,
+		availableCountMutex: sync.RWMutex{},
 	}
 	return s
 }
 
 func (s *Sandbox) Reserve(timeout time.Duration) (int, bool) {
 	if item := s.AvailableBoxIDs.Dequeue(); item != nil {
+		s.SubtractAvailableCount()
 		return item.(int), true
 	}
 
@@ -53,6 +59,7 @@ func (s *Sandbox) Reserve(timeout time.Duration) (int, bool) {
 
 	select {
 	case boxID := <-waitChan:
+		s.SubtractAvailableCount()
 		return boxID, true
 	case <-time.After(timeout):
 		return -1, false
@@ -68,6 +75,7 @@ func (s *Sandbox) Release(boxID int) {
 			case waitChan <- boxID:
 				close(waitChan)
 			default:
+				s.AddAvailableCount()
 				s.AvailableBoxIDs.Enqueue(boxID)
 			}
 			return
@@ -78,11 +86,12 @@ func (s *Sandbox) Release(boxID int) {
 	cmd := exec.Command("isolate", "--init", fmt.Sprintf("-b %v", boxID))
 	cmd.Run()
 
+	s.AddAvailableCount()
 	s.AvailableBoxIDs.Enqueue(boxID)
 }
 
 func (s *Sandbox) AvailableCount() int {
-	return int(s.AvailableBoxIDs.Length())
+	return max(0, s.availableCount)
 }
 
 func (s *Sandbox) WaitingCount() int {
@@ -90,7 +99,7 @@ func (s *Sandbox) WaitingCount() int {
 }
 
 func (s *Sandbox) ProcessingCount() int {
-	return s.sandboxCount - int(s.AvailableCount())
+	return s.sandboxCount - s.AvailableCount()
 }
 
 func (s *Sandbox) IsJobEmpty() bool {
@@ -147,4 +156,16 @@ func (s *Sandbox) Cleanup() {
 			break
 		}
 	}
+}
+
+func (s *Sandbox) AddAvailableCount() {
+	s.availableCountMutex.Lock()
+	s.availableCount++
+	s.availableCountMutex.Unlock()
+}
+
+func (s *Sandbox) SubtractAvailableCount() {
+	s.availableCountMutex.Lock()
+	s.availableCount--
+	s.availableCountMutex.Unlock()
 }
