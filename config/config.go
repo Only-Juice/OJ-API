@@ -43,3 +43,23 @@ func GetIsolatePath() string {
 	}
 	return isolatePath
 }
+
+// GetGiteaOAuthConfig returns the Gitea OAuth configuration
+func GetGiteaOAuthConfig() struct {
+	URL          string
+	ClientID     string
+	ClientSecret string
+	Issuer       string
+} {
+	return struct {
+		URL          string
+		ClientID     string
+		ClientSecret string
+		Issuer       string
+	}{
+		URL:          Config("GITEA_URL"),
+		ClientID:     Config("GITEA_CLIENT_ID"),
+		ClientSecret: Config("GITEA_CLIENT_SECRET"),
+		Issuer:       Config("GITEA_ISSUER"),
+	}
+}

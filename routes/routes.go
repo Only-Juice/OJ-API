@@ -145,6 +145,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/auth/login", handlers.AuthBasic)
 		api.POST("/auth/refresh", handlers.RefreshToken)
 		api.POST("/auth/logout", handlers.Logout)
+		api.GET("/auth/oauth/callback", handlers.OAuthCallback)
 
 		// Admin routes
 		api.POST("/admin/:id/user/reset_password", AuthMiddleware(), handlers.ResetUserPassword)

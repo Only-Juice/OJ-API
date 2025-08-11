@@ -1309,6 +1309,42 @@ paths:
       summary: Logout user
       tags:
       - Auth
+  /api/auth/oauth/callback:
+    get:
+      description: Handle OAuth callback and complete authentication
+      parameters:
+      - description: Authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State parameter
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OAuth login successful
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Handle Gitea OAuth callback
+      tags:
+      - Auth
   /api/auth/refresh:
     post:
       consumes:
