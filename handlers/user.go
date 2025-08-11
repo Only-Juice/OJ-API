@@ -326,7 +326,7 @@ func ResetPasswordPage(c *gin.Context) {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>密碼重置 - 橘測評OJ</title>
+	<title>密碼重置 - 橘評測 OJ</title>
 	<style>
 		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
@@ -336,7 +336,7 @@ func ResetPasswordPage(c *gin.Context) {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">橘測評 OJ</div>
+		<div class="logo">橘評測 OJ</div>
 		<div class="error">❌ 無效的重置連結</div>
 		<p>重置代碼遺失或無效，請重新申請密碼重置。</p>
 	</div>
@@ -355,7 +355,7 @@ func ResetPasswordPage(c *gin.Context) {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>密碼重置 - 橘測評OJ</title>
+	<title>密碼重置 - 橘評測 OJ</title>
 	<style>
 		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
@@ -365,7 +365,7 @@ func ResetPasswordPage(c *gin.Context) {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">橘測評 OJ</div>
+		<div class="logo">橘評測 OJ</div>
 		<div class="error">❌ 無效或過期的重置連結</div>
 		<p>重置代碼無效或已過期，請重新申請密碼重置。</p>
 	</div>
@@ -382,7 +382,7 @@ func ResetPasswordPage(c *gin.Context) {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>重設密碼 - 橘測評OJ</title>
+	<title>重設密碼 - 橘評測 OJ</title>
 	<style>
 		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
@@ -401,7 +401,7 @@ func ResetPasswordPage(c *gin.Context) {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">🍊 橘測評 OJ</div>
+		<div class="logo">🍊 橘評測 OJ</div>
 		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">重設密碼</h2>
 		
 		<form id="resetForm">

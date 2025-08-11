@@ -14,7 +14,7 @@ import (
 
 func SendResetEmail(email, token string) error {
 	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJBaseURL(), url.QueryEscape(token))
-	subject := "[橘測評OJ] 密碼重置 - Password Reset"
+	subject := "[橘評測 OJ] 密碼重置 - Password Reset"
 
 	body := fmt.Sprintf(`
 		<html>
@@ -60,7 +60,7 @@ func SendResetEmail(email, token string) error {
 }
 
 func SendPasswordChangeNotification(email, username string, clientInfo *ClientInfo) error {
-	subject := "[橘測評OJ] 密碼變更通知 - Password Change Notification"
+	subject := "[橘評測 OJ] 密碼變更通知 - Password Change Notification"
 
 	// Format client information for email
 	clientInfoText := "未知"
@@ -124,7 +124,7 @@ func SendPasswordChangeNotification(email, username string, clientInfo *ClientIn
 }
 
 func SendPasswordResetNotification(email, username, newPassword string) error {
-	subject := "[橘測評OJ] 密碼重置通知 - Password Reset Notification"
+	subject := "[橘評測 OJ] 密碼重置通知 - Password Reset Notification"
 
 	body := fmt.Sprintf(`
 		<html>
