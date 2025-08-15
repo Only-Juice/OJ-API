@@ -550,6 +550,20 @@ func GetUserQuestionByID(c *gin.Context) {
 	})
 }
 
+type AddQuestionScript struct {
+	CompileScript string `json:"compile_script" example:"script example"`
+	ExecuteScript string `json:"execute_script" example:"script example"`
+	ScoreScript   string `json:"score_script" example:"script example"`
+}
+
+type AddQuestionLimit struct {
+	Memory      *uint `json:"memory" example:"262144" description:"Memory limit in KB"`
+	StackMemory *uint `json:"stack_memory" example:"8192" description:"Stack memory limit in KB"`
+	Time        *uint `json:"time" example:"1000" description:"CPU time limit in ms"`
+	WallTime    *uint `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
+	FileSize    *uint `json:"file_size" example:"10240" description:"Output file size limit in KB"`
+}
+
 type AddQuestionRequest struct {
 	Title       string    `json:"title" validate:"required" example:"Question Title"`
 	Description string    `json:"description" validate:"required" example:"Question Description"`
@@ -557,6 +571,8 @@ type AddQuestionRequest struct {
 	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
 	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
 	IsActive    bool      `json:"is_active" example:"true"`
+	AddQuestionScript
+	AddQuestionLimit
 }
 
 type AddQuestionResponse struct {
@@ -636,6 +652,51 @@ func AddQuestion(c *gin.Context) {
 		StartTime:   newquestion.StartTime,
 		EndTime:     newquestion.EndTime,
 		IsActive:    req.IsActive,
+	}
+
+	questionInfo := models.QuestionTestScript{
+		QuestionID:    response.Id,
+		CompileScript: req.CompileScript,
+		ExecuteScript: req.ExecuteScript,
+		ScoreScript:   req.ScoreScript,
+	}
+
+	if req.Memory != nil {
+		questionInfo.Memory = *req.Memory
+	} else {
+		questionInfo.Memory = 10240
+	}
+
+	if req.StackMemory != nil {
+		questionInfo.StackMemory = *req.StackMemory
+	} else {
+		questionInfo.StackMemory = 5120
+	}
+
+	if req.Time != nil {
+		questionInfo.Time = *req.Time
+	} else {
+		questionInfo.Time = 1000
+	}
+
+	if req.WallTime != nil {
+		questionInfo.WallTime = *req.WallTime
+	} else {
+		questionInfo.WallTime = 3000
+	}
+
+	if req.FileSize != nil {
+		questionInfo.FileSize = *req.FileSize
+	} else {
+		questionInfo.FileSize = 10240
+	}
+
+	if err := db.Create(&questionInfo).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to create question limit",
+		})
+		return
 	}
 
 	c.JSON(200, ResponseHTTP{
@@ -853,7 +914,7 @@ func GetQuestionTestScript(c *gin.Context) {
 		Success: true,
 		Message: "Question test script fetched successfully",
 		Data: QuestionTestScript{
-			TestScript: questionTestScript.TestScript,
+			TestScript: questionTestScript.CompileScript,
 		},
 	})
 }

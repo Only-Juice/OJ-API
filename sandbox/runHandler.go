@@ -91,7 +91,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	defer cancel()
 
 	// saving code as file
-	compileScript := []byte(cmd.TestScript)
+	compileScript := []byte(cmd.CompileScript)
 	codeID, err := WriteToTempFile(compileScript, boxID)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -298,8 +298,8 @@ func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 	filepath := filepath.Join(path, filename)
 	var prettyJSON []byte
 	var tmp interface{}
-	if err := json.Unmarshal(row.ScoreScript, &tmp); err != nil {
-		prettyJSON = row.ScoreScript
+	if err := json.Unmarshal([]byte(row.ScoreScript), &tmp); err != nil {
+		prettyJSON = []byte(row.ScoreScript)
 	} else {
 		prettyJSON, err = json.MarshalIndent(tmp, "", "  ")
 		if err != nil {
