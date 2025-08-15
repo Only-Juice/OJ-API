@@ -551,7 +551,7 @@ func GetUserQuestionByID(c *gin.Context) {
 }
 
 type AddQuestionScript struct {
-	TestScript    string `json:"test_script" example:"script example"`
+	CompileScript string `json:"compile_script" example:"script example"`
 	ExecuteScript string `json:"execute_script" example:"script example"`
 	ScoreScript   string `json:"score_script" example:"script example"`
 }
@@ -656,7 +656,7 @@ func AddQuestion(c *gin.Context) {
 
 	questionInfo := models.QuestionTestScript{
 		QuestionID:    response.Id,
-		TestScript:    req.TestScript,
+		CompileScript: req.CompileScript,
 		ExecuteScript: req.ExecuteScript,
 		ScoreScript:   req.ScoreScript,
 	}
@@ -914,7 +914,7 @@ func GetQuestionTestScript(c *gin.Context) {
 		Success: true,
 		Message: "Question test script fetched successfully",
 		Data: QuestionTestScript{
-			TestScript: questionTestScript.TestScript,
+			TestScript: questionTestScript.CompileScript,
 		},
 	})
 }

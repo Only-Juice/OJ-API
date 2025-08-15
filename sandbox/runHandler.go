@@ -91,7 +91,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	defer cancel()
 
 	// saving code as file
-	compileScript := []byte(cmd.TestScript)
+	compileScript := []byte(cmd.CompileScript)
 	codeID, err := WriteToTempFile(compileScript, boxID)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{

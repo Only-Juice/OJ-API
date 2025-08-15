@@ -397,6 +397,9 @@ definitions:
     type: object
   handlers.AddQuestionRequest:
     properties:
+      compile_script:
+        example: script example
+        type: string
       description:
         example: Question Description
         type: string
@@ -426,9 +429,6 @@ definitions:
         type: integer
       start_time:
         example: "2006-01-02T15:04:05Z"
-        type: string
-      test_script:
-        example: script example
         type: string
       time:
         example: 1000
@@ -1098,6 +1098,8 @@ definitions:
     type: object
   models.QuestionTestScript:
     properties:
+      compile_script:
+        type: string
       execute_script:
         type: string
       file_size:
@@ -1114,8 +1116,6 @@ definitions:
         type: string
       stack_memory:
         type: integer
-      test_script:
-        type: string
       time:
         type: integer
       wall_time:

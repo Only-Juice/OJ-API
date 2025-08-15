@@ -3531,6 +3531,10 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "compile_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
                 "description": {
                     "type": "string",
                     "example": "Question Description"
@@ -3570,10 +3574,6 @@ const docTemplate = `{
                 "start_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z"
-                },
-                "test_script": {
-                    "type": "string",
-                    "example": "script example"
                 },
                 "time": {
                     "type": "integer",
@@ -4600,6 +4600,9 @@ const docTemplate = `{
         "models.QuestionTestScript": {
             "type": "object",
             "properties": {
+                "compile_script": {
+                    "type": "string"
+                },
                 "execute_script": {
                     "type": "string"
                 },
@@ -4623,9 +4626,6 @@ const docTemplate = `{
                 },
                 "stack_memory": {
                     "type": "integer"
-                },
-                "test_script": {
-                    "type": "string"
                 },
                 "time": {
                     "type": "integer"
