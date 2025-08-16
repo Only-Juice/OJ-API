@@ -317,7 +317,7 @@ func getOAuth2Config() *oauth2.Config {
 		ClientID:     giteaConfig.ClientID,
 		ClientSecret: giteaConfig.ClientSecret,
 		RedirectURL:  config.Config("OAUTH_CALLBACK_URL"),
-		Scopes:       []string{"user:email", "read:user"},
+		Scopes:       []string{"read:user"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  giteaConfig.URL + "/login/oauth/authorize",
 			TokenURL: giteaConfig.URL + "/login/oauth/access_token",
@@ -431,6 +431,33 @@ func OAuthCallback(c *gin.Context) {
 			Success: false,
 			Message: "No Gitea token found",
 		})
+		return
+	}
+
+	// check Gitea Login
+	var giteaToken string
+	giteaToken, err = utils.GetToken(existingUser.ID)
+	if err != nil {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Failed to get Gitea token",
+		})
+		return
+	}
+	client, err = gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(giteaToken),
+	)
+	if err != nil {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Failed to create Gitea client",
+		})
+		return
+	}
+	giteaUser, _, err = client.GetMyUserInfo()
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.Abort()
 		return
 	}
 
