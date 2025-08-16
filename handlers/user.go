@@ -583,6 +583,11 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
+	if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
+		// Log error but don't fail the request
+		utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password reset successfully",

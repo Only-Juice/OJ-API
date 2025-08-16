@@ -43,7 +43,7 @@ func SendResetEmail(email, token string) error {
 				</p>
 				
 				<p style="font-size: 14px; color: #888; margin-top: 25px;">
-					⚠️ 此連結將在24小時後失效。如果您並未請求重置密碼，請忽略此郵件。
+					⚠️ 此連結將在5分鐘後失效。如果您並未請求重置密碼，請忽略此郵件。
 				</p>
 			</div>
 			
