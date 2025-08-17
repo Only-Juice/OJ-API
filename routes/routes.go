@@ -44,7 +44,7 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 		}
 
 		// If no JWT found and required, return unauthorized
-		if haveAuth && isRequired {
+		if haveAuth && isRequired && jwt == "" {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Missing Authorization header or access token cookie",
@@ -55,7 +55,16 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 
 		var jwtClaims *utils.JWTClaims
 		if !haveAuth {
-			jwtClaims = nil
+			if isRequired {
+				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Missing Authorization header or access token cookie",
+				})
+				c.Abort()
+				return
+			} else {
+				jwtClaims = nil
+			}
 		} else {
 			// Validate access token specifically
 			var err error
