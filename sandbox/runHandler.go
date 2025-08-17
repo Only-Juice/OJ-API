@@ -144,8 +144,13 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 
 	LogWithLocation("Start Execute")
 
-	executeScript := append([]byte(cmd.ExecuteScript), []byte("\nrm build -rf")...)
-	execodeID, err := WriteToTempFile([]byte(executeScript), boxID)
+	//executeScript := append([]byte(cmd.ExecuteScript), []byte("\n/utils/grp_parser /build/grp/ut_*.json /utils/score.json")...)
+	execodeID, err := WriteToTempFile([]byte(cmd.ExecuteScript), boxID)
+
+	fmt.Println("=== Final Execute Script ===")
+	fmt.Println(string(cmd.ExecuteScript))
+	fmt.Println("============================")
+
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -155,7 +160,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	}
 	defer os.Remove(shellFilename(execodeID, boxID))
 
-	s.runExecute(boxID, ctx, shellFilename(execodeID, boxID), []byte(boxRoot))
+	s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
 
 	/*
 
@@ -217,7 +222,7 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 		Where("git_repo_url = ?", work.Repo).Take(&cmd).Error; err != nil {
 		db.Model(&work.UQR).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
+			Message: fmt.Sprintf("Wo ji had da for %v: %v", work.Repo, err),
 		})
 		s.Release(boxID)
 		return
@@ -261,14 +266,20 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	return true, string(out)
 }
 
-func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
+func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
-		"--fsize=5120",
+		fmt.Sprintf("--fsize=%v", qt.FileSize),
 		"--wait",
 		"--processes=100",
-		"--open-files=0",
+		"--open-files=64",
 		"--env=PATH",
+		"--stdout=stdout.txt",
+		"--stderr=stderr.txt",
+		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
+		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
+		//fmt.Sprintf("--mem=%v", qt.Memory),
+		//fmt.Sprintf("--stack=%v", qt.StackMemory),
 	}
 
 	if len(codePath) > 0 {
@@ -278,7 +289,7 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, shellCommand string, 
 			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
 	}
 
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", shellCommand)
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand)
 
 	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
