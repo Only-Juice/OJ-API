@@ -45,6 +45,12 @@ type LoginRequest struct {
 	Token    string `json:"token" example:""` // Optional token for API access
 }
 
+type LoginResponse struct {
+	AccessToken   string `json:"access_token"`
+	RefreshToken  string `json:"refresh_token"`
+	ResetPassword bool   `json:"reset_password"`
+}
+
 // Use basic authentication or token to access the Gitea API
 // @Summary	User login with username and password
 // @Description Use basic authentication or token to login and get access token and refresh token
@@ -52,7 +58,7 @@ type LoginRequest struct {
 // @Accept		json
 // @Produce	json
 // @Param		LoginRequest	body		LoginRequest	true	"Login Request"
-// @Success	200		{object}	ResponseHTTP{} "Return access token and refresh token"
+// @Success	200		{object}	ResponseHTTP{data=LoginResponse} "Return access token and refresh token"
 // @Failure	503
 // @Router		/api/auth/login [post]
 func AuthBasic(c *gin.Context) {
@@ -185,9 +191,10 @@ func AuthBasic(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Login successfully",
-		Data: gin.H{
-			"access_token":  accessToken,
-			"refresh_token": refreshToken,
+		Data: LoginResponse{
+			AccessToken:   accessToken,
+			RefreshToken:  refreshToken,
+			ResetPassword: existingUser.ResetPassword,
 		},
 	})
 }

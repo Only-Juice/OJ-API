@@ -832,6 +832,15 @@ definitions:
         example: username
         type: string
     type: object
+  handlers.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      reset_password:
+        type: boolean
+    type: object
   handlers.PatchQuestionRequest:
     properties:
       description:
@@ -1105,6 +1114,8 @@ definitions:
         type: boolean
       refresh_token:
         type: string
+      reset_password:
+        type: boolean
       user_name:
         type: string
     type: object
@@ -1284,7 +1295,12 @@ paths:
         "200":
           description: Return access token and refresh token
           schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.LoginResponse'
+              type: object
         "503":
           description: Service Unavailable
       summary: User login with username and password

@@ -298,7 +298,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Return access token and refresh token",
                         "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.LoginResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "503": {
@@ -4215,6 +4227,20 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "reset_password": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PatchQuestionRequest": {
             "type": "object",
             "properties": {
@@ -4668,6 +4694,9 @@ const docTemplate = `{
                 },
                 "refresh_token": {
                     "type": "string"
+                },
+                "reset_password": {
+                    "type": "boolean"
                 },
                 "user_name": {
                     "type": "string"

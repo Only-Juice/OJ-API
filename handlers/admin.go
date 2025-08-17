@@ -115,6 +115,16 @@ func ResetUserPassword(c *gin.Context) {
 		utils.Warnf("Failed to send password reset notification email to %s: %v", user.Email, err)
 	}
 
+	// Update user's reset password status
+	user.ResetPassword = true
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Data: ResetUserPasswordDTO{
