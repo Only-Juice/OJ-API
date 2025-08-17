@@ -142,8 +142,8 @@ func ValidateResetToken(encryptedToken string) (uint, error) {
 		return 0, errors.New("invalid token format")
 	}
 
-	// Check if token has expired (24 hours)
-	expirationTime := time.Unix(timestamp, 0).Add(24 * time.Hour)
+	// Check if token has expired (5 minutes)
+	expirationTime := time.Unix(timestamp, 0).Add(5 * time.Minute)
 	if time.Now().After(expirationTime) {
 		return 0, errors.New("reset token has expired")
 	}

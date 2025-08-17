@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/md5"
 	"crypto/rand"
+	"encoding/csv"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -115,6 +117,16 @@ func ResetUserPassword(c *gin.Context) {
 		utils.Warnf("Failed to send password reset notification email to %s: %v", user.Email, err)
 	}
 
+	// Update user's reset password status
+	user.ResetPassword = true
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Data: ResetUserPasswordDTO{
@@ -213,7 +225,7 @@ func GetAllUserInfo(c *gin.Context) {
 		return
 	}
 
-	if err := db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	if err := db.Limit(limit).Offset(offset).Order("is_admin DESC, id ASC").Find(&users).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "User not found",
@@ -335,4 +347,106 @@ func UpdateUserInfo(c *gin.Context) {
 		Data:    user,
 		Message: "User info updated successfully",
 	})
+}
+
+// Export Question Score
+// @Summary Export question score
+// @Description Export question score to CSV or XLSX
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path int true "Question ID"
+// @Param format query string false "Export format: csv or xlsx" default(csv)
+// @Success 200 {file} application/csv
+// @Success 200 {file} application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Failure 400
+// @Failure 401
+// @Failure 403
+// @Failure 500
+// @Router /api/admin/questions/{id}/export [get]
+// @Security BearerAuth
+func ExportQuestionScore(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	db := database.DBConn
+	id := c.Param("id")
+	format := c.DefaultQuery("format", "csv")
+
+	// Validate format parameter
+	if format != "csv" && format != "xlsx" {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid format. Supported formats: csv, xlsx",
+		})
+		return
+	}
+
+	var question models.Question
+	if err := db.First(&question, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	// Fetch question scores with earliest submit time for highest score
+	var scores []utils.ExportQuestionScoreResponse
+	if err := db.Table("user_question_relations UQR").
+		Select("U.user_name as user_name, UQR.git_user_repo_url as git_user_repo_url, COALESCE(MAX(UQT.score), 0) AS score, MIN(CASE WHEN UQT.score = (SELECT MAX(score) FROM user_question_tables WHERE uqr_id = UQR.id) THEN UQT.created_at END) AS earliest_best_submit_time").
+		Where("UQR.question_id = ?", question.ID).
+		Joins("JOIN users U ON U.id = UQR.user_id").
+		Joins("LEFT JOIN user_question_tables UQT ON UQT.uqr_id = UQR.id").
+		Group("U.user_name, UQR.git_user_repo_url").
+		Find(&scores).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to fetch question scores",
+		})
+		return
+	}
+
+	if format == "csv" {
+		// Generate CSV
+		var csvData bytes.Buffer
+		// Add UTF-8 BOM for proper encoding
+		csvData.Write([]byte{0xEF, 0xBB, 0xBF})
+		writer := csv.NewWriter(&csvData)
+
+		// Write CSV header
+		writer.Write([]string{"User Name", "Git User Repo URL", "Score", "Earliest Best Submit Time"})
+
+		// Write CSV rows
+		for _, score := range scores {
+			writer.Write([]string{
+				score.UserName,
+				score.GitUserRepoURL,
+				strconv.FormatFloat(score.Score, 'f', 2, 64),
+				score.EarliestBestSubmitTime.Format("2006-01-02 15:04:05"),
+			})
+		}
+
+		// Flush the writer to ensure all data is written to the buffer
+		writer.Flush()
+
+		// Set response headers for CSV
+		c.Header("Content-Type", "application/csv")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"question_%d_%s.csv\"", question.ID, time.Now().Format("20060102_150405")))
+		c.String(http.StatusOK, csvData.String())
+	} else {
+		// Generate XLSX
+		if err := utils.ExportQuestionScoreToXLSX(c, question.ID, scores); err != nil {
+			c.JSON(http.StatusInternalServerError, ResponseHTTP{
+				Success: false,
+				Message: "Failed to generate XLSX file",
+			})
+			return
+		}
+	}
 }

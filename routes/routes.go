@@ -22,10 +22,12 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		var jwt string
+		var haveAuth bool
 
 		// First, try to get JWT from Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
+			haveAuth = true
 			const bearerPrefix = "Bearer "
 			if len(authHeader) > len(bearerPrefix) && authHeader[:len(bearerPrefix)] == bearerPrefix {
 				jwt = authHeader[len(bearerPrefix):]
@@ -36,12 +38,13 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 		if jwt == "" {
 			cookie, err := c.Cookie("access_token")
 			if err == nil {
+				haveAuth = true
 				jwt = cookie
 			}
 		}
 
 		// If no JWT found and required, return unauthorized
-		if jwt == "" && isRequired {
+		if haveAuth && isRequired && jwt == "" {
 			c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 				Success: false,
 				Message: "Missing Authorization header or access token cookie",
@@ -50,12 +53,23 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 			return
 		}
 
-		// Validate access token specifically
-		jwtClaims, err := utils.ValidateAccessToken(jwt)
-		if err != nil {
-			if !isRequired {
-				jwtClaims = nil
+		var jwtClaims *utils.JWTClaims
+		if !haveAuth {
+			if isRequired {
+				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
+					Success: false,
+					Message: "Missing Authorization header or access token cookie",
+				})
+				c.Abort()
+				return
 			} else {
+				jwtClaims = nil
+			}
+		} else {
+			// Validate access token specifically
+			var err error
+			jwtClaims, err = utils.ValidateAccessToken(jwt)
+			if err != nil {
 				c.JSON(http.StatusUnauthorized, handlers.ResponseHTTP{
 					Success: false,
 					Message: "Invalid access token",
@@ -145,12 +159,14 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/auth/login", handlers.AuthBasic)
 		api.POST("/auth/refresh", handlers.RefreshToken)
 		api.POST("/auth/logout", handlers.Logout)
+		api.GET("/auth/oauth/callback", handlers.OAuthCallback)
 
 		// Admin routes
 		api.POST("/admin/:id/user/reset_password", AuthMiddleware(), handlers.ResetUserPassword)
 		api.GET("/admin/user", AuthMiddleware(), handlers.GetAllUserInfo)
 		api.GET("/admin/:id/user", AuthMiddleware(), handlers.GetUserInfo)
 		api.PATCH("/admin/:id/user", AuthMiddleware(), handlers.UpdateUserInfo)
+		api.GET("/admin/questions/:id/export", AuthMiddleware(), handlers.ExportQuestionScore)
 
 		// Exam routes
 		api.POST("/exams/admin", AuthMiddleware(), handlers.CreateExam)

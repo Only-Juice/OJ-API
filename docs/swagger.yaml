@@ -856,6 +856,15 @@ definitions:
         example: username
         type: string
     type: object
+  handlers.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      reset_password:
+        type: boolean
+    type: object
   handlers.PatchQuestionRequest:
     properties:
       description:
@@ -1137,6 +1146,8 @@ definitions:
         type: boolean
       refresh_token:
         type: string
+      reset_password:
+        type: boolean
       user_name:
         type: string
     type: object
@@ -1258,6 +1269,42 @@ paths:
       summary: Reset user password
       tags:
       - admin
+  /api/admin/questions/{id}/export:
+    get:
+      consumes:
+      - application/json
+      description: Export question score to CSV or XLSX
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: csv
+        description: 'Export format: csv or xlsx'
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Export question score
+      tags:
+      - admin
   /api/admin/user:
     get:
       consumes:
@@ -1316,7 +1363,12 @@ paths:
         "200":
           description: Return access token and refresh token
           schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.LoginResponse'
+              type: object
         "503":
           description: Service Unavailable
       summary: User login with username and password
@@ -1339,6 +1391,42 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
       summary: Logout user
+      tags:
+      - Auth
+  /api/auth/oauth/callback:
+    get:
+      description: Handle OAuth callback and complete authentication
+      parameters:
+      - description: Authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State parameter
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OAuth login successful
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      summary: Handle Gitea OAuth callback
       tags:
       - Auth
   /api/auth/refresh:

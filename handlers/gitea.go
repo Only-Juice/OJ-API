@@ -159,6 +159,42 @@ type BulkCreateUserResponse struct {
 	FailedUsers     map[string]string `json:"failed_users" example:"username1:error"`
 }
 
+func CreateUserAccessToken(username, email, password string) {
+	db := database.DBConn
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetBasicAuth(username, password),
+	)
+	if err != nil {
+		utils.Errorf("Failed to create Gitea client for user %s: %v", username, err)
+		return
+	}
+
+	var existingUser models.User
+	if err := db.Where(&models.User{UserName: username}).First(&existingUser).Error; err != nil {
+		existingUser = models.User{
+			UserName: username,
+			Email:    email,
+		}
+		db.Create(&existingUser)
+	}
+
+	if existingUser.GiteaToken == "" {
+		client.DeleteAccessToken("OJ-API")
+		token, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
+			Name:   "OJ-API",
+			Scopes: []gitea.AccessTokenScope{gitea.AccessTokenScopeAll},
+		})
+		if err != nil {
+			utils.Errorf("Failed to create access token for user %s: %v", username, err)
+			return
+		}
+		if err := utils.StoreToken(existingUser.ID, token.Token); err != nil {
+			utils.Errorf("Failed to store token for user %s: %v", username, err)
+			return
+		}
+	}
+}
+
 // Bulk create User
 // @Summary	Bulk create User
 // @Description Bulk create User
@@ -215,9 +251,10 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 
 	for _, username := range bulkUsers.Usernames {
 		_, _, err := client.AdminCreateUser(gitea.CreateUserOption{
-			Email:    username + "@" + bulkUsers.EmailDomain,
-			Username: username,
-			Password: bulkUsers.DefaultPassword,
+			Email:              username + "@" + bulkUsers.EmailDomain,
+			Username:           username,
+			Password:           bulkUsers.DefaultPassword,
+			MustChangePassword: func(b bool) *bool { return &b }(false),
 		})
 		if err != nil {
 			failedUsers[username] = err.Error()
@@ -229,6 +266,13 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 			})
 		}
 	}
+
+	go func() {
+		// Create access tokens sequentially after all users are created
+		for _, username := range successfulUsers {
+			CreateUserAccessToken(username, username+"@"+bulkUsers.EmailDomain, bulkUsers.DefaultPassword)
+		}
+	}()
 
 	c.JSON(200, ResponseHTTP{
 		Success: true,
@@ -322,6 +366,20 @@ func PostBulkCreateUserGiteav2(c *gin.Context) {
 
 		successfulUsers = append(successfulUsers, user.Username)
 	}
+
+	go func() {
+		// Create access tokens sequentially after all users are created
+		for _, user := range bulkUsers.User {
+			// Only create tokens for successfully created users
+			for _, successfulUser := range successfulUsers {
+				if user.Username == successfulUser {
+					CreateUserAccessToken(user.Username, user.Email, user.Password)
+					break
+				}
+			}
+		}
+	}()
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Data: BulkCreateUserResponse{
