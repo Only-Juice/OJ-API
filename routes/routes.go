@@ -166,6 +166,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/admin/user", AuthMiddleware(), handlers.GetAllUserInfo)
 		api.GET("/admin/:id/user", AuthMiddleware(), handlers.GetUserInfo)
 		api.PATCH("/admin/:id/user", AuthMiddleware(), handlers.UpdateUserInfo)
+		api.GET("/admin/questions/:id/export", AuthMiddleware(), handlers.ExportQuestionScore)
 
 		// Exam routes
 		api.POST("/exams/admin", AuthMiddleware(), handlers.CreateExam)
