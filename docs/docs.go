@@ -1889,14 +1889,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/questions/admin/{ID}/test_script": {
+        "/api/questions/admin/{ID}/scripts": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get the test script for a question",
+                "description": "Get the scripts for a question. Including compile script,execute script and score script.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1906,11 +1906,11 @@ const docTemplate = `{
                 "tags": [
                     "Question"
                 ],
-                "summary": "Get the test script for a question",
+                "summary": "Get the scripts for a question.",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID of the Question to get the test script for",
+                        "description": "ID of the Question to get the scripts for",
                         "name": "ID",
                         "in": "path",
                         "required": true
@@ -1928,7 +1928,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handlers.QuestionTestScript"
+                                            "$ref": "#/definitions/handlers.QuestionScripts"
                                         }
                                     }
                                 }
@@ -4332,6 +4332,10 @@ const docTemplate = `{
         "handlers.PatchQuestionRequest": {
             "type": "object",
             "properties": {
+                "compile_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
                 "description": {
                     "type": "string",
                     "example": "Question Description"
@@ -4339,6 +4343,14 @@ const docTemplate = `{
                 "end_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z"
+                },
+                "execute_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
+                "file_size": {
+                    "type": "integer",
+                    "example": 10240
                 },
                 "git_repo_url": {
                     "type": "string",
@@ -4348,13 +4360,33 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "memory": {
+                    "type": "integer",
+                    "example": 262144
+                },
+                "score_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
+                "stack_memory": {
+                    "type": "integer",
+                    "example": 8192
+                },
                 "start_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z"
                 },
+                "time": {
+                    "type": "integer",
+                    "example": 1000
+                },
                 "title": {
                     "type": "string",
                     "example": "Question Title"
+                },
+                "wall_time": {
+                    "type": "integer",
+                    "example": 3000
                 }
             }
         },
@@ -4385,14 +4417,20 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.QuestionTestScript": {
+        "handlers.QuestionScripts": {
             "type": "object",
-            "required": [
-                "test_script"
-            ],
             "properties": {
-                "test_script": {
-                    "type": "string"
+                "compile_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
+                "execute_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
+                "score_script": {
+                    "type": "string",
+                    "example": "script example"
                 }
             }
         },
