@@ -223,7 +223,7 @@ func GetAllUserInfo(c *gin.Context) {
 		return
 	}
 
-	if err := db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	if err := db.Limit(limit).Offset(offset).Order("is_admin DESC, id ASC").Find(&users).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "User not found",
