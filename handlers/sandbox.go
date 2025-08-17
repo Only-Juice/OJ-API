@@ -66,13 +66,13 @@ func PostSandboxCmd(c *gin.Context) {
 
 		// If we get here, the question exists but doesn't have a test script
 		existingCmd = models.QuestionTestScript{
-			QuestionID: question.ID,
-			TestScript: cmd.Script,
+			QuestionID:    question.ID,
+			CompileScript: cmd.Script,
 		}
 		db.Create(&existingCmd)
 	} else {
 		// If the script exists, update it
-		existingCmd.TestScript = cmd.Script
+		existingCmd.CompileScript = cmd.Script
 		db.Save(&existingCmd)
 	}
 

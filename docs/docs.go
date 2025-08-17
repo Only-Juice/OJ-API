@@ -3531,6 +3531,10 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "compile_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
                 "description": {
                     "type": "string",
                     "example": "Question Description"
@@ -3538,6 +3542,14 @@ const docTemplate = `{
                 "end_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z"
+                },
+                "execute_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
+                "file_size": {
+                    "type": "integer",
+                    "example": 10240
                 },
                 "git_repo_url": {
                     "type": "string",
@@ -3547,13 +3559,33 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "memory": {
+                    "type": "integer",
+                    "example": 262144
+                },
+                "score_script": {
+                    "type": "string",
+                    "example": "script example"
+                },
+                "stack_memory": {
+                    "type": "integer",
+                    "example": 8192
+                },
                 "start_time": {
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z"
                 },
+                "time": {
+                    "type": "integer",
+                    "example": 1000
+                },
                 "title": {
                     "type": "string",
                     "example": "Question Title"
+                },
+                "wall_time": {
+                    "type": "integer",
+                    "example": 3000
                 }
             }
         },
@@ -4568,10 +4600,19 @@ const docTemplate = `{
         "models.QuestionTestScript": {
             "type": "object",
             "properties": {
+                "compile_script": {
+                    "type": "string"
+                },
                 "execute_script": {
                     "type": "string"
                 },
+                "file_size": {
+                    "type": "integer"
+                },
                 "id": {
+                    "type": "integer"
+                },
+                "memory": {
                     "type": "integer"
                 },
                 "question": {
@@ -4581,13 +4622,16 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "score_script": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "test_script": {
                     "type": "string"
+                },
+                "stack_memory": {
+                    "type": "integer"
+                },
+                "time": {
+                    "type": "integer"
+                },
+                "wall_time": {
+                    "type": "integer"
                 }
             }
         },
