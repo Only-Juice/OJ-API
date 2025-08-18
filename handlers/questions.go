@@ -713,6 +713,15 @@ type PatchQuestionRequest struct {
 	StartTime   *time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
 	EndTime     *time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
 	IsActive    *bool      `json:"is_active" example:"true"`
+
+	CompileScript *string `json:"compile_script" example:"script example"`
+	ExecuteScript *string `json:"execute_script" example:"script example"`
+	ScoreScript   *string `json:"score_script" example:"script example"`
+	Memory        *uint   `json:"memory" example:"262144" description:"Memory limit in KB"`
+	StackMemory   *uint   `json:"stack_memory" example:"8192" description:"Stack memory limit in KB"`
+	Time          *uint   `json:"time" example:"1000" description:"CPU time limit in ms"`
+	WallTime      *uint   `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
+	FileSize      *uint   `json:"file_size" example:"10240" description:"Output file size limit in KB"`
 }
 
 // PatchQuestion is a function to update a question
@@ -760,6 +769,15 @@ func PatchQuestion(c *gin.Context) {
 		return
 	}
 
+	var questionscript models.QuestionTestScript
+	if err := db.Where("question_id = ?", ID).First(&questionscript).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question Info not found",
+		})
+		return
+	}
+
 	var updateQuestion PatchQuestionRequest
 	if err := c.ShouldBindJSON(&updateQuestion); err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -788,10 +806,43 @@ func PatchQuestion(c *gin.Context) {
 		question.IsActive = *updateQuestion.IsActive
 	}
 
+	if updateQuestion.CompileScript != nil {
+		questionscript.CompileScript = *updateQuestion.CompileScript
+	}
+	if updateQuestion.ScoreScript != nil {
+		questionscript.ScoreScript = *updateQuestion.ScoreScript
+	}
+	if updateQuestion.ExecuteScript != nil {
+		questionscript.ExecuteScript = *updateQuestion.ExecuteScript
+	}
+	if updateQuestion.Time != nil {
+		questionscript.Time = *updateQuestion.Time
+	}
+	if updateQuestion.WallTime != nil {
+		questionscript.WallTime = *updateQuestion.WallTime
+	}
+	if updateQuestion.Memory != nil {
+		questionscript.Memory = *updateQuestion.Memory
+	}
+	if updateQuestion.StackMemory != nil {
+		questionscript.StackMemory = *updateQuestion.StackMemory
+	}
+	if updateQuestion.FileSize != nil {
+		questionscript.FileSize = *updateQuestion.FileSize
+	}
+
 	if err := db.Save(&question).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to update question",
+		})
+		return
+	}
+
+	if err := db.Save(&questionscript).Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update question scripts and limit",
 		})
 		return
 	}
@@ -862,25 +913,27 @@ func DeleteQuestion(c *gin.Context) {
 	})
 }
 
-type QuestionTestScript struct {
-	TestScript string `json:"test_script" validate:"required"`
+type QuestionScripts struct {
+	CompileScript string `json:"compile_script" example:"script example"`
+	ExecuteScript string `json:"execute_script" example:"script example"`
+	ScoreScript   string `json:"score_script" example:"script example"`
 }
 
-// GetQuestionTestScript is a function to get the test script for a question
-// @Summary		Get the test script for a question
-// @Description	Get the test script for a question
+// GetQuestionScripts is a function to get the scripts for a question
+// @Summary		Get the scripts for a question.
+// @Description	Get the scripts for a question. Including compile script,execute script and score script.
 // @Tags			Question
 // @Accept			json
 // @Produce		json
-// @Param			ID	path	int	true	"ID of the Question to get the test script for"
-// @Success		200		{object}	ResponseHTTP{data=QuestionTestScript}
+// @Param			ID	path	int	true	"ID of the Question to get the scripts for"
+// @Success		200		{object}	ResponseHTTP{data=QuestionScripts}
 // @Failure		400
 // @Failure		401
 // @Failure		404
 // @Failure		503
-// @Router			/api/questions/admin/{ID}/test_script [get]
+// @Router			/api/questions/admin/{ID}/scripts [get]
 // @Security		BearerAuth
-func GetQuestionTestScript(c *gin.Context) {
+func GetQuestionScripts(c *gin.Context) {
 	db := database.DBConn
 	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
 	if !jwtClaims.IsAdmin {
@@ -913,8 +966,10 @@ func GetQuestionTestScript(c *gin.Context) {
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question test script fetched successfully",
-		Data: QuestionTestScript{
-			TestScript: questionTestScript.CompileScript,
+		Data: QuestionScripts{
+			CompileScript: questionTestScript.CompileScript,
+			ExecuteScript: questionTestScript.ExecuteScript,
+			ScoreScript:   questionTestScript.ScoreScript,
 		},
 	})
 }

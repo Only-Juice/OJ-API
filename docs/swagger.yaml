@@ -867,24 +867,48 @@ definitions:
     type: object
   handlers.PatchQuestionRequest:
     properties:
+      compile_script:
+        example: script example
+        type: string
       description:
         example: Question Description
         type: string
       end_time:
         example: "2006-01-02T15:04:05Z"
         type: string
+      execute_script:
+        example: script example
+        type: string
+      file_size:
+        example: 10240
+        type: integer
       git_repo_url:
         example: user_name/repo_name
         type: string
       is_active:
         example: true
         type: boolean
+      memory:
+        example: 262144
+        type: integer
+      score_script:
+        example: script example
+        type: string
+      stack_memory:
+        example: 8192
+        type: integer
       start_time:
         example: "2006-01-02T15:04:05Z"
         type: string
+      time:
+        example: 1000
+        type: integer
       title:
         example: Question Title
         type: string
+      wall_time:
+        example: 3000
+        type: integer
     type: object
   handlers.QuestionScore:
     properties:
@@ -906,12 +930,17 @@ definitions:
     - question_title
     - score
     type: object
-  handlers.QuestionTestScript:
+  handlers.QuestionScripts:
     properties:
-      test_script:
+      compile_script:
+        example: script example
         type: string
-    required:
-    - test_script
+      execute_script:
+        example: script example
+        type: string
+      score_script:
+        example: script example
+        type: string
     type: object
   handlers.ResetPasswordRequest:
     properties:
@@ -2297,13 +2326,14 @@ paths:
       summary: Update a question
       tags:
       - Question
-  /api/questions/admin/{ID}/test_script:
+  /api/questions/admin/{ID}/scripts:
     get:
       consumes:
       - application/json
-      description: Get the test script for a question
+      description: Get the scripts for a question. Including compile script,execute
+        script and score script.
       parameters:
-      - description: ID of the Question to get the test script for
+      - description: ID of the Question to get the scripts for
         in: path
         name: ID
         required: true
@@ -2318,7 +2348,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/handlers.QuestionTestScript'
+                  $ref: '#/definitions/handlers.QuestionScripts'
               type: object
         "400":
           description: Bad Request
@@ -2330,7 +2360,7 @@ paths:
           description: Service Unavailable
       security:
       - BearerAuth: []
-      summary: Get the test script for a question
+      summary: Get the scripts for a question.
       tags:
       - Question
   /api/questions/admin/question:
