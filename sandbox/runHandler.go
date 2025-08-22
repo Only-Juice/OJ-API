@@ -142,15 +142,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		Execute the code
 	*/
 
-	LogWithLocation("Start Execute")
-
-	//executeScript := append([]byte(cmd.ExecuteScript), []byte("\n/utils/grp_parser /build/grp/ut_*.json /utils/score.json")...)
 	execodeID, err := WriteToTempFile([]byte(cmd.ExecuteScript), boxID)
-
-	fmt.Println("=== Final Execute Script ===")
-	fmt.Println(string(cmd.ExecuteScript))
-	fmt.Println("============================")
-
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -161,6 +153,35 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	defer os.Remove(shellFilename(execodeID, boxID))
 
 	s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
+
+	/*
+	*
+	*	Part for calculate score.
+	*
+	 */
+
+	ScoreScript :=
+		`
+	#!/bin/bash
+	set -e
+
+	SCORE_FILE="./utils/score.json"
+
+	for json in ./build/grp/ut_*.json; do
+		echo "🔍 Parsing: $json"
+		./utils/grp_parser "$json" "$SCORE_FILE"
+	done
+	`
+	scoreScriptID, err := WriteToTempFile([]byte(ScoreScript), boxID)
+	if err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+		})
+		return
+	}
+	defer os.Remove(shellFilename(execodeID, boxID))
+	s.runScore(boxID, ctx, cmd, shellFilename(scoreScriptID, boxID), []byte(boxRoot))
 
 	/*
 
@@ -233,7 +254,7 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
-		"--fsize=5120",
+		"--fsize=10240",
 		"--wait",
 		"--processes",
 		"--open-files=0",
@@ -278,8 +299,40 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 		"--stderr=stderr.txt",
 		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
 		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
-		//fmt.Sprintf("--mem=%v", qt.Memory),
-		//fmt.Sprintf("--stack=%v", qt.StackMemory),
+		fmt.Sprintf("--mem=%v", qt.Memory),
+		fmt.Sprintf("--stack=%v", qt.StackMemory),
+	}
+
+	if len(codePath) > 0 {
+		cmdArgs = append(cmdArgs,
+			fmt.Sprintf("--chdir=%v", string(codePath)),
+			fmt.Sprintf("--dir=%v:rw", string(codePath)),
+			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+	}
+
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand)
+
+	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
+	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		utils.Errorf("Failed to run command: %v", err)
+		return "Execute with Error!", false
+	}
+
+	return string(out), true
+}
+
+func (s *Sandbox) runScore(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
+	cmdArgs := []string{
+		fmt.Sprintf("--box-id=%v", box),
+		fmt.Sprintf("--fsize=10240"),
+		"--wait",
+		"--processes=100",
+		"--open-files=64",
+		"--env=PATH",
 	}
 
 	if len(codePath) > 0 {
