@@ -73,10 +73,6 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	default:
 	}
 
-	db.Model(&userQuestion).Updates(models.UserQuestionTable{
-		JudgeTime: time.Now().UTC(),
-	})
-
 	boxRoot, _ := CopyCodeToBox(boxID, string(codePath))
 
 	defer s.Release(boxID)
