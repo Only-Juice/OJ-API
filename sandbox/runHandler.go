@@ -152,7 +152,15 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	}
 	defer os.Remove(shellFilename(execodeID, boxID))
 
-	s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
+	exeResult, success := s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
+
+	if !success {
+		db.Model(&userQuestion).Updates(map[string]interface{}{
+			"score":   0,
+			"message": "Execute failed:\n" + exeResult,
+		})
+		return
+	}
 
 	/*
 	*
@@ -251,7 +259,36 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 	s.runShellCommand(ctx, boxID, cmd, work.CodePath, work.UQR)
 }
 
+func getExecutables(root string) map[string]struct{} {
+	result := make(map[string]struct{})
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+
+		if info.IsDir() && strings.Contains(path, "CMakeFiles") {
+			return filepath.SkipDir
+		}
+		if err == nil && !info.IsDir() && info.Mode().IsRegular() && (info.Mode()&0o111 != 0) {
+			result[path] = struct{}{}
+		}
+		return nil
+	})
+	return result
+}
+
+func findDiff(old, new map[string]struct{}) []string {
+	var diff []string
+	for path := range new {
+		if _, ok := old[path]; !ok {
+			diff = append(diff, path)
+		}
+	}
+	return diff
+}
+
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
+
+	utils.Info(string(codePath))
+	init_file := getExecutables(string(codePath))
+
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
 		"--fsize=10240",
@@ -259,7 +296,6 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 		"--processes",
 		"--open-files=0",
 		"--env=PATH",
-		"--stderr-to-stdout",
 	}
 
 	if len(codePath) > 0 {
@@ -273,15 +309,14 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", scriptFile)
 
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
-
 	out, err := cmd.CombinedOutput()
 
-	if err != nil {
-		return false, err.Error() + "\n" + string(out)
-	}
+	time.Sleep(10 * time.Millisecond)
 
-	if strings.Contains(string(out), "error:") {
-		return false, string(out)
+	after_file := findDiff(init_file, getExecutables(string(codePath)))
+
+	if err != nil && len(after_file) == 0 {
+		return false, err.Error() + "\n" + string(out)
 	}
 
 	return true, string(out)
@@ -292,11 +327,9 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 		fmt.Sprintf("--box-id=%v", box),
 		fmt.Sprintf("--fsize=%v", qt.FileSize),
 		"--wait",
-		"--processes=100",
-		"--open-files=64",
+		"--processes=3",
+		"--open-files=16",
 		"--env=PATH",
-		"--stdout=stdout.txt",
-		"--stderr=stderr.txt",
 		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
 		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
 		fmt.Sprintf("--mem=%v", qt.Memory),
@@ -318,8 +351,7 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		utils.Errorf("Failed to run command: %v", err)
-		return "Execute with Error!", false
+		return fmt.Sprintf("%v\n%s", err, string(out)), false
 	}
 
 	return string(out), true
