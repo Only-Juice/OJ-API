@@ -128,15 +128,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		Compile the code
 	*/
 
-	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
-
-	if !success {
-		db.Model(&userQuestion).Updates(map[string]interface{}{
-			"score":   0,
-			"message": "Compilation Failed:\n" + compileOut,
-		})
-		return
-	}
+	compile_success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
 
 	/*
 		Execute the code
@@ -202,7 +194,17 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 
 	// read score from file
 	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", []byte(boxRoot)))
+
 	if err != nil {
+
+		if !compile_success {
+			db.Model(&userQuestion).Updates(map[string]interface{}{
+				"score":   0,
+				"message": "Compilation Failed:\n" + compileOut,
+			})
+			return
+		}
+
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
 			Message: fmt.Sprintf("Failed to read score: %v", err),
@@ -259,35 +261,7 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 	s.runShellCommand(ctx, boxID, cmd, work.CodePath, work.UQR)
 }
 
-func getExecutables(root string) map[string]struct{} {
-	result := make(map[string]struct{})
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-
-		if info.IsDir() && strings.Contains(path, "CMakeFiles") {
-			return filepath.SkipDir
-		}
-		if err == nil && !info.IsDir() && info.Mode().IsRegular() && (info.Mode()&0o111 != 0) {
-			result[path] = struct{}{}
-		}
-		return nil
-	})
-	return result
-}
-
-func findDiff(old, new map[string]struct{}) []string {
-	var diff []string
-	for path := range new {
-		if _, ok := old[path]; !ok {
-			diff = append(diff, path)
-		}
-	}
-	return diff
-}
-
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
-
-	utils.Info(string(codePath))
-	init_file := getExecutables(string(codePath))
 
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
@@ -311,11 +285,7 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
 	out, err := cmd.CombinedOutput()
 
-	time.Sleep(10 * time.Millisecond)
-
-	after_file := findDiff(init_file, getExecutables(string(codePath)))
-
-	if err != nil && len(after_file) == 0 {
+	if err != nil {
 		return false, err.Error() + "\n" + string(out)
 	}
 
