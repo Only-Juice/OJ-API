@@ -182,7 +182,7 @@ func GetUserInfo(c *gin.Context) {
 
 type GetAllUserInfoResponse struct {
 	Items      []models.User `json:"items"`
-	TotalCount int64         `json:"totalCount"`
+	TotalCount int64         `json:"total_count"`
 }
 
 // GetAllUserInfo shows all user information
