@@ -405,6 +405,11 @@ type GetQuestionByIDResponseData struct {
 	GitRepoURL  string `json:"git_repo_url" validate:"required"`
 	StartTime   string `json:"start_time" validate:"required" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339"`
 	EndTime     string `json:"end_time" validate:"required" example:"2006-01-02T15:04:05Z07:00" time_format:"RFC3339"`
+	Memory      uint   `json:"memory" example:"262144" description:"Memory limit in KB"`
+	StackMemory uint   `json:"stack_memory" example:"8192" description:"Stack memory limit in KB"`
+	Time        uint   `json:"time" example:"1000" description:"CPU time limit in ms"`
+	WallTime    uint   `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
+	FileSize    uint   `json:"file_size" example:"10240" description:"Output file size limit in KB"`
 }
 
 // GetQuestionByID is a function to get a question by ID
@@ -449,6 +454,15 @@ func GetQuestionByID(c *gin.Context) {
 		return
 	}
 
+	var questionTestScript models.QuestionTestScript
+	if err := db.Where("question_id = ?", ID).First(&questionTestScript).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question test script not found",
+		})
+		return
+	}
+
 	c.JSON(200, ResponseHTTP{
 		Success: true,
 		Message: "Question fetched successfully",
@@ -459,6 +473,11 @@ func GetQuestionByID(c *gin.Context) {
 			StartTime:   question.StartTime.Format(time.RFC3339),
 			EndTime:     question.EndTime.Format(time.RFC3339),
 			README:      GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
+			Memory:      questionTestScript.Memory,
+			StackMemory: questionTestScript.StackMemory,
+			Time:        questionTestScript.Time,
+			WallTime:    questionTestScript.WallTime,
+			FileSize:    questionTestScript.FileSize,
 		},
 	})
 }
