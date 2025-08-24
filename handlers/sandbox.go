@@ -13,12 +13,14 @@ import (
 
 type Sandbox struct {
 	SourceGitRepo string `json:"source_git_url" example:"user_name/repo_name" validate:"required"`
-	Script        string `json:"script" example:"#!/bin/bash\n\necho 'Hello, World!'" validate:"required"`
+	CompileScript string `json:"compilescript" example:"#!/bin/bash\n\necho 'Hello, World!'" validate:"required"`
+	ExecuteScript string `json:"executescript" example:"#!/bin/bash\n\necho 'Hello, World!'" validate:"required"`
+	ScoreScript   string `json:"scorescript" example:"#!/bin/bash\n\necho 'Hello, World!'" validate:"required"`
 }
 
-// Specify the shell command for the corresponding repo
-// @Summary		Specify the shell command for the corresponding repo
-// @Description	Specify the shell command for the corresponding repo
+// Specify the shell commands and limitation for the corresponding repo
+// @Summary		Specify the shell commands and limitation for the corresponding repo
+// @Description	Specify the shell commands and limitation for the corresponding repo
 // @Tags			Sandbox
 // @Accept			json
 // @Produce		json
@@ -67,12 +69,14 @@ func PostSandboxCmd(c *gin.Context) {
 		// If we get here, the question exists but doesn't have a test script
 		existingCmd = models.QuestionTestScript{
 			QuestionID:    question.ID,
-			CompileScript: cmd.Script,
+			CompileScript: cmd.CompileScript,
+			ExecuteScript: cmd.ExecuteScript,
+			ScoreScript:   cmd.ScoreScript,
 		}
 		db.Create(&existingCmd)
 	} else {
 		// If the script exists, update it
-		existingCmd.CompileScript = cmd.Script
+		existingCmd.CompileScript = cmd.CompileScript
 		db.Save(&existingCmd)
 	}
 
