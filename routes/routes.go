@@ -202,10 +202,11 @@ func RegisterRoutes(r *gin.Engine) {
 		api.PATCH("/questions/admin/:ID/question", AuthMiddleware(), handlers.PatchQuestion)
 		api.DELETE("/questions/admin/:ID/question", AuthMiddleware(), handlers.DeleteQuestion)
 		api.POST("/questions/admin/question", AuthMiddleware(), handlers.AddQuestion)
+		api.GET("/questions/admin/:ID/question_limit", AuthMiddleware(), handlers.GetQuestionLimitByID)
+		api.GET("/questions/admin/:ID/scripts", AuthMiddleware(), handlers.GetQuestionScripts)
 		api.GET("/questions/user", AuthMiddleware(), handlers.GetUsersQuestions)
 		api.GET("/questions/user/:ID/question", AuthMiddleware(), handlers.GetUserQuestionByID)
 		api.GET("/questions/uqr/:UQR_ID/question", AuthMiddleware(), handlers.GetQuestion)
-		api.GET("/questions/admin/:ID/scripts", AuthMiddleware(), handlers.GetQuestionScripts)
 
 		// Score routes
 		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
