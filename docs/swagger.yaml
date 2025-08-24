@@ -2340,6 +2340,38 @@ paths:
       summary: Update a question
       tags:
       - Question
+  /api/questions/admin/{ID}/question_limit:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve only public questions
+      parameters:
+      - description: ID of the Question to get
+        in: path
+        name: ID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.GetQuestionResponseData'
+              type: object
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get a question limitation by ID
+      tags:
+      - Question
   /api/questions/admin/{ID}/scripts:
     get:
       consumes:
