@@ -967,7 +967,19 @@ definitions:
     type: object
   handlers.Sandbox:
     properties:
-      script:
+      compilescript:
+        example: |-
+          #!/bin/bash
+
+          echo 'Hello, World!'
+        type: string
+      executescript:
+        example: |-
+          #!/bin/bash
+
+          echo 'Hello, World!'
+        type: string
+      scorescript:
         example: |-
           #!/bin/bash
 
@@ -977,7 +989,9 @@ definitions:
         example: user_name/repo_name
         type: string
     required:
-    - script
+    - compilescript
+    - executescript
+    - scorescript
     - source_git_url
     type: object
   handlers.Score:
@@ -2518,7 +2532,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Specify the shell command for the corresponding repo
+      description: Specify the shell commands and limitation for the corresponding
+        repo
       parameters:
       - description: Shell command
         in: body
@@ -2548,7 +2563,7 @@ paths:
           description: Service Unavailable
       security:
       - BearerAuth: []
-      summary: Specify the shell command for the corresponding repo
+      summary: Specify the shell commands and limitation for the corresponding repo
       tags:
       - Sandbox
   /api/sandbox/status:

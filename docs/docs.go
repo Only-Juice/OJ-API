@@ -2198,7 +2198,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Specify the shell command for the corresponding repo",
+                "description": "Specify the shell commands and limitation for the corresponding repo",
                 "consumes": [
                     "application/json"
                 ],
@@ -2208,7 +2208,7 @@ const docTemplate = `{
                 "tags": [
                     "Sandbox"
                 ],
-                "summary": "Specify the shell command for the corresponding repo",
+                "summary": "Specify the shell commands and limitation for the corresponding repo",
                 "parameters": [
                     {
                         "description": "Shell command",
@@ -4472,11 +4472,21 @@ const docTemplate = `{
         "handlers.Sandbox": {
             "type": "object",
             "required": [
-                "script",
+                "compilescript",
+                "executescript",
+                "scorescript",
                 "source_git_url"
             ],
             "properties": {
-                "script": {
+                "compilescript": {
+                    "type": "string",
+                    "example": "#!/bin/bash\n\necho 'Hello, World!'"
+                },
+                "executescript": {
+                    "type": "string",
+                    "example": "#!/bin/bash\n\necho 'Hello, World!'"
+                },
+                "scorescript": {
                     "type": "string",
                     "example": "#!/bin/bash\n\necho 'Hello, World!'"
                 },
