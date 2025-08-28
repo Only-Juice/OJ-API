@@ -1,7 +1,9 @@
 package sandbox
 
 import (
+	"OJ-API/config"
 	"OJ-API/database"
+	"OJ-API/gitclone"
 	"OJ-API/models"
 	"OJ-API/utils"
 	"context"
@@ -58,8 +60,21 @@ func (s *Sandbox) assignJob(ctx context.Context) {
 	}
 }
 
-func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd models.QuestionTestScript, codePath []byte, userQuestion models.UserQuestionTable) {
+type JudgeInfo struct {
+	QuestionInfo   models.QuestionTestScript
+	MotherCodePath string
+	BoxID          int
+	CodePath       []byte
+	UQR            models.UserQuestionTable
+}
+
+func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo) {
 	db := database.DBConn
+	userQuestion := judgeinfo.UQR
+	boxID := judgeinfo.BoxID
+	codePath := judgeinfo.CodePath
+	mothercodePath := judgeinfo.MotherCodePath
+	cmd := judgeinfo.QuestionInfo
 
 	// 檢查父 context 是否已經被取消，如果是則不開始新任務
 	select {
@@ -77,6 +92,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		JudgeTime: time.Now().UTC(),
 	})
 
+	CopyDir(mothercodePath+"/test", string(codePath)+"/test")
 	boxRoot, _ := CopyCodeToBox(boxID, string(codePath))
 
 	defer s.Release(boxID)
@@ -123,6 +139,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), cmd)
 	}
 	defer os.RemoveAll(string(codePath))
+	defer os.RemoveAll(string(mothercodePath))
 
 	/*
 		Compile the code
@@ -253,12 +270,37 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 		Where("git_repo_url = ?", work.Repo).Take(&cmd).Error; err != nil {
 		db.Model(&work.UQR).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Wo ji had da for %v: %v", work.Repo, err),
+			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
 		})
 		s.Release(boxID)
 		return
 	}
-	s.runShellCommand(ctx, boxID, cmd, work.CodePath, work.UQR)
+
+	name := strings.Split(cmd.Question.GitRepoURL, "/")
+	var userrow models.User
+	db.Where("user_name = ?", name[0]).First(&userrow)
+	gittoken, _ := utils.GetToken(userrow.ID)
+	gitURL := config.GetGiteaBaseURL() + "/" + cmd.Question.GitRepoURL
+
+	mothercodepath, err := gitclone.CloneRepository(cmd.Question.GitRepoURL, gitURL, "", userrow.UserName, gittoken)
+
+	if err != nil {
+		db.Model(&work.UQR).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Can't get test info: %v", err),
+		})
+		s.Release(boxID)
+		return
+	}
+
+	judgeinfo := JudgeInfo{
+		QuestionInfo:   cmd,
+		MotherCodePath: mothercodepath,
+		BoxID:          boxID,
+		CodePath:       work.CodePath,
+		UQR:            work.UQR,
+	}
+	s.runShellCommand(ctx, judgeinfo)
 }
 
 func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
@@ -330,7 +372,7 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 func (s *Sandbox) runScore(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
-		fmt.Sprintf("--fsize=10240"),
+		"--fsize=10240",
 		"--wait",
 		"--processes=100",
 		"--open-files=64",
