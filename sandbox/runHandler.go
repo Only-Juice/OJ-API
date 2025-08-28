@@ -88,6 +88,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	default:
 	}
 
+
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		JudgeTime: time.Now().UTC(),
 	})

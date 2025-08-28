@@ -4126,7 +4126,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.User"
                     }
                 },
-                "totalCount": {
+                "total_count": {
                     "type": "integer"
                 }
             }
