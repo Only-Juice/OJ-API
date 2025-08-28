@@ -690,7 +690,7 @@ definitions:
         items:
           $ref: '#/definitions/models.User'
         type: array
-      totalCount:
+      total_count:
         type: integer
     type: object
   handlers.GetLeaderboardResponseData:

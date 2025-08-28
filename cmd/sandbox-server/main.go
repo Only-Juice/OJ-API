@@ -13,15 +13,11 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
 	"time"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
@@ -417,17 +413,18 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 // AddJob 添加任務到隊列
 func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJobRequest) (*pb.AddJobResponse, error) {
 	sandboxInstance.SubtractAvailableCount()
-	// 創建 UserQuestionTable 模型
-	uqr := models.UserQuestionTable{
-		ID: uint(req.UserQuestionTableId),
+	defer sandboxInstance.AddAvailableCount()
+	// 從數據庫獲取完整的 UserQuestionTable 模型，包含關聯的 UQR 和 Question
+	var uqr models.UserQuestionTable
+	if err := database.DBConn.Preload("UQR.Question").First(&uqr, req.UserQuestionTableId).Error; err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user question table: %v", err)
 	}
 
-	codePath, err := CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken)
+	codePath, err := CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken, uqr.UQR.Question.EndTime)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to clone repository: %v", err)
 	}
 
-	sandboxInstance.AddAvailableCount()
 	// 添加任務到隊列
 	sandboxInstance.ReserveJob(req.ParentGitFullName, []byte(codePath), uqr)
 
@@ -436,68 +433,4 @@ func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJo
 		Message: "Job added to queue successfully",
 		JobId:   fmt.Sprintf("job_%d_%s", req.UserQuestionTableId, req.GitFullName),
 	}, nil
-}
-
-// CloneRepository 執行 git clone 操作
-func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToken string) (string, error) {
-	// 生成唯一的代碼路徑
-	codePath := fmt.Sprintf("%s/%s", config.Config("REPO_FOLDER"), GitFullName+"/"+uuid.New().String())
-
-	// 配置 clone 選項
-	cloneOptions := &git.CloneOptions{
-		URL: GitRepoURL,
-		Auth: &http.BasicAuth{
-			Username: GitUsername,
-			Password: GitToken,
-		},
-		Progress: nil, // 在生產環境中不輸出進度
-	}
-
-	// 執行 clone
-	repo, err := git.PlainClone(codePath, false, cloneOptions)
-	if err != nil {
-		return "", fmt.Errorf("failed to clone repository: %v", err)
-	}
-
-	// 如果有指定的 commit hash，則 checkout 到該 commit
-	if GitAfterHash != "" && GitAfterHash != "0000000000000000000000000000000000000000" {
-		// 獲取 worktree 並 checkout 到指定 commit
-		worktree, err := repo.Worktree()
-		if err != nil {
-			return "", fmt.Errorf("failed to get worktree: %v", err)
-		}
-
-		// Checkout 到指定的 commit hash
-		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(GitAfterHash),
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to checkout to %s: %v", GitAfterHash, err)
-		}
-		utils.Debugf("Successfully cloned and checked out %s to %s at commit %s", GitFullName, codePath, GitAfterHash)
-	} else {
-		utils.Debugf("Successfully cloned %s to %s (using HEAD)", GitFullName, codePath)
-	}
-
-	// 設置目錄權限為 777 (讀寫執行權限)
-	err = os.Chmod(codePath, 0777)
-	if err != nil {
-		utils.Warnf("Warning: failed to set permissions for %s: %v", codePath, err)
-	}
-
-	// 遞歸設置所有子目錄和文件的權限
-	err = filepath.Walk(codePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return os.Chmod(path, 0777)
-		}
-		return os.Chmod(path, 0644)
-	})
-	if err != nil {
-		utils.Warnf("Warning: failed to set recursive permissions for %s: %v", codePath, err)
-	}
-
-	return codePath, nil
 }
