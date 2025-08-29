@@ -421,11 +421,8 @@ func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJo
 		return nil, status.Errorf(codes.Internal, "failed to get user question table: %v", err)
 	}
 
-<<<<<<< HEAD
 	codePath, err := gitclone.CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken)
-=======
-	codePath, err := CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken, uqr.UQR.Question.EndTime)
->>>>>>> 250a12d13dec5591a1cab1444ecde2a437b5f70c
+
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to clone repository: %v", err)
 	}
