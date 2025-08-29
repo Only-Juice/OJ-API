@@ -145,7 +145,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 		Compile the code
 	*/
 
-	compile_success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
+	compileResult, compileSuccess := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
 
 	/*
 		Execute the code
@@ -161,16 +161,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	}
 	defer os.Remove(shellFilename(execodeID, boxID))
 
-	exeResult, success := s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
-
-	if !success {
-		db.Model(&userQuestion).Updates(map[string]interface{}{
-			"score":   0,
-			"message": "Execute failed:\n" + exeResult,
-		})
-		return
-	}
-
+	exeResult, exeSuccess := s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
 	/*
 	*
 	*	Part for calculate score.
@@ -214,10 +205,18 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 
 	if err != nil {
 
-		if !compile_success {
+		if !compileSuccess {
 			db.Model(&userQuestion).Updates(map[string]interface{}{
 				"score":   0,
-				"message": "Compilation Failed:\n" + compileOut,
+				"message": "Compilation Failed:\n" + compileResult,
+			})
+			return
+		}
+
+		if !exeSuccess {
+			db.Model(&userQuestion).Updates(map[string]interface{}{
+				"score":   0,
+				"message": "Execute failed:\n" + exeResult,
 			})
 			return
 		}
@@ -275,14 +274,8 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 		s.Release(boxID)
 		return
 	}
-
-	name := strings.Split(cmd.Question.GitRepoURL, "/")
-	var userrow models.User
-	db.Where("user_name = ?", name[0]).First(&userrow)
-	gittoken, _ := utils.GetToken(userrow.ID)
 	gitURL := config.GetGiteaBaseURL() + "/" + cmd.Question.GitRepoURL
-
-	mothercodepath, err := gitclone.CloneRepository(cmd.Question.GitRepoURL, gitURL, "", userrow.UserName, gittoken)
+	mothercodepath, err := gitclone.CloneRepository(cmd.Question.GitRepoURL, gitURL, "", "", "")
 
 	if err != nil {
 		db.Model(&work.UQR).Updates(models.UserQuestionTable{
@@ -303,7 +296,7 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 	s.runShellCommand(ctx, judgeinfo)
 }
 
-func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
+func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
 
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
@@ -328,10 +321,10 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return false, err.Error() + "\n" + string(out)
+		return err.Error() + "\n" + string(out), false
 	}
 
-	return true, string(out)
+	return string(out), true
 }
 
 func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {

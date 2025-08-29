@@ -27,12 +27,16 @@ func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToke
 
 	// 配置 clone 選項
 	cloneOptions := &git.CloneOptions{
-		URL: GitRepoURL,
-		Auth: &http.BasicAuth{
+		URL:      GitRepoURL,
+		Progress: nil, // 在生產環境中不輸出進度
+	}
+
+	// 如果有帳號密碼才設定 Auth（處理私有 repo）
+	if GitUsername != "" && GitToken != "" {
+		cloneOptions.Auth = &http.BasicAuth{
 			Username: GitUsername,
 			Password: GitToken,
-		},
-		Progress: nil, // 在生產環境中不輸出進度
+		}
 	}
 
 	// 執行 clone

@@ -414,17 +414,22 @@ func sendCurrentStatus(stream pb.SchedulerService_SandboxStreamClient, sandboxID
 // AddJob 添加任務到隊列
 func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJobRequest) (*pb.AddJobResponse, error) {
 	sandboxInstance.SubtractAvailableCount()
-	// 創建 UserQuestionTable 模型
-	uqr := models.UserQuestionTable{
-		ID: uint(req.UserQuestionTableId),
+	defer sandboxInstance.AddAvailableCount()
+	// 從數據庫獲取完整的 UserQuestionTable 模型，包含關聯的 UQR 和 Question
+	var uqr models.UserQuestionTable
+	if err := database.DBConn.Preload("UQR.Question").First(&uqr, req.UserQuestionTableId).Error; err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get user question table: %v", err)
 	}
 
+<<<<<<< HEAD
 	codePath, err := gitclone.CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken)
+=======
+	codePath, err := CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken, uqr.UQR.Question.EndTime)
+>>>>>>> 250a12d13dec5591a1cab1444ecde2a437b5f70c
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to clone repository: %v", err)
 	}
 
-	sandboxInstance.AddAvailableCount()
 	// 添加任務到隊列
 	sandboxInstance.ReserveJob(req.ParentGitFullName, []byte(codePath), uqr)
 
