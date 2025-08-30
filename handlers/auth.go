@@ -129,25 +129,19 @@ func AuthBasic(c *gin.Context) {
 		}
 	}
 
-	fail := false
+	var client_check *gitea.Client
 	tokenString, err := utils.GetToken(existingUser.ID)
-	if err != nil {
-		fail = true
+	if err == nil {
+		// Check if the token is valid
+		client_check, err = gitea.NewClient(config.GetGiteaBaseURL(),
+			gitea.SetToken(tokenString),
+		)
+		if err == nil {
+			_, _, err = client_check.GetMyUserInfo()
+		}
 	}
 
-	// Check if the token is valid
-	client_check, err := gitea.NewClient(config.GetGiteaBaseURL(),
-		gitea.SetToken(tokenString),
-	)
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: err.Error(),
-		})
-		return
-	}
-	_, _, err = client_check.GetMyUserInfo()
-	if err != nil || fail {
 		client.DeleteAccessToken("OJ-API")
 		newToken, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
 			Name:   "OJ-API",

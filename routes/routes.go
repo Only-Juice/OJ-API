@@ -187,7 +187,6 @@ func RegisterRoutes(r *gin.Engine) {
 
 		// Gitea routes
 		api.POST("/gitea", handlers.PostGiteaHook)
-		api.POST("/gitea/auth", handlers.PostBasicAuthenticationGitea)
 		api.POST("/gitea/:question_id/question", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
 		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
 		api.POST("/gitea/admin/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
