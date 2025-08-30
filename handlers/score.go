@@ -57,7 +57,7 @@ func GetScoreByRepo(c *gin.Context) {
 		})
 		return
 	}
-	if jwtClaims.Username != owner {
+	if jwtClaims.Username != owner && !jwtClaims.IsAdmin {
 		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Unauthorized",
@@ -95,7 +95,7 @@ func GetScoreByRepo(c *gin.Context) {
 		Joins("UQR").
 		Joins("JOIN questions Q ON question_id = Q.id").
 		Where("git_user_repo_url = ? AND Q.is_active = ?", repoURL, true).
-		Order("judge_time DESC").
+		Order("created_at DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&_scores).Error; err != nil {
@@ -118,7 +118,7 @@ func GetScoreByRepo(c *gin.Context) {
 		scores = append(scores, Score{
 			Score:     score.Score,
 			Message:   score.Message,
-			JudgeTime: score.JudgeTime,
+			JudgeTime: score.CreatedAt,
 		})
 	}
 	c.JSON(200, ResponseHTTP{
@@ -219,7 +219,7 @@ func GetScoreByUQRID(c *gin.Context) {
 	var _scores []models.UserQuestionTable
 	if err := db.Model(&models.UserQuestionTable{}).
 		Where("UQR_ID = ?", UQRID).
-		Order("judge_time DESC").
+		Order("created_at DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&_scores).Error; err != nil {
@@ -242,7 +242,7 @@ func GetScoreByUQRID(c *gin.Context) {
 		scores = append(scores, Score{
 			Score:     score.Score,
 			Message:   score.Message,
-			JudgeTime: score.JudgeTime,
+			JudgeTime: score.CreatedAt,
 		})
 	}
 	c.JSON(200, ResponseHTTP{
@@ -322,7 +322,7 @@ func GetScoreByQuestionID(c *gin.Context) {
 	if err := db.Model(&models.UserQuestionTable{}).
 		Joins("UQR").
 		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
-		Order("judge_time DESC").
+		Order("created_at DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&_scores).Error; err != nil {
@@ -344,7 +344,7 @@ func GetScoreByQuestionID(c *gin.Context) {
 		scores = append(scores, Score{
 			Score:     score.Score,
 			Message:   score.Message,
-			JudgeTime: score.JudgeTime,
+			JudgeTime: score.CreatedAt,
 		})
 	}
 	if len(scores) == 0 {
@@ -712,7 +712,7 @@ func GetAllScore(c *gin.Context) {
 	var totalCount int64
 
 	subQuery := db.Model(&models.UserQuestionTable{}).
-		Select("UQR.question_id, Q.title, UQR.git_user_repo_url, score, message, judge_time").
+		Select("UQR.question_id, Q.title, UQR.git_user_repo_url, score, message, created_at as judge_time").
 		Joins("JOIN user_question_relations UQR ON uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
 		Where("Q.is_active = ?", true).
