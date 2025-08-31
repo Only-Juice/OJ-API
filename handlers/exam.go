@@ -248,7 +248,7 @@ func ListExams(c *gin.Context) {
 	var exams []models.Exam
 
 	db := database.DBConn
-	if err := db.Find(&exams).Error; err != nil {
+	if err := db.Where("start_time < ? AND end_time > ?", time.Now(), time.Now()).Find(&exams).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ResponseHTTP{
 			Success: false,
 			Message: "Failed to retrieve exams",
