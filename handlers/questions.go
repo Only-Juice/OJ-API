@@ -743,6 +743,7 @@ func AddQuestion(c *gin.Context) {
 		CompileScript: req.CompileScript,
 		ExecuteScript: req.ExecuteScript,
 		ScoreScript:   req.ScoreScript,
+		ScoreMap:      req.ScoreMap,
 	}
 
 	if req.Memory != nil {
