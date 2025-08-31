@@ -3,6 +3,7 @@ package main
 import (
 	"OJ-API/config"
 	"OJ-API/database"
+	"OJ-API/gitclone"
 	"OJ-API/models"
 	pb "OJ-API/proto"
 	"OJ-API/sandbox"
@@ -420,7 +421,8 @@ func AddJob(sandboxInstance *sandbox.Sandbox, ctx context.Context, req *pb.AddJo
 		return nil, status.Errorf(codes.Internal, "failed to get user question table: %v", err)
 	}
 
-	codePath, err := CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken, uqr.UQR.Question.EndTime)
+	codePath, err := gitclone.CloneRepository(req.GitFullName, req.GitRepoUrl, req.GitAfterHash, req.GitUsername, req.GitToken)
+
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to clone repository: %v", err)
 	}

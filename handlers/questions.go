@@ -463,6 +463,83 @@ func GetQuestionByID(c *gin.Context) {
 	})
 }
 
+type GetQuestionLimitByIDResponseData struct {
+	Id          uint   `json:"id" example:"123"`
+	Title       string `json:"title" validate:"required"`
+	Memory      uint   `json:"memory" example:"262144" description:"Memory limit in KB"`
+	StackMemory uint   `json:"stack_memory" example:"8192" description:"Stack memory limit in KB"`
+	Time        uint   `json:"time" example:"1000" description:"CPU time limit in ms"`
+	WallTime    uint   `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
+	FileSize    uint   `json:"file_size" example:"10240" description:"Output file size limit in KB"`
+}
+
+// GetQuestionLimitByID is a function to get a question limitation by ID
+// @Summary		Get a question limitation by ID
+// @Description Retrieve only public questions
+// @Tags			Question
+// @Accept			json
+// @Produce		json
+// @Param			ID	path	int	true	"ID of the Question to get"
+// @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
+// @Failure		404
+// @Failure		503
+// @Router			/api/questions/admin/{ID}/question_limit [get]
+// @Security		BearerAuth
+func GetQuestionLimitByID(c *gin.Context) {
+	db := database.DBConn
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	IDstr := c.Param("ID")
+	ID, err := strconv.Atoi(IDstr)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	var question models.Question
+	db.Where("id = ? AND is_active = ?", ID, true).Limit(1).Find(&question)
+	if question.ID == 0 {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+
+	var questionTestScript models.QuestionTestScript
+	if err := db.Where("question_id = ?", ID).First(&questionTestScript).Error; err != nil {
+		c.JSON(404, ResponseHTTP{
+			Success: false,
+			Message: "Question test script not found",
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Message: "Question fetched successfully",
+		Data: GetQuestionLimitByIDResponseData{
+			Id:          question.ID,
+			Title:       question.Title,
+			Memory:      questionTestScript.Memory,
+			StackMemory: questionTestScript.StackMemory,
+			Time:        questionTestScript.Time,
+			WallTime:    questionTestScript.WallTime,
+			FileSize:    questionTestScript.FileSize,
+		},
+	})
+}
+
 type GetUserQuestionResponseData struct {
 	GetQuestionResponseData
 	UQR_ID uint `json:"uqr_id" validate:"required"`

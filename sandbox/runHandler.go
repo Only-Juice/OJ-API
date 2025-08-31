@@ -1,7 +1,9 @@
 package sandbox
 
 import (
+	"OJ-API/config"
 	"OJ-API/database"
+	"OJ-API/gitclone"
 	"OJ-API/models"
 	"OJ-API/utils"
 	"context"
@@ -58,8 +60,21 @@ func (s *Sandbox) assignJob(ctx context.Context) {
 	}
 }
 
-func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd models.QuestionTestScript, codePath []byte, userQuestion models.UserQuestionTable) {
+type JudgeInfo struct {
+	QuestionInfo   models.QuestionTestScript
+	MotherCodePath string
+	BoxID          int
+	CodePath       []byte
+	UQR            models.UserQuestionTable
+}
+
+func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo) {
 	db := database.DBConn
+	userQuestion := judgeinfo.UQR
+	boxID := judgeinfo.BoxID
+	codePath := judgeinfo.CodePath
+	mothercodePath := judgeinfo.MotherCodePath
+	cmd := judgeinfo.QuestionInfo
 
 	// 檢查父 context 是否已經被取消，如果是則不開始新任務
 	select {
@@ -73,6 +88,11 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	default:
 	}
 
+	db.Model(&userQuestion).Updates(models.UserQuestionTable{
+		JudgeTime: time.Now().UTC(),
+	})
+
+	CopyDir(mothercodePath+"/test", string(codePath)+"/test")
 	boxRoot, _ := CopyCodeToBox(boxID, string(codePath))
 
 	defer s.Release(boxID)
@@ -119,34 +139,19 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 		s.getJsonfromdb(fmt.Sprintf("%v/%s", string(boxRoot), "utils"), cmd)
 	}
 	defer os.RemoveAll(string(codePath))
+	defer os.RemoveAll(string(mothercodePath))
 
 	/*
 		Compile the code
 	*/
 
-	success, compileOut := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
-
-	if !success {
-		db.Model(&userQuestion).Updates(map[string]interface{}{
-			"score":   0,
-			"message": "Compilation Failed:\n" + compileOut,
-		})
-		return
-	}
+	compileResult, compileSuccess := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
 
 	/*
 		Execute the code
 	*/
 
-	LogWithLocation("Start Execute")
-
-	//executeScript := append([]byte(cmd.ExecuteScript), []byte("\n/utils/grp_parser /build/grp/ut_*.json /utils/score.json")...)
 	execodeID, err := WriteToTempFile([]byte(cmd.ExecuteScript), boxID)
-
-	fmt.Println("=== Final Execute Script ===")
-	fmt.Println(string(cmd.ExecuteScript))
-	fmt.Println("============================")
-
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
@@ -156,7 +161,35 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 	}
 	defer os.Remove(shellFilename(execodeID, boxID))
 
-	s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
+	exeResult, exeSuccess := s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
+	/*
+	*
+	*	Part for calculate score.
+	*
+	 */
+
+	ScoreScript :=
+		`
+	#!/bin/bash
+	set -e
+
+	SCORE_FILE="./utils/score.json"
+
+	for json in ./build/grp/ut_*.json; do
+		echo "🔍 Parsing: $json"
+		./utils/grp_parser "$json" "$SCORE_FILE"
+	done
+	`
+	scoreScriptID, err := WriteToTempFile([]byte(ScoreScript), boxID)
+	if err != nil {
+		db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+		})
+		return
+	}
+	defer os.Remove(shellFilename(execodeID, boxID))
+	s.runScore(boxID, ctx, cmd, shellFilename(scoreScriptID, boxID), []byte(boxRoot))
 
 	/*
 
@@ -169,7 +202,25 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, boxID int, cmd mode
 
 	// read score from file
 	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", []byte(boxRoot)))
+
 	if err != nil {
+
+		if !compileSuccess {
+			db.Model(&userQuestion).Updates(map[string]interface{}{
+				"score":   0,
+				"message": "Compilation Failed:\n" + compileResult,
+			})
+			return
+		}
+
+		if !exeSuccess {
+			db.Model(&userQuestion).Updates(map[string]interface{}{
+				"score":   0,
+				"message": "Execute failed:\n" + exeResult,
+			})
+			return
+		}
+
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
 			Message: fmt.Sprintf("Failed to read score: %v", err),
@@ -218,23 +269,42 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 		Where("git_repo_url = ?", work.Repo).Take(&cmd).Error; err != nil {
 		db.Model(&work.UQR).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Wo ji had da for %v: %v", work.Repo, err),
+			Message: fmt.Sprintf("Failed to find shell command for %v: %v", work.Repo, err),
 		})
 		s.Release(boxID)
 		return
 	}
-	s.runShellCommand(ctx, boxID, cmd, work.CodePath, work.UQR)
+	gitURL := config.GetGiteaBaseURL() + "/" + cmd.Question.GitRepoURL
+	mothercodepath, err := gitclone.CloneRepository(cmd.Question.GitRepoURL, gitURL, "", "", "")
+
+	if err != nil {
+		db.Model(&work.UQR).Updates(models.UserQuestionTable{
+			Score:   -2,
+			Message: fmt.Sprintf("Can't get test info: %v", err),
+		})
+		s.Release(boxID)
+		return
+	}
+
+	judgeinfo := JudgeInfo{
+		QuestionInfo:   cmd,
+		MotherCodePath: mothercodepath,
+		BoxID:          boxID,
+		CodePath:       work.CodePath,
+		UQR:            work.UQR,
+	}
+	s.runShellCommand(ctx, judgeinfo)
 }
 
-func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (bool, string) {
+func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
+
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
-		"--fsize=5120",
+		"--fsize=10240",
 		"--wait",
 		"--processes",
 		"--open-files=0",
 		"--env=PATH",
-		"--stderr-to-stdout",
 	}
 
 	if len(codePath) > 0 {
@@ -248,18 +318,13 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", scriptFile)
 
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
-
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return false, err.Error() + "\n" + string(out)
+		return err.Error() + "\n" + string(out), false
 	}
 
-	if strings.Contains(string(out), "error:") {
-		return false, string(out)
-	}
-
-	return true, string(out)
+	return string(out), true
 }
 
 func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
@@ -267,15 +332,44 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 		fmt.Sprintf("--box-id=%v", box),
 		fmt.Sprintf("--fsize=%v", qt.FileSize),
 		"--wait",
+		"--processes=3",
+		"--open-files=16",
+		"--env=PATH",
+		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
+		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
+		fmt.Sprintf("--mem=%v", qt.Memory),
+		fmt.Sprintf("--stack=%v", qt.StackMemory),
+	}
+
+	if len(codePath) > 0 {
+		cmdArgs = append(cmdArgs,
+			fmt.Sprintf("--chdir=%v", string(codePath)),
+			fmt.Sprintf("--dir=%v:rw", string(codePath)),
+			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+	}
+
+	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand)
+
+	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
+	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		return fmt.Sprintf("%v\n%s", err, string(out)), false
+	}
+
+	return string(out), true
+}
+
+func (s *Sandbox) runScore(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
+	cmdArgs := []string{
+		fmt.Sprintf("--box-id=%v", box),
+		"--fsize=10240",
+		"--wait",
 		"--processes=100",
 		"--open-files=64",
 		"--env=PATH",
-		"--stdout=stdout.txt",
-		"--stderr=stderr.txt",
-		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
-		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
-		//fmt.Sprintf("--mem=%v", qt.Memory),
-		//fmt.Sprintf("--stack=%v", qt.StackMemory),
 	}
 
 	if len(codePath) > 0 {
