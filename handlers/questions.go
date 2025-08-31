@@ -471,6 +471,8 @@ type GetQuestionLimitByIDResponseData struct {
 	Time        uint   `json:"time" example:"1000" description:"CPU time limit in ms"`
 	WallTime    uint   `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
 	FileSize    uint   `json:"file_size" example:"10240" description:"Output file size limit in KB"`
+	Processes   uint   `json:"processes" example:"10" description:"process count"`
+	OpenFiles   uint   `json:"open_files" example:"64" description:"Counts can open"`
 }
 
 // GetQuestionLimitByID is a function to get a question limitation by ID
@@ -536,6 +538,8 @@ func GetQuestionLimitByID(c *gin.Context) {
 			Time:        questionTestScript.Time,
 			WallTime:    questionTestScript.WallTime,
 			FileSize:    questionTestScript.FileSize,
+			Processes:   questionTestScript.Processes,
+			OpenFiles:   questionTestScript.OpenFiles,
 		},
 	})
 }
@@ -631,6 +635,7 @@ type AddQuestionScript struct {
 	CompileScript string `json:"compile_script" example:"script example"`
 	ExecuteScript string `json:"execute_script" example:"script example"`
 	ScoreScript   string `json:"score_script" example:"script example"`
+	ScoreMap      string `json:"score_map" example:"script example"`
 }
 
 type AddQuestionLimit struct {
@@ -639,6 +644,8 @@ type AddQuestionLimit struct {
 	Time        *uint `json:"time" example:"1000" description:"CPU time limit in ms"`
 	WallTime    *uint `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
 	FileSize    *uint `json:"file_size" example:"10240" description:"Output file size limit in KB"`
+	Processes   *uint `json:"processes" example:"10" description:"process count"`
+	OpenFiles   *uint `json:"open_files" example:"64" description:"Counts can open"`
 }
 
 type AddQuestionRequest struct {
@@ -736,6 +743,7 @@ func AddQuestion(c *gin.Context) {
 		CompileScript: req.CompileScript,
 		ExecuteScript: req.ExecuteScript,
 		ScoreScript:   req.ScoreScript,
+		ScoreMap:      req.ScoreMap,
 	}
 
 	if req.Memory != nil {
@@ -753,19 +761,31 @@ func AddQuestion(c *gin.Context) {
 	if req.Time != nil {
 		questionInfo.Time = *req.Time
 	} else {
-		questionInfo.Time = 1000
+		questionInfo.Time = 3000
 	}
 
 	if req.WallTime != nil {
 		questionInfo.WallTime = *req.WallTime
 	} else {
-		questionInfo.WallTime = 3000
+		questionInfo.WallTime = 5000
 	}
 
 	if req.FileSize != nil {
 		questionInfo.FileSize = *req.FileSize
 	} else {
 		questionInfo.FileSize = 10240
+	}
+
+	if req.Processes != nil {
+		questionInfo.Processes = *req.Processes
+	} else {
+		questionInfo.Processes = 10
+	}
+
+	if req.OpenFiles != nil {
+		questionInfo.OpenFiles = *req.OpenFiles
+	} else {
+		questionInfo.OpenFiles = 64
 	}
 
 	if err := db.Create(&questionInfo).Error; err != nil {
@@ -799,6 +819,8 @@ type PatchQuestionRequest struct {
 	Time          *uint   `json:"time" example:"1000" description:"CPU time limit in ms"`
 	WallTime      *uint   `json:"wall_time" example:"3000" description:"Wall clock time limit in ms"`
 	FileSize      *uint   `json:"file_size" example:"10240" description:"Output file size limit in KB"`
+	Processes     *uint   `json:"processes" example:"10" description:"process count"`
+	OpenFiles     *uint   `json:"open_files" example:"64" description:"Counts can open"`
 }
 
 // PatchQuestion is a function to update a question
@@ -906,6 +928,12 @@ func PatchQuestion(c *gin.Context) {
 	}
 	if updateQuestion.FileSize != nil {
 		questionscript.FileSize = *updateQuestion.FileSize
+	}
+	if updateQuestion.Processes != nil {
+		questionscript.Processes = *updateQuestion.Processes
+	}
+	if updateQuestion.OpenFiles != nil {
+		questionscript.OpenFiles = *updateQuestion.OpenFiles
 	}
 
 	if err := db.Save(&question).Error; err != nil {

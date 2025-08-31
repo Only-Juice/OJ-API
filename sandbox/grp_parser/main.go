@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+var boxPathRegex = regexp.MustCompile(`(?m)/[^:\n]*/box/`)
 
 // TestSuite represents a test suite structure from the input JSON
 type TestSuite struct {
@@ -133,7 +136,11 @@ func (jp *JSONParser) Parse() {
 
 		for _, suite := range jp.inputFile.TestSuites[i].TestSuite {
 			// Check if individual test case has failures or errors
-			// This matches the original C++ logic: suite.contains("failures") || suite.contains("errors")
+			if len(suite.Failures) > 0 {
+				for j := range suite.Failures {
+					suite.Failures[j].Failure = boxPathRegex.ReplaceAllString(suite.Failures[j].Failure, "")
+				}
+			}
 			if len(suite.Failures) > 0 || len(suite.Errors) > 0 {
 				wa += 1.0
 			} else {

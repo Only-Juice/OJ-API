@@ -1337,6 +1337,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/gitea/auth": {
+            "post": {
+                "description": "Use basic authentication to access the Gitea API",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gitea"
+                ],
+                "summary": "Use basic authentication to access the Gitea API",
+                "parameters": [
+                    {
+                        "description": "Basic Authentication",
+                        "name": "BasicAuthentication",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BasicAuthentication"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return access token",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ResponseHTTP"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/gitea/user": {
             "get": {
                 "security": [
@@ -3703,6 +3740,18 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 262144
                 },
+                "open_files": {
+                    "type": "integer",
+                    "example": 64
+                },
+                "processes": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "score_map": {
+                    "type": "string",
+                    "example": "script example"
+                },
                 "score_script": {
                     "type": "string",
                     "example": "script example"
@@ -3764,6 +3813,23 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "Question Title"
+                }
+            }
+        },
+        "handlers.BasicAuthentication": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "password"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "username"
                 }
             }
         },
@@ -4072,7 +4138,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.User"
                     }
                 },
-                "total_count": {
+                "totalCount": {
                     "type": "integer"
                 }
             }
@@ -4364,6 +4430,14 @@ const docTemplate = `{
                 "memory": {
                     "type": "integer",
                     "example": 262144
+                },
+                "open_files": {
+                    "type": "integer",
+                    "example": 64
+                },
+                "processes": {
+                    "type": "integer",
+                    "example": 10
                 },
                 "score_script": {
                     "type": "string",
@@ -4800,11 +4874,20 @@ const docTemplate = `{
                 "memory": {
                     "type": "integer"
                 },
+                "open_files": {
+                    "type": "integer"
+                },
+                "processes": {
+                    "type": "integer"
+                },
                 "question": {
                     "$ref": "#/definitions/models.Question"
                 },
                 "question_id": {
                     "type": "integer"
+                },
+                "score_map": {
+                    "type": "string"
                 },
                 "score_script": {
                     "type": "string"
