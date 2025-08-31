@@ -357,8 +357,12 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		}
 	}
 
+	accessToken, err := utils.GenerateAccessToken(jwtClaims.UserID, jwtClaims.Username, jwtClaims.IsAdmin)
+	if err != nil {
+		utils.Errorf("Failed to generate token for %s/%s: %v", jwtClaims.Username, parentRepoName, err)
+		return
+	}
 	if !hookExists {
-
 		if _, _, err := client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
 			Type:   "gitea",
 			Active: true,
@@ -367,6 +371,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 				"url":          scheme + "://" + config.Config("OJ_HOST") + "/api/gitea",
 				"content_type": "json",
 			},
+			AuthorizationHeader: "Bearer " + accessToken,
 		}); err != nil {
 			c.JSON(503, ResponseHTTP{
 				Success: false,

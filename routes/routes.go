@@ -186,7 +186,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/sandbox/status", handlers.GetSandboxStatus)
 
 		// Gitea routes
-		api.POST("/gitea", handlers.PostGiteaHook)
+		api.POST("/gitea", AuthMiddleware(), handlers.PostGiteaHook)
 		api.POST("/gitea/:question_id/question", AuthMiddleware(), handlers.PostCreateQuestionRepositoryGitea)
 		api.GET("/gitea/user", AuthMiddleware(), handlers.GetUserProfileGitea)
 		api.POST("/gitea/admin/user/bulk", AuthMiddleware(), handlers.PostBulkCreateUserGitea)
