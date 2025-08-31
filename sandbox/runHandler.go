@@ -323,7 +323,7 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 		fmt.Sprintf("--fsize=%v", qt.FileSize),
 		"--wait",
 		fmt.Sprintf("--processes=%v", qt.Processes),
-		fmt.Sprintf("--open-files=%v", qt.Openfiles),
+		fmt.Sprintf("--open-files=%v", qt.OpenFiles),
 		"--env=PATH",
 		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
 		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),

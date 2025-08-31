@@ -13,6 +13,6 @@ type QuestionTestScript struct {
 	WallTime      uint     `gorm:"not null;default:3000" json:"wall_time"`
 	FileSize      uint     `gorm:"not null;default:10240" json:"file_size"`
 	Processes     uint     `gorm:"not null;default:10" json:"processes"`
-	Openfiles     uint     `gorm:"not null;default:10" json:"open_files"`
+	OpenFiles     uint     `gorm:"not null;default:64" json:"open_files"`
 	ScoreMap      string   `gorm:"size:8000;not null" json:"score_map"`
 }
