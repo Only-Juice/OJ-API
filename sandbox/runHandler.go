@@ -168,18 +168,8 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	*
 	 */
 
-	ScoreScript :=
-		`
-	#!/bin/bash
-	set -e
+	ScoreScript := cmd.ScoreScript
 
-	SCORE_FILE="./utils/score.json"
-
-	for json in ./build/grp/ut_*.json; do
-		echo "🔍 Parsing: $json"
-		./utils/grp_parser "$json" "$SCORE_FILE"
-	done
-	`
 	scoreScriptID, err := WriteToTempFile([]byte(ScoreScript), boxID)
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
@@ -189,7 +179,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 		return
 	}
 	defer os.Remove(shellFilename(execodeID, boxID))
-	s.runScore(boxID, ctx, cmd, shellFilename(scoreScriptID, boxID), []byte(boxRoot))
+	s.runScore(boxID, ctx, shellFilename(scoreScriptID, boxID), []byte(boxRoot))
 
 	/*
 
@@ -332,8 +322,8 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 		fmt.Sprintf("--box-id=%v", box),
 		fmt.Sprintf("--fsize=%v", qt.FileSize),
 		"--wait",
-		"--processes=3",
-		"--open-files=16",
+		fmt.Sprintf("--processes=%v", qt.Processes),
+		fmt.Sprintf("--open-files=%v", qt.Openfiles),
 		"--env=PATH",
 		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
 		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
@@ -362,13 +352,13 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 	return string(out), true
 }
 
-func (s *Sandbox) runScore(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
+func (s *Sandbox) runScore(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
 	cmdArgs := []string{
 		fmt.Sprintf("--box-id=%v", box),
 		"--fsize=10240",
 		"--wait",
 		"--processes=100",
-		"--open-files=64",
+		"--open-files=65536",
 		"--env=PATH",
 	}
 
@@ -399,8 +389,8 @@ func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 	filepath := filepath.Join(path, filename)
 	var prettyJSON []byte
 	var tmp interface{}
-	if err := json.Unmarshal([]byte(row.ScoreScript), &tmp); err != nil {
-		prettyJSON = []byte(row.ScoreScript)
+	if err := json.Unmarshal([]byte(row.ScoreMap), &tmp); err != nil {
+		prettyJSON = []byte(row.ScoreMap)
 	} else {
 		prettyJSON, err = json.MarshalIndent(tmp, "", "  ")
 		if err != nil {
