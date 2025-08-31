@@ -169,6 +169,9 @@ func main() {
 		utils.Fatal("Failed to listen on port:", err)
 	}
 
+	// Gitea Check
+	go services.GiteaCheckInit()
+
 	if useTLS {
 		utils.Infof("Server (HTTPS + gRPC) is running on port %s...", port)
 		if err := httpServer.ServeTLS(lis, certFile, keyFile); err != nil && err != http.ErrServerClosed {

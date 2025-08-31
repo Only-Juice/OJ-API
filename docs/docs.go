@@ -1337,43 +1337,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/gitea/auth": {
-            "post": {
-                "description": "Use basic authentication to access the Gitea API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gitea"
-                ],
-                "summary": "Use basic authentication to access the Gitea API",
-                "parameters": [
-                    {
-                        "description": "Basic Authentication",
-                        "name": "BasicAuthentication",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.BasicAuthentication"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Return access token",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
         "/api/gitea/user": {
             "get": {
                 "security": [
@@ -3801,23 +3764,6 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "Question Title"
-                }
-            }
-        },
-        "handlers.BasicAuthentication": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "password"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "username"
                 }
             }
         },
