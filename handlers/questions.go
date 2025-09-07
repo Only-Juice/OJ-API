@@ -312,6 +312,8 @@ func GetReadme(client *gitea.Client, userName string, gitRepoURL string) string 
 		for _, readmeFile := range readmeFiles {
 			fileContent, _, err := client.GetFile(userName, gitRepoURL, branch, readmeFile)
 			if err == nil {
+				// 處理圖片路徑
+				fileContent = []byte(strings.ReplaceAll(string(fileContent), "](./", "]("+config.GetGiteaBaseURL()+"/"+userName+"/"+gitRepoURL+"/raw/"+branch+"/"))
 				return string(fileContent)
 			}
 		}
