@@ -391,8 +391,11 @@ func ResetPasswordPage(c *gin.Context) {
 		label { display: block; margin-bottom: 8px; color: #333; font-weight: bold; }
 		input[type="password"] { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 16px; transition: border-color 0.3s; box-sizing: border-box; }
 		input[type="password"]:focus { outline: none; border-color: #667eea; }
-		.btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
-		.btn:hover { transform: translateY(-2px); }
+		.btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; }
+		.btn:hover:not(:disabled) { transform: translateY(-2px); }
+		.btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+		.spinner { border: 2px solid transparent; border-top: 2px solid #ffffff; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; margin-right: 8px; }
+		@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 		.message { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; }
 		.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
 		.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -416,7 +419,9 @@ func ResetPasswordPage(c *gin.Context) {
 				<input type="password" id="confirmPassword" name="confirm_password" required minlength="6">
 			</div>
 			
-			<button type="submit" class="btn">重設密碼</button>
+			<button type="submit" class="btn" id="submitBtn">
+				<span id="btnText">重設密碼</span>
+			</button>
 		</form>
 		
 		<div id="message" class="message" style="display: none;"></div>
@@ -429,6 +434,11 @@ func ResetPasswordPage(c *gin.Context) {
 			const newPassword = document.getElementById('newPassword').value;
 			const confirmPassword = document.getElementById('confirmPassword').value;
 			const messageDiv = document.getElementById('message');
+			const submitBtn = document.getElementById('submitBtn');
+			const btnText = document.getElementById('btnText');
+			
+			// Hide previous messages
+			messageDiv.style.display = 'none';
 			
 			// Validate passwords match
 			if (newPassword !== confirmPassword) {
@@ -445,6 +455,10 @@ func ResetPasswordPage(c *gin.Context) {
 				messageDiv.style.display = 'block';
 				return;
 			}
+			
+			// Start loading state
+			submitBtn.disabled = true;
+			btnText.innerHTML = '<div class="spinner"></div>';
 			
 			try {
 				const response = await fetch(window.location.href, {
@@ -475,6 +489,10 @@ func ResetPasswordPage(c *gin.Context) {
 				messageDiv.className = 'message error';
 				messageDiv.textContent = '網路錯誤，請稍後再試';
 				messageDiv.style.display = 'block';
+			} finally {
+				// Reset button state
+				submitBtn.disabled = false;
+				btnText.innerHTML = '重設密碼';
 			}
 		});
 	</script>
@@ -583,19 +601,16 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
-		// Log error but don't fail the request
-		utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
-	}
-
-	// Clear the nonce to prevent reuse
-	if err := db.Model(&models.User{}).Where("id = ?", userID).Update("nonce", "").Error; err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: "Failed to clear nonce",
-		})
-		return
-	}
+	go func() {
+		if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
+			// Log error but don't fail the request
+			utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+		}
+		// Clear the nonce to prevent reuse
+		if err := db.Model(&models.User{}).Where("id = ?", userID).Update("nonce", "").Error; err != nil {
+			utils.Warnf("Failed to clear nonce for user ID %d: %v", userID, err)
+		}
+	}()
 
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
