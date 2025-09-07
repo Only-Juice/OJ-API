@@ -126,6 +126,17 @@ func GetToken(userID uint) (string, error) {
 	return DecryptToken(user.GiteaToken, getEncryptionKey())
 }
 
+// GetTokenByUsername retrieves and decrypts a token from the database by username
+func GetTokenByUsername(username string) (string, error) {
+	var user models.User
+	db := database.DBConn
+	if err := db.Where("user_name = ?", username).Limit(1).Find(&user).Error; err != nil {
+		return "", err
+	}
+
+	return DecryptToken(user.GiteaToken, getEncryptionKey())
+}
+
 func GenerateResetToken(userID uint) (string, error) {
 	nonce := uuid.New().String()
 	token := fmt.Sprintf("%d:%d:%s", userID, time.Now().Unix(), nonce)
