@@ -720,6 +720,60 @@ func AddQuestion(c *gin.Context) {
 		return
 	}
 
+	// 檢查 Gitea 中是否存在該倉庫，不存在的話建立對應的倉庫
+	parts := strings.Split(req.GitRepoURL, "/")
+	if len(parts) != 2 {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Invalid GitRepoURL format",
+		})
+		return
+	}
+	owner := parts[0]
+	repo := parts[1]
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	_, _, err = client.GetRepo(owner, repo)
+	if err != nil {
+		// 如果 owner 不是當前用戶，則無權創建倉庫
+		if owner != jwtClaims.Username {
+			c.JSON(400, ResponseHTTP{
+				Success: false,
+				Message: "Repository does not exist and cannot be created under another user's account",
+			})
+			return
+		}
+		// 如果倉庫不存在，則創建一個新的倉庫
+		_, _, err := client.CreateRepo(gitea.CreateRepoOption{
+			Name:     repo,
+			Private:  false,
+			AutoInit: false,
+		})
+		if err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: "Failed to create repository in Gitea: " + err.Error(),
+			})
+			return
+		}
+	}
+
 	if err := db.Create(&newquestion).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
