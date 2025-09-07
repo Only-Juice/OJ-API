@@ -233,8 +233,7 @@ func SendPasswordChangeNotification(email, username string, clientInfo *ClientIn
 				
 				<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
 					<p style="font-size: 14px; color: #666; margin: 0;">
-						<strong>變更時間：</strong> %s<br>
-						<strong>使用者名稱：</strong> %s
+						<strong>變更時間：</strong> %s
 					</p>
 				</div>
 
@@ -248,6 +247,12 @@ func SendPasswordChangeNotification(email, username string, clientInfo *ClientIn
 				<p style="font-size: 14px; color: #888; margin-top: 25px;">
 					⚠️ 如果您並未進行此操作，請立即聯繫系統管理員以確保帳戶安全。
 				</p>
+				
+				<div style="text-align: center; margin: 35px 0;">
+					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+						前往登入頁面 / Go to Login
+					</a>
+				</div>
 			</div>
 			
 			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
@@ -257,7 +262,7 @@ func SendPasswordChangeNotification(email, username string, clientInfo *ClientIn
 			</div>
 		</body>
 		</html>
-	`, username, time.Now().Format("2006-01-02 15:04:05"), username, clientInfoText)
+	`, username, time.Now().Format("2006-01-02 15:04:05"), clientInfoText, config.GetFrontendURL())
 
 	return SendEmail(email, subject, body)
 }
@@ -296,9 +301,14 @@ func SendPasswordResetNotification(email, username, newPassword string) error {
 				</div>
 				
 				<p style="font-size: 14px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-					重置時間：%s<br>
-					使用者名稱：%s
+					重置時間：%s
 				</p>
+				
+				<div style="text-align: center; margin: 35px 0;">
+					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+						立即登入 / Login Now
+					</a>
+				</div>
 			</div>
 			
 			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
@@ -308,7 +318,7 @@ func SendPasswordResetNotification(email, username, newPassword string) error {
 			</div>
 		</body>
 		</html>
-	`, username, newPassword, time.Now().Format("2006-01-02 15:04:05"), username)
+	`, username, newPassword, time.Now().Format("2006-01-02 15:04:05"), config.GetFrontendURL())
 
 	return SendEmail(email, subject, body)
 }
@@ -350,6 +360,12 @@ func SendDefaultPasswordNotification(email, username, newPassword string) error 
 				<p style="font-size: 14px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
 					帳戶建立時間：%s
 				</p>
+				
+				<div style="text-align: center; margin: 35px 0;">
+					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+						立即登入 / Login Now
+					</a>
+				</div>
 			</div>
 			
 			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
@@ -359,7 +375,7 @@ func SendDefaultPasswordNotification(email, username, newPassword string) error 
 			</div>
 		</body>
 		</html>
-	`, username, username, newPassword, time.Now().Format("2006-01-02 15:04:05"))
+	`, username, username, newPassword, time.Now().Format("2006-01-02 15:04:05"), config.GetFrontendURL())
 
 	return SendEmail(email, subject, body)
 }

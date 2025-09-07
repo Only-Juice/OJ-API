@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"math/rand"
 	"strconv"
 	"strings"
 
@@ -62,17 +61,6 @@ func CreateUserAccessToken(username, email, password string) {
 	}
 }
 
-func generateRandomPassword() string {
-	const charset = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	const length = 12
-
-	password := make([]byte, length)
-	for i := range password {
-		password[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(password)
-}
-
 // Bulk create User
 // @Summary	Bulk create User
 // @Description Bulk create User
@@ -130,7 +118,7 @@ func PostBulkCreateUserGitea(c *gin.Context) {
 	for _, username := range bulkUsers.Usernames {
 		password := bulkUsers.DefaultPassword
 		if password == "" {
-			password = generateRandomPassword()
+			password = utils.GenerateRandomPassword()
 		}
 		_, _, err := client.AdminCreateUser(gitea.CreateUserOption{
 			Email:              username + "@" + bulkUsers.EmailDomain,
@@ -243,7 +231,7 @@ func PostBulkCreateUserGiteav2(c *gin.Context) {
 
 	for i, user := range bulkUsers.User {
 		if bulkUsers.User[i].Password == "" {
-			bulkUsers.User[i].Password = generateRandomPassword()
+			bulkUsers.User[i].Password = utils.GenerateRandomPassword()
 		}
 		if _, _, err := client.AdminCreateUser(gitea.CreateUserOption{
 			Email:              user.Email,

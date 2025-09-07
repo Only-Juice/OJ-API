@@ -1,5 +1,7 @@
 package utils
 
+import "OJ-API/config"
+
 func MissingOrInvalidTokenPage() string {
 	return `
 <!DOCTYPE html>
@@ -150,11 +152,24 @@ func PasswordResetPage() string {
 				
 				if (result.success) {
 					messageDiv.className = 'message success';
-					messageDiv.textContent = '密碼重設成功！請使用新密碼登入。';
 					messageDiv.style.display = 'block';
 					
 					// Disable form
 					document.getElementById('resetForm').style.display = 'none';
+					
+					// Start countdown
+					let countdown = 3;
+					messageDiv.textContent = '密碼重設成功！' + countdown + '秒後將導向登入頁面...';
+					
+					const countdownTimer = setInterval(function() {
+						countdown--;
+						if (countdown > 0) {
+							messageDiv.textContent = '密碼重設成功！' + countdown + '秒後將導向登入頁面...';
+						} else {
+							clearInterval(countdownTimer);
+							window.location.href = '` + config.GetFrontendURL() + `';
+						}
+					}, 1000);
 				} else {
 					messageDiv.className = 'message error';
 					messageDiv.textContent = result.message || '密碼重設失敗';

@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"crypto/md5"
-	"crypto/rand"
 	"encoding/csv"
 	"fmt"
 	"net/http"
@@ -71,22 +69,8 @@ func ResetUserPassword(c *gin.Context) {
 		})
 		return
 	}
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
-		c.JSON(http.StatusInternalServerError, ResponseHTTP{
-			Success: false,
-			Message: "Failed to generate secure salt",
-		})
-		return
-	}
-	saltStr := fmt.Sprintf("%x", salt)
 
-	hasher := md5.New()
-	hasher.Write([]byte(time.Now().String() + saltStr))
-	passwordHashBytes := hasher.Sum(nil)
-
-	passwordHash := fmt.Sprintf("%x", passwordHashBytes)[:8]
-
+	password := utils.GenerateRandomPassword()
 	token, err := utils.GetToken(jwtClaims.UserID)
 	if err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -108,11 +92,11 @@ func ResetUserPassword(c *gin.Context) {
 
 	client.AdminEditUser(user.UserName, gitea.EditUserOption{
 		LoginName: user.UserName,
-		Password:  passwordHash,
+		Password:  password,
 	})
 
 	// Send password reset notification email
-	if err := utils.SendPasswordResetNotification(user.Email, user.UserName, passwordHash); err != nil {
+	if err := utils.SendPasswordResetNotification(user.Email, user.UserName, password); err != nil {
 		// Log error but don't fail the request
 		utils.Warnf("Failed to send password reset notification email to %s: %v", user.Email, err)
 	}
@@ -130,7 +114,7 @@ func ResetUserPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Data: ResetUserPasswordDTO{
-			Password: passwordHash,
+			Password: password,
 		},
 		Message: "Password reset successfully",
 	})
