@@ -344,14 +344,9 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		})
 		return
 	}
-
-	scheme := "http"
-	if config.Config("USE_TLS") == "true" {
-		scheme = "https"
-	}
 	hookExists := false
 	for _, hook := range hooks {
-		if hook.Config["url"] == scheme+"://"+config.Config("OJ_HOST")+"/api/gitea" {
+		if hook.Config["url"] == config.GetOJBaseURL()+"/api/gitea" {
 			hookExists = true
 			break
 		}
@@ -368,7 +363,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 			Active: true,
 			Events: []string{"push"},
 			Config: map[string]string{
-				"url":          scheme + "://" + config.Config("OJ_HOST") + "/api/gitea",
+				"url":          config.GetOJBaseURL() + "/api/gitea",
 				"content_type": "json",
 			},
 			AuthorizationHeader: "Bearer " + accessToken,

@@ -320,7 +320,7 @@ func GetReadme(client *gitea.Client, userName string, gitRepoURL string, withTok
 			if err == nil {
 				// 處理圖片路徑並帶入 token
 				content := string(fileContent)
-				giteaBaseURL := config.GetGiteaBaseURL()
+				giteaBaseURL := config.GetGiteaExternalURL()
 
 				// Replace relative image paths with absolute paths
 				content = strings.ReplaceAll(content, "](./", "]("+giteaBaseURL+"/"+userName+"/"+gitRepoURL+"/raw/branch/"+branch+"/")

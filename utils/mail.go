@@ -13,7 +13,7 @@ import (
 )
 
 func SendResetEmail(email, token string) error {
-	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJBaseURL(), url.QueryEscape(token))
+	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJExternalURL(), url.QueryEscape(token))
 	subject := "[橘評測 OJ] 密碼重置 - Password Reset"
 
 	body := fmt.Sprintf(`

@@ -27,6 +27,15 @@ func GetGiteaBaseURL() string {
 	return gitBaseURL
 }
 
+// GetExternalURL returns the complete external OJ URL with configurable scheme
+func GetGiteaExternalURL() string {
+	externalURL := Config("GIT_EXTERNAL_URL")
+	if externalURL == "" {
+		externalURL = GetGiteaBaseURL() // Default to Gitea base URL if not provided
+	}
+	return externalURL
+}
+
 // GetOJBaseURL returns the complete OJ base URL with configurable scheme
 func GetOJBaseURL() string {
 	ojBaseURL := Config("OJ_BASE_URL")
@@ -34,6 +43,15 @@ func GetOJBaseURL() string {
 		ojBaseURL = "http://" + Config("OJ_HOST") // Default to http if not provided
 	}
 	return ojBaseURL
+}
+
+// OJ_EXTERNAL_URL returns the external host for generating user links
+func GetOJExternalURL() string {
+	externalHost := Config("OJ_EXTERNAL_URL")
+	if externalHost == "" {
+		externalHost = GetOJBaseURL() // Default to OJ base URL if not provided
+	}
+	return externalHost
 }
 
 func GetIsolatePath() string {
