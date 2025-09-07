@@ -481,18 +481,6 @@ definitions:
     - git_repo_url
     - title
     type: object
-  handlers.BasicAuthentication:
-    properties:
-      password:
-        example: password
-        type: string
-      username:
-        example: username
-        type: string
-    required:
-    - password
-    - username
-    type: object
   handlers.BulkCreateUser:
     properties:
       default_password:
@@ -699,7 +687,7 @@ definitions:
         items:
           $ref: '#/definitions/models.User'
         type: array
-      totalCount:
+      total_count:
         type: integer
     type: object
   handlers.GetLeaderboardResponseData:
@@ -1208,6 +1196,8 @@ definitions:
         type: boolean
       is_public:
         type: boolean
+      nonce:
+        type: string
       refresh_token:
         type: string
       reset_password:
@@ -2061,30 +2051,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Bulk create User v2
-      tags:
-      - Gitea
-  /api/gitea/auth:
-    post:
-      consumes:
-      - application/json
-      description: Use basic authentication to access the Gitea API
-      parameters:
-      - description: Basic Authentication
-        in: body
-        name: BasicAuthentication
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.BasicAuthentication'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Return access token
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-        "503":
-          description: Service Unavailable
-      summary: Use basic authentication to access the Gitea API
       tags:
       - Gitea
   /api/gitea/user:
