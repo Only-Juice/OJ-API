@@ -222,16 +222,24 @@ func ChangeUserPassword(c *gin.Context) {
 		return
 	}
 
-	// Get user email for notification
-	var user models.User
-	if err := db.First(&user, models.User{UserName: jwtClaims.Username}).Error; err == nil {
-		// Send password change notification email
-		if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
-			// Log error but don't fail the request
-			utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+	go func() {
+		// Get user email for notification
+		var user models.User
+		if err := db.First(&user, models.User{UserName: jwtClaims.Username}).Error; err == nil {
+			// Send password change notification email
+			if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
+				// Log error but don't fail the request
+				utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+			}
+			user.RefreshToken = ""
+			if err := db.Save(&user).Error; err != nil {
+				utils.Warnf("Failed to update user after password change: %v", err)
+			}
 		}
-	}
+	}()
 
+	c.Set("internal", true)
+	Logout(c)
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password changed successfully",
@@ -438,6 +446,15 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
+	user.RefreshToken = ""
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user",
+		})
+		return
+	}
+
 	go func() {
 		if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
 			// Log error but don't fail the request
@@ -449,6 +466,8 @@ func ResetPassword(c *gin.Context) {
 		}
 	}()
 
+	c.Set("internal", true)
+	Logout(c)
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password reset successfully",

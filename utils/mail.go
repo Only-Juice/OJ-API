@@ -247,12 +247,6 @@ func SendPasswordChangeNotification(email, username string, clientInfo *ClientIn
 				<p style="font-size: 14px; color: #888; margin-top: 25px;">
 					⚠️ 如果您並未進行此操作，請立即聯繫系統管理員以確保帳戶安全。
 				</p>
-				
-				<div style="text-align: center; margin: 35px 0;">
-					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-						前往登入頁面 / Go to Login
-					</a>
-				</div>
 			</div>
 			
 			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
@@ -262,7 +256,7 @@ func SendPasswordChangeNotification(email, username string, clientInfo *ClientIn
 			</div>
 		</body>
 		</html>
-	`, username, time.Now().Format("2006-01-02 15:04:05"), clientInfoText, config.GetFrontendURL())
+	`, username, time.Now().Format("2006-01-02 15:04:05"), clientInfoText)
 
 	return SendEmail(email, subject, body)
 }

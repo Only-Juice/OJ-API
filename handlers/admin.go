@@ -102,6 +102,7 @@ func ResetUserPassword(c *gin.Context) {
 	}
 
 	// Update user's reset password status
+	user.RefreshToken = ""
 	user.ResetPassword = true
 	if err := db.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ResponseHTTP{
