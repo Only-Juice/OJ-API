@@ -9,7 +9,7 @@ func MissingOrInvalidTokenPage() string {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Password Reset - Orange Judge OJ</title>
+	<title>Password Reset - Orange Juice OJ</title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
 		body { 
@@ -80,7 +80,7 @@ func MissingOrInvalidTokenPage() string {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">Orange Judge OJ</div>
+		<div class="logo">Orange Juice OJ</div>
 		<div class="error">❌ Invalid Reset Link</div>
 		<p>The reset token is missing or invalid. Please request a new password reset.</p>
 	</div>
@@ -95,7 +95,7 @@ func ExpiredOrUsedTokenPage() string {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Password Reset - Orange Judge OJ</title>
+	<title>Password Reset - Orange Juice OJ</title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
 		body { 
@@ -166,7 +166,7 @@ func ExpiredOrUsedTokenPage() string {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">Orange Judge OJ</div>
+		<div class="logo">Orange Juice OJ</div>
 		<div class="error">❌ Invalid or Expired Reset Link</div>
 		<p>The reset token is invalid or has expired. Please request a new password reset.</p>
 	</div>
@@ -181,7 +181,7 @@ func PasswordResetPage() string {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Reset Password - Orange Judge OJ</title>
+	<title>Reset Password - Orange Juice OJ</title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
 		body { 
@@ -358,7 +358,7 @@ func PasswordResetPage() string {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">🍊 Orange Judge OJ</div>
+		<div class="logo">🍊 Orange Juice OJ</div>
 		<h2>Reset Password</h2>
 		
 		<form id="resetForm">
