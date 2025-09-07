@@ -436,12 +436,12 @@ func PasswordResetPage() string {
 					
 					// Start countdown
 					let countdown = 3;
-					messageDiv.textContent = 'Password reset successful! Redirecting to login page in ' + countdown + ' seconds...';
+					messageDiv.innerHTML = 'Password reset successful!<br>Redirecting to login page in ' + countdown + ' seconds...';
 					
 					const countdownTimer = setInterval(function() {
 						countdown--;
 						if (countdown > 0) {
-							messageDiv.textContent = 'Password reset successful! Redirecting to login page in ' + countdown + ' seconds...';
+							messageDiv.innerHTML = 'Password reset successful!<br>Redirecting to login page in ' + countdown + ' seconds...';
 						} else {
 							clearInterval(countdownTimer);
 							window.location.href = '` + config.GetFrontendURL() + `';
