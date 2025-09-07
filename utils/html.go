@@ -5,11 +5,11 @@ import "OJ-API/config"
 func MissingOrInvalidTokenPage() string {
 	return `
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>密碼重置 - 橘評測 OJ</title>
+	<title>Password Reset - Orange Judge OJ</title>
 	<style>
 		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
@@ -19,9 +19,9 @@ func MissingOrInvalidTokenPage() string {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">橘評測 OJ</div>
-		<div class="error">❌ 無效的重置連結</div>
-		<p>重置代碼遺失或無效，請重新申請密碼重置。</p>
+		<div class="logo">Orange Judge OJ</div>
+		<div class="error">❌ Invalid Reset Link</div>
+		<p>The reset token is missing or invalid. Please request a new password reset.</p>
 	</div>
 </body>
 </html>`
@@ -30,11 +30,11 @@ func MissingOrInvalidTokenPage() string {
 func ExpiredOrUsedTokenPage() string {
 	return `
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>密碼重置 - 橘評測 OJ</title>
+	<title>Password Reset - Orange Judge OJ</title>
 	<style>
 		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
@@ -44,9 +44,9 @@ func ExpiredOrUsedTokenPage() string {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">橘評測 OJ</div>
-		<div class="error">❌ 無效或過期的重置連結</div>
-		<p>重置代碼無效或已過期，請重新申請密碼重置。</p>
+		<div class="logo">Orange Judge OJ</div>
+		<div class="error">❌ Invalid or Expired Reset Link</div>
+		<p>The reset token is invalid or has expired. Please request a new password reset.</p>
 	</div>
 </body>
 </html>`
@@ -55,11 +55,11 @@ func ExpiredOrUsedTokenPage() string {
 func PasswordResetPage() string {
 	return `
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>重設密碼 - 橘評測 OJ</title>
+	<title>Reset Password - Orange Judge OJ</title>
 	<style>
 		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
@@ -81,23 +81,23 @@ func PasswordResetPage() string {
 </head>
 <body>
 	<div class="container">
-		<div class="logo">🍊 橘評測 OJ</div>
-		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">重設密碼</h2>
+		<div class="logo">🍊 Orange Judge OJ</div>
+		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">Reset Password</h2>
 		
 		<form id="resetForm">
 			<div class="form-group">
-				<label for="newPassword">新密碼</label>
+				<label for="newPassword">New Password</label>
 				<input type="password" id="newPassword" name="new_password" required minlength="6">
-				<div class="requirements">密碼長度至少6位字符</div>
+				<div class="requirements">Password must be at least 6 characters long</div>
 			</div>
 			
 			<div class="form-group">
-				<label for="confirmPassword">確認新密碼</label>
+				<label for="confirmPassword">Confirm New Password</label>
 				<input type="password" id="confirmPassword" name="confirm_password" required minlength="6">
 			</div>
 			
 			<button type="submit" class="btn" id="submitBtn">
-				<span id="btnText">重設密碼</span>
+				<span id="btnText">Reset Password</span>
 			</button>
 		</form>
 		
@@ -120,7 +120,7 @@ func PasswordResetPage() string {
 			// Validate passwords match
 			if (newPassword !== confirmPassword) {
 				messageDiv.className = 'message error';
-				messageDiv.textContent = '密碼確認不一致';
+				messageDiv.textContent = 'Password confirmation does not match';
 				messageDiv.style.display = 'block';
 				return;
 			}
@@ -128,7 +128,7 @@ func PasswordResetPage() string {
 			// Validate password length
 			if (newPassword.length < 6) {
 				messageDiv.className = 'message error';
-				messageDiv.textContent = '密碼長度至少6位字符';
+				messageDiv.textContent = 'Password must be at least 6 characters long';
 				messageDiv.style.display = 'block';
 				return;
 			}
@@ -159,12 +159,12 @@ func PasswordResetPage() string {
 					
 					// Start countdown
 					let countdown = 3;
-					messageDiv.textContent = '密碼重設成功！' + countdown + '秒後將導向登入頁面...';
+					messageDiv.textContent = 'Password reset successful! Redirecting to login page in ' + countdown + ' seconds...';
 					
 					const countdownTimer = setInterval(function() {
 						countdown--;
 						if (countdown > 0) {
-							messageDiv.textContent = '密碼重設成功！' + countdown + '秒後將導向登入頁面...';
+							messageDiv.textContent = 'Password reset successful! Redirecting to login page in ' + countdown + ' seconds...';
 						} else {
 							clearInterval(countdownTimer);
 							window.location.href = '` + config.GetFrontendURL() + `';
@@ -172,17 +172,17 @@ func PasswordResetPage() string {
 					}, 1000);
 				} else {
 					messageDiv.className = 'message error';
-					messageDiv.textContent = result.message || '密碼重設失敗';
+					messageDiv.textContent = result.message || 'Password reset failed';
 					messageDiv.style.display = 'block';
 				}
 			} catch (error) {
 				messageDiv.className = 'message error';
-				messageDiv.textContent = '網路錯誤，請稍後再試';
+				messageDiv.textContent = 'Network error, please try again later';
 				messageDiv.style.display = 'block';
 			} finally {
 				// Reset button state
 				submitBtn.disabled = false;
-				btnText.innerHTML = '重設密碼';
+				btnText.innerHTML = 'Reset Password';
 			}
 		});
 	</script>
