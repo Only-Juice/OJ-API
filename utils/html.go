@@ -11,10 +11,71 @@ func MissingOrInvalidTokenPage() string {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Password Reset - Orange Judge OJ</title>
 	<style>
-		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
-		.error { color: #e74c3c; font-size: 18px; margin-bottom: 20px; }
-		.logo { font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 20px; }
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		body { 
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			margin: 0; 
+			padding: 20px; 
+			background: #fafafa;
+			min-height: 100vh; 
+			display: flex; 
+			align-items: center; 
+			justify-content: center;
+			color: #15191e;
+			transition: background-color 0.3s, color 0.3s;
+		}
+		.container { 
+			background: white; 
+			padding: 48px; 
+			border-radius: 12px; 
+			border: 1px solid #e5e5e5;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+			max-width: 400px; 
+			width: 100%; 
+			text-align: center;
+			transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+		}
+		.error { 
+			color: #dc2626; 
+			font-size: 18px; 
+			margin-bottom: 20px; 
+			font-weight: 500;
+			transition: color 0.3s;
+		}
+		.logo { 
+			font-size: 28px; 
+			font-weight: 600; 
+			color: #000; 
+			margin-bottom: 32px;
+			transition: color 0.3s;
+		}
+		p {
+			color: #666;
+			line-height: 1.6;
+			margin-bottom: 0;
+			transition: color 0.3s;
+		}
+		
+		@media (prefers-color-scheme: dark) {
+			body {
+				background: #191e24;
+				color: #e5e5e5;
+			}
+			.container {
+				background: #1d232a;
+				border: 1px solid #15191e;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+			}
+			.logo {
+				color: #fff;
+			}
+			p {
+				color: #a3a3a3;
+			}
+			.error {
+				color: #f87171;
+			}
+		}
 	</style>
 </head>
 <body>
@@ -36,10 +97,71 @@ func ExpiredOrUsedTokenPage() string {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Password Reset - Orange Judge OJ</title>
 	<style>
-		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
-		.error { color: #e74c3c; font-size: 18px; margin-bottom: 20px; }
-		.logo { font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 20px; }
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		body { 
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			margin: 0; 
+			padding: 20px; 
+			background: #fafafa;
+			min-height: 100vh; 
+			display: flex; 
+			align-items: center; 
+			justify-content: center;
+			color: #15191e;
+			transition: background-color 0.3s, color 0.3s;
+		}
+		.container { 
+			background: white; 
+			padding: 48px; 
+			border-radius: 12px; 
+			border: 1px solid #e5e5e5;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+			max-width: 400px; 
+			width: 100%; 
+			text-align: center;
+			transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+		}
+		.error { 
+			color: #dc2626; 
+			font-size: 18px; 
+			margin-bottom: 20px; 
+			font-weight: 500;
+			transition: color 0.3s;
+		}
+		.logo { 
+			font-size: 28px; 
+			font-weight: 600; 
+			color: #000; 
+			margin-bottom: 32px;
+			transition: color 0.3s;
+		}
+		p {
+			color: #666;
+			line-height: 1.6;
+			margin-bottom: 0;
+			transition: color 0.3s;
+		}
+		
+		@media (prefers-color-scheme: dark) {
+			body {
+				background: #191e24;
+				color: #e5e5e5;
+			}
+			.container {
+				background: #1d232a;
+				border: 1px solid #15191e;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+			}
+			.logo {
+				color: #fff;
+			}
+			p {
+				color: #a3a3a3;
+			}
+			.error {
+				color: #f87171;
+			}
+		}
 	</style>
 </head>
 <body>
@@ -61,28 +183,183 @@ func PasswordResetPage() string {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Reset Password - Orange Judge OJ</title>
 	<style>
-		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
-		.logo { text-align: center; font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 30px; }
-		.form-group { margin-bottom: 20px; }
-		label { display: block; margin-bottom: 8px; color: #333; font-weight: bold; }
-		input[type="password"] { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 16px; transition: border-color 0.3s; box-sizing: border-box; }
-		input[type="password"]:focus { outline: none; border-color: #667eea; }
-		.btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; }
-		.btn:hover:not(:disabled) { transform: translateY(-2px); }
-		.btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-		.spinner { border: 2px solid transparent; border-top: 2px solid #ffffff; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; margin-right: 8px; }
-		@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-		.message { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; }
-		.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-		.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-		.requirements { font-size: 12px; color: #666; margin-top: 5px; }
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		body { 
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			margin: 0; 
+			padding: 20px; 
+			background: #fafafa;
+			min-height: 100vh; 
+			display: flex; 
+			align-items: center; 
+			justify-content: center;
+			color: #15191e;
+			transition: background-color 0.3s, color 0.3s;
+		}
+		.container { 
+			background: white; 
+			padding: 48px; 
+			border-radius: 12px; 
+			border: 1px solid #e5e5e5;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+			max-width: 400px; 
+			width: 100%;
+			transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+		}
+		.logo { 
+			text-align: center; 
+			font-size: 28px; 
+			font-weight: 600; 
+			color: #000; 
+			margin-bottom: 32px;
+			transition: color 0.3s;
+		}
+		h2 {
+			text-align: center;
+			color: #000;
+			margin-bottom: 32px;
+			font-size: 24px;
+			font-weight: 600;
+			transition: color 0.3s;
+		}
+		.form-group { 
+			margin-bottom: 24px; 
+		}
+		label { 
+			display: block; 
+			margin-bottom: 8px; 
+			color: #374151; 
+			font-weight: 500;
+			font-size: 14px;
+			transition: color 0.3s;
+		}
+		input[type="password"] { 
+			width: 100%; 
+			padding: 12px 16px; 
+			border: 1px solid #d1d5db; 
+			border-radius: 8px; 
+			font-size: 16px; 
+			transition: all 0.2s; 
+			box-sizing: border-box;
+			background: #fff;
+		}
+		input[type="password"]:focus { 
+			outline: none; 
+			border-color: #000; 
+			box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+		}
+		.btn { 
+			width: 100%; 
+			padding: 12px 16px; 
+			background: #605dff; 
+			color: #edf1fe;
+			border: none; 
+			border-radius: 8px; 
+			font-size: 16px; 
+			font-weight: 500; 
+			cursor: pointer; 
+			transition: all 0.2s; 
+			display: flex; 
+			align-items: center; 
+			justify-content: center;
+			min-height: 48px;
+		}
+		.btn:hover:not(:disabled) { 
+			background: #5754e8; 
+		}
+		.btn:disabled { 
+			opacity: 0.6; 
+			cursor: not-allowed; 
+		}
+		.spinner { 
+			border: 2px solid transparent; 
+			border-top: 2px solid #ffffff; 
+			border-radius: 50%; 
+			width: 16px; 
+			height: 16px; 
+			animation: spin 1s linear infinite; 
+			margin-right: 8px; 
+		}
+		@keyframes spin { 
+			0% { transform: rotate(0deg); } 
+			100% { transform: rotate(360deg); } 
+		}
+		.message { 
+			margin-top: 16px; 
+			padding: 12px; 
+			border-radius: 8px; 
+			text-align: center;
+			font-size: 14px;
+		}
+		.success { 
+			background: #dcfce7; 
+			color: #166534; 
+			border: 1px solid #bbf7d0; 
+		}
+		.error { 
+			background: #fef2f2; 
+			color: #dc2626; 
+			border: 1px solid #fecaca; 
+		}
+		.requirements { 
+			font-size: 12px; 
+			color: #6b7280; 
+			margin-top: 4px;
+			transition: color 0.3s;
+		}
+		
+		@media (prefers-color-scheme: dark) {
+			body {
+				background: #191e24;
+				color: #e5e5e5;
+			}
+			.container {
+				background: #1d232a;
+				border: 1px solid #15191e;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+			}
+			.logo, h2 {
+				color: #ededed;
+			}
+			label {
+				color: #d1d5db;
+			}
+			input[type="password"] {
+				background: #1f2937;
+				border: 1px solid #374151;
+				color: #e5e5e5;
+			}
+			input[type="password"]:focus {
+				border-color: #fff;
+				box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+			}
+			.btn {
+				background: #605dff;
+				color: #edf1fe;
+			}
+			.btn:hover:not(:disabled) {
+				background: #5754e8;
+			}
+			.success {
+				background: #064e3b;
+				color: #a7f3d0;
+				border: 1px solid #047857;
+			}
+			.error {
+				background: #7f1d1d;
+				color: #fca5a5;
+				border: 1px solid #dc2626;
+			}
+			.requirements {
+				color: #9ca3af;
+			}
+		}
 	</style>
 </head>
 <body>
 	<div class="container">
 		<div class="logo">🍊 Orange Judge OJ</div>
-		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">Reset Password</h2>
+		<h2>Reset Password</h2>
 		
 		<form id="resetForm">
 			<div class="form-group">
