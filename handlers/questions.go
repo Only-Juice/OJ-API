@@ -304,98 +304,41 @@ type GetQuestionResponseData struct {
 	ParentGitRepoURL string `json:"parent_git_repo_url" validate:"required"`
 }
 
-func GetReadme(client *gitea.Client, userName string, gitRepoURL string) string {
+func GetReadme(client *gitea.Client, userName string, gitRepoURL string, withToken bool) string {
 	branches := []string{"main", "master"}
 	readmeFiles := []string{"README.md", "README"}
+
+	// 取得 token
+	token := ""
+	if withToken {
+		token, _ = utils.GetTokenByUsername(userName)
+	}
 
 	for _, branch := range branches {
 		for _, readmeFile := range readmeFiles {
 			fileContent, _, err := client.GetFile(userName, gitRepoURL, branch, readmeFile)
 			if err == nil {
-				return string(fileContent)
+				// 處理圖片路徑並帶入 token
+				content := string(fileContent)
+				giteaBaseURL := config.GetGiteaExternalURL()
+
+				// Replace relative image paths with absolute paths
+				content = strings.ReplaceAll(content, "](./", "]("+giteaBaseURL+"/"+userName+"/"+gitRepoURL+"/raw/branch/"+branch+"/")
+
+				// Only add token parameter to image URLs that are from our own Gitea instance
+				if withToken && strings.Contains(content, giteaBaseURL) {
+					content = strings.ReplaceAll(content, ".png)", ".png?token="+token+")")
+					content = strings.ReplaceAll(content, ".jpg)", ".jpg?token="+token+")")
+					content = strings.ReplaceAll(content, ".jpeg)", ".jpeg?token="+token+")")
+					content = strings.ReplaceAll(content, ".gif)", ".gif?token="+token+")")
+					content = strings.ReplaceAll(content, ".webp)", ".webp?token="+token+")")
+				}
+
+				return content
 			}
 		}
 	}
 	return ""
-}
-
-// GetQuestion is a function to get a question by UQR_ID
-// @Summary		Get a question by UQR_ID
-// @Description	Get a question by UQR_ID
-// @Tags			Question
-// @Accept			json
-// @Produce		json
-// @Param			UQR_ID	path	int	true	"ID of the UserQuestionRelation to get"
-// @Success		200		{object}	ResponseHTTP{data=GetQuestionResponseData}
-// @Failure		400
-// @Failure		401
-// @Failure		404
-// @Failure		503
-// @Router			/api/questions/uqr/{UQR_ID}/question [get]
-// @Security		BearerAuth
-func GetQuestion(c *gin.Context) {
-	db := database.DBConn
-	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
-	token, err := utils.GetToken(jwtClaims.UserID)
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: "Failed to retrieve token",
-		})
-		return
-	}
-	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
-		gitea.SetToken(token),
-	)
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	UQR_IDstr := c.Param("UQR_ID")
-	UQR_ID, err := strconv.Atoi(UQR_IDstr)
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: "Invalid UQR ID",
-		})
-		return
-	}
-
-	var uqr models.UserQuestionRelation
-	db.Where("id = ? AND user_id = ?", UQR_ID, jwtClaims.UserID).Limit(1).Find(&uqr)
-	if uqr.ID == 0 {
-		c.JSON(404, ResponseHTTP{
-			Success: false,
-			Message: "Question not found",
-		})
-		return
-	}
-
-	var question models.Question
-	db.Where("id = ? AND is_active = ?", uqr.QuestionID, true).Limit(1).Find(&question)
-	if question.ID == 0 {
-		c.JSON(404, ResponseHTTP{
-			Success: false,
-			Message: "Question not found",
-		})
-		return
-	}
-
-	c.JSON(200, ResponseHTTP{
-		Success: true,
-		Message: "Question fetched successfully",
-		Data: GetQuestionResponseData{
-			Title:            question.Title,
-			Description:      question.Description,
-			README:           GetReadme(client, jwtClaims.Username, strings.Split(uqr.GitUserRepoURL, "/")[1]),
-			GitRepoURL:       uqr.GitUserRepoURL,
-			ParentGitRepoURL: question.GitRepoURL,
-		},
-	})
 }
 
 type GetQuestionByIDResponseData struct {
@@ -458,7 +401,7 @@ func GetQuestionByID(c *gin.Context) {
 			GitRepoURL:  question.GitRepoURL,
 			StartTime:   question.StartTime.Format(time.RFC3339),
 			EndTime:     question.EndTime.Format(time.RFC3339),
-			README:      GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
+			README:      GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1], false),
 		},
 	})
 }
@@ -622,7 +565,7 @@ func GetUserQuestionByID(c *gin.Context) {
 			GetQuestionResponseData: GetQuestionResponseData{
 				Title:            question.Title,
 				Description:      question.Description,
-				README:           GetReadme(client, jwtClaims.Username, strings.Split(uqr.GitUserRepoURL, "/")[1]),
+				README:           GetReadme(client, jwtClaims.Username, strings.Split(uqr.GitUserRepoURL, "/")[1], true),
 				GitRepoURL:       uqr.GitUserRepoURL,
 				ParentGitRepoURL: question.GitRepoURL,
 			},
@@ -718,6 +661,60 @@ func AddQuestion(c *gin.Context) {
 			Message: "Question with this GitRepoURL already exists",
 		})
 		return
+	}
+
+	// 檢查 Gitea 中是否存在該倉庫，不存在的話建立對應的倉庫
+	parts := strings.Split(req.GitRepoURL, "/")
+	if len(parts) != 2 {
+		c.JSON(400, ResponseHTTP{
+			Success: false,
+			Message: "Invalid GitRepoURL format",
+		})
+		return
+	}
+	owner := parts[0]
+	repo := parts[1]
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+	_, _, err = client.GetRepo(owner, repo)
+	if err != nil {
+		// 如果 owner 不是當前用戶，則無權創建倉庫
+		if owner != jwtClaims.Username {
+			c.JSON(400, ResponseHTTP{
+				Success: false,
+				Message: "Repository does not exist and cannot be created under another user's account",
+			})
+			return
+		}
+		// 如果倉庫不存在，則創建一個新的倉庫
+		_, _, err := client.CreateRepo(gitea.CreateRepoOption{
+			Name:     repo,
+			Private:  false,
+			AutoInit: false,
+		})
+		if err != nil {
+			c.JSON(503, ResponseHTTP{
+				Success: false,
+				Message: "Failed to create repository in Gitea: " + err.Error(),
+			})
+			return
+		}
 	}
 
 	if err := db.Create(&newquestion).Error; err != nil {

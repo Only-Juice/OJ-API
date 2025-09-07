@@ -205,7 +205,6 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/questions/admin/:ID/scripts", AuthMiddleware(), handlers.GetQuestionScripts)
 		api.GET("/questions/user", AuthMiddleware(), handlers.GetUsersQuestions)
 		api.GET("/questions/user/:ID/question", AuthMiddleware(), handlers.GetUserQuestionByID)
-		api.GET("/questions/uqr/:UQR_ID/question", AuthMiddleware(), handlers.GetQuestion)
 
 		// Score routes
 		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)

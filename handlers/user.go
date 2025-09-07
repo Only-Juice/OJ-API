@@ -588,6 +588,15 @@ func ResetPassword(c *gin.Context) {
 		utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
 	}
 
+	// Clear the nonce to prevent reuse
+	if err := db.Model(&models.User{}).Where("id = ?", userID).Update("nonce", "").Error; err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to clear nonce",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password reset successfully",

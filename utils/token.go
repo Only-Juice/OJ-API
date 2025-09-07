@@ -14,6 +14,8 @@ import (
 	"OJ-API/config"
 	"OJ-API/database"
 	"OJ-API/models"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -124,8 +126,25 @@ func GetToken(userID uint) (string, error) {
 	return DecryptToken(user.GiteaToken, getEncryptionKey())
 }
 
+// GetTokenByUsername retrieves and decrypts a token from the database by username
+func GetTokenByUsername(username string) (string, error) {
+	var user models.User
+	db := database.DBConn
+	if err := db.Where("user_name = ?", username).Limit(1).Find(&user).Error; err != nil {
+		return "", err
+	}
+
+	return DecryptToken(user.GiteaToken, getEncryptionKey())
+}
+
 func GenerateResetToken(userID uint) (string, error) {
-	token := fmt.Sprintf("%d:%d", userID, time.Now().Unix())
+	nonce := uuid.New().String()
+	token := fmt.Sprintf("%d:%d:%s", userID, time.Now().Unix(), nonce)
+	// Store the nonce in the database
+	db := database.DBConn
+	if err := db.Model(&models.User{}).Where("id = ?", userID).Update("nonce", nonce).Error; err != nil {
+		return "", err
+	}
 	return EncryptToken(token, getEncryptionKey())
 }
 
@@ -137,7 +156,9 @@ func ValidateResetToken(encryptedToken string) (uint, error) {
 
 	var userID uint
 	var timestamp int64
-	_, err = fmt.Sscanf(decryptedToken, "%d:%d", &userID, &timestamp)
+	var nonce string
+	_, err = fmt.Sscanf(decryptedToken, "%d:%d:%s", &userID, &timestamp, &nonce)
+	Infof("Decrypted token: %s", decryptedToken)
 	if err != nil {
 		return 0, errors.New("invalid token format")
 	}
@@ -146,6 +167,16 @@ func ValidateResetToken(encryptedToken string) (uint, error) {
 	expirationTime := time.Unix(timestamp, 0).Add(5 * time.Minute)
 	if time.Now().After(expirationTime) {
 		return 0, errors.New("reset token has expired")
+	}
+
+	// Verify the nonce matches the one stored in the database
+	var user models.User
+	db := database.DBConn
+	if err := db.Where("id = ?", userID).Limit(1).Find(&user).Error; err != nil {
+		return 0, err
+	}
+	if user.Nonce != nonce {
+		return 0, errors.New("invalid nonce in token")
 	}
 
 	return userID, nil

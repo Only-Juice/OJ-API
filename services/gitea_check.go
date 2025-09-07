@@ -66,10 +66,6 @@ func giteaCheck() {
 			utils.Errorf("Failed to list hooks for %s/%s: %v", username, reponame, err)
 			return
 		}
-		scheme := "http"
-		if config.Config("USE_TLS") == "true" {
-			scheme = "https"
-		}
 		token, err := utils.GenerateAccessToken(item.User.ID, item.User.UserName, item.User.IsAdmin)
 		if err != nil {
 			utils.Errorf("Failed to generate token for %s/%s: %v", username, reponame, err)
@@ -78,12 +74,12 @@ func giteaCheck() {
 
 		hookExists := false
 		for _, hook := range hooks {
-			if hook.Config["url"] == scheme+"://"+config.Config("OJ_HOST")+"/api/gitea" {
+			if hook.Config["url"] == config.GetOJBaseURL()+"/api/gitea" {
 				if hook.AuthorizationHeader != token {
 					// 更新 Authorization Header
 					if _, err := client.EditRepoHook(username, reponame, hook.ID, gitea.EditHookOption{
 						Config: map[string]string{
-							"url":          scheme + "://" + config.Config("OJ_HOST") + "/api/gitea",
+							"url":          config.GetOJBaseURL() + "/api/gitea",
 							"content_type": "json",
 						},
 						AuthorizationHeader: "Bearer " + token,
@@ -101,7 +97,7 @@ func giteaCheck() {
 				Active: true,
 				Events: []string{"push"},
 				Config: map[string]string{
-					"url":          scheme + "://" + config.Config("OJ_HOST") + "/api/gitea",
+					"url":          config.GetOJBaseURL() + "/api/gitea",
 					"content_type": "json",
 				},
 				AuthorizationHeader: "Bearer " + token,

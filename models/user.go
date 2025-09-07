@@ -8,6 +8,7 @@ type User struct {
 	IsPublic      bool   `gorm:"default:true;not null" json:"is_public"`
 	GiteaToken    string `gorm:"size:450" json:"gitea_token"`
 	RefreshToken  string `gorm:"size:1000" json:"refresh_token"`
+	Nonce         string `gorm:"size:100" json:"nonce"`
 	IsAdmin       bool   `gorm:"default:false;not null" json:"is_admin"`
 	ResetPassword bool   `gorm:"default:false;not null" json:"reset_password"`
 }

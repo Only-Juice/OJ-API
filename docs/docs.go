@@ -1337,43 +1337,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/gitea/auth": {
-            "post": {
-                "description": "Use basic authentication to access the Gitea API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gitea"
-                ],
-                "summary": "Use basic authentication to access the Gitea API",
-                "parameters": [
-                    {
-                        "description": "Basic Authentication",
-                        "name": "BasicAuthentication",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.BasicAuthentication"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Return access token",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
         "/api/gitea/user": {
             "get": {
                 "security": [
@@ -1984,67 +1947,6 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/handlers.QuestionScripts"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/questions/uqr/{UQR_ID}/question": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a question by UQR_ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Question"
-                ],
-                "summary": "Get a question by UQR_ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID of the UserQuestionRelation to get",
-                        "name": "UQR_ID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/handlers.GetQuestionResponseData"
                                         }
                                     }
                                 }
@@ -3816,23 +3718,6 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.BasicAuthentication": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "password"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "username"
-                }
-            }
-        },
         "handlers.BulkCreateUser": {
             "type": "object",
             "required": [
@@ -4138,7 +4023,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.User"
                     }
                 },
-                "totalCount": {
+                "total_count": {
                     "type": "integer"
                 }
             }
@@ -4923,6 +4808,9 @@ const docTemplate = `{
                 },
                 "is_public": {
                     "type": "boolean"
+                },
+                "nonce": {
+                    "type": "string"
                 },
                 "refresh_token": {
                     "type": "string"
