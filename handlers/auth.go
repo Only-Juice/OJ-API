@@ -304,10 +304,13 @@ func Logout(c *gin.Context) {
 	setCrossDomainCookie(c, "access_token", "", -1)
 	setCrossDomainCookie(c, "refresh_token", "", -1)
 
-	c.JSON(200, ResponseHTTP{
-		Success: true,
-		Message: "Logout successful",
-	})
+	internal := c.GetBool("internal")
+	if !internal {
+		c.JSON(200, ResponseHTTP{
+			Success: true,
+			Message: "Logout successful",
+		})
+	}
 }
 
 // getOAuth2Config returns the OAuth2 configuration for Gitea

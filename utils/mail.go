@@ -12,168 +12,6 @@ import (
 	"OJ-API/config"
 )
 
-func SendResetEmail(email, token string) error {
-	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJExternalURL(), url.QueryEscape(token))
-	subject := "[橘評測 OJ] 密碼重置 - Password Reset"
-
-	body := fmt.Sprintf(`
-		<html>
-		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-				<h1 style="color: white; margin: 0; font-size: 28px;">密碼重置請求</h1>
-				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Password Reset Request</p>
-			</div>
-			
-			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
-				<p style="font-size: 16px; margin-bottom: 20px;">您好，</p>
-				
-				<p style="font-size: 16px; margin-bottom: 25px;">
-					我們收到了您的密碼重置請求。請點擊下方按鈕來重置您的密碼：
-				</p>
-				
-				<div style="text-align: center; margin: 35px 0;">
-					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-						重置密碼 / Reset Password
-					</a>
-				</div>
-				
-				<p style="font-size: 14px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-					如果按鈕無法點擊，請複製以下連結到瀏覽器：<br>
-					<span style="color: #667eea; word-break: break-all;">%s</span>
-				</p>
-				
-				<p style="font-size: 14px; color: #888; margin-top: 25px;">
-					⚠️ 此連結將在5分鐘後失效。如果您並未請求重置密碼，請忽略此郵件。
-				</p>
-			</div>
-			
-			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
-				<p style="font-size: 12px; color: #999; margin: 0;">
-					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
-				</p>
-			</div>
-		</body>
-		</html>
-	`, resetLink, resetLink)
-
-	return SendEmail(email, subject, body)
-}
-
-func SendPasswordChangeNotification(email, username string, clientInfo *ClientInfo) error {
-	subject := "[橘評測 OJ] 密碼變更通知 - Password Change Notification"
-
-	// Format client information for email
-	clientInfoText := "未知"
-	if clientInfo != nil {
-		clientInfoText = fmt.Sprintf(`
-					<strong>IP 地址：</strong> %s<br>
-					<strong>瀏覽器：</strong> %s<br>
-					<strong>作業系統：</strong> %s<br>
-					<strong>地點：</strong> %s, %s`,
-			clientInfo.IPAddress,
-			clientInfo.Browser,
-			clientInfo.OS,
-			clientInfo.Location,
-			clientInfo.Country)
-	}
-
-	body := fmt.Sprintf(`
-		<html>
-		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-				<h1 style="color: white; margin: 0; font-size: 28px;">密碼變更通知</h1>
-				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Password Change Notification</p>
-			</div>
-			
-			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
-				<p style="font-size: 16px; margin-bottom: 20px;">親愛的 %s，</p>
-				
-				<p style="font-size: 16px; margin-bottom: 25px;">
-					您的帳戶密碼已成功變更。如果這不是您本人的操作，請立即聯繫管理員。
-				</p>
-				
-				<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
-					<p style="font-size: 14px; color: #666; margin: 0;">
-						<strong>變更時間：</strong> %s<br>
-						<strong>使用者名稱：</strong> %s
-					</p>
-				</div>
-
-				<div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #0066cc;">
-					<p style="font-size: 14px; color: #0066cc; margin: 0 0 10px 0; font-weight: bold;">🔍 操作來源資訊：</p>
-					<p style="font-size: 13px; color: #444; margin: 0;">
-						%s
-					</p>
-				</div>
-				
-				<p style="font-size: 14px; color: #888; margin-top: 25px;">
-					⚠️ 如果您並未進行此操作，請立即聯繫系統管理員以確保帳戶安全。
-				</p>
-			</div>
-			
-			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
-				<p style="font-size: 12px; color: #999; margin: 0;">
-					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
-				</p>
-			</div>
-		</body>
-		</html>
-	`, username, time.Now().Format("2006-01-02 15:04:05"), username, clientInfoText)
-
-	return SendEmail(email, subject, body)
-}
-
-func SendPasswordResetNotification(email, username, newPassword string) error {
-	subject := "[橘評測 OJ] 密碼重置通知 - Password Reset Notification"
-
-	body := fmt.Sprintf(`
-		<html>
-		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-				<h1 style="color: white; margin: 0; font-size: 28px;">密碼重置通知</h1>
-				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Password Reset Notification</p>
-			</div>
-			
-			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
-				<p style="font-size: 16px; margin-bottom: 20px;">親愛的 %s，</p>
-				
-				<p style="font-size: 16px; margin-bottom: 25px;">
-					管理員已為您重置密碼。您的新密碼如下：
-				</p>
-				
-				<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
-					<p style="font-size: 18px; color: #333; margin: 0; font-weight: bold; font-family: monospace;">
-						新密碼：<span style="background: #e9ecef; padding: 5px 10px; border-radius: 4px;">%s</span>
-					</p>
-				</div>
-				
-				<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 25px 0;">
-					<p style="font-size: 14px; color: #856404; margin: 0;">
-						<strong>⚠️ 安全提醒：</strong><br>
-						• 請立即登入並變更為您個人的密碼<br>
-						• 請勿與他人分享此密碼<br>
-						• 建議使用包含英文、數字和特殊符號的強密碼
-					</p>
-				</div>
-				
-				<p style="font-size: 14px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-					重置時間：%s<br>
-					使用者名稱：%s
-				</p>
-			</div>
-			
-			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
-				<p style="font-size: 12px; color: #999; margin: 0;">
-					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
-				</p>
-			</div>
-		</body>
-		</html>
-	`, username, newPassword, time.Now().Format("2006-01-02 15:04:05"), username)
-
-	return SendEmail(email, subject, body)
-}
-
 func SendEmail(to, subject, body string) error {
 	// Get SMTP configuration from environment variables
 	smtpHost := config.Config("SMTP_HOST")
@@ -311,4 +149,328 @@ func extractEmailAddress(emailString string) string {
 	}
 	// Otherwise, return the string as is (assuming it's just an email address)
 	return emailString
+}
+
+func SendResetEmail(email, token string) error {
+	resetLink := fmt.Sprintf("%s/api/user/reset_password?token=%s", config.GetOJExternalURL(), url.QueryEscape(token))
+	subject := "[橘評測 OJ] 密碼重置 - Password Reset"
+
+	body := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+				<h1 style="color: white; margin: 0; font-size: 28px;">密碼重置請求</h1>
+				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Password Reset Request</p>
+			</div>
+			
+			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 16px; margin-bottom: 25px;">
+					您好 / Hello,
+				</p>
+				
+				<p style="font-size: 16px; margin-bottom: 30px;">
+					我們收到了您的密碼重置請求。請點擊下方按鈕來重置您的密碼：
+				</p>
+				
+				<p style="font-size: 15px; color: #666; margin-bottom: 25px;">
+					We received a password reset request for your account. Please click the button below to reset your password:
+				</p>
+				
+				<div style="text-align: center; margin: 35px 0;">
+					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+						重置密碼 / Reset Password
+					</a>
+				</div>
+				
+				<div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+					<p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+						如果按鈕無法點擊，請複製以下連結到瀏覽器：
+					</p>
+					<p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+						If the button doesn't work, please copy and paste this link into your browser:
+					</p>
+					<p style="font-size: 13px; color: #667eea; word-break: break-all; margin: 0;">
+						%s
+					</p>
+				</div>
+				
+				<div style="background: linear-gradient(135deg, #fff3cd 0%%, #fef5cd 100%%); border: 1px solid #ffeaa7; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f39c12; box-shadow: 0 2px 8px rgba(243, 156, 18, 0.1);">
+					<div style="display: flex; align-items: center; margin-bottom: 12px;">
+						<span style="font-size: 18px; margin-right: 10px; color: #f39c12;">⚠️</span>
+						<p style="font-size: 15px; color: #856404; margin: 0; font-weight: bold;">
+							重要提醒 / Important Notice
+						</p>
+					</div>
+					<div style="line-height: 1.6;">
+						<p style="font-size: 14px; color: #856404; margin: 0 0 10px 0;">
+							此連結將在 <strong>5 分鐘後失效</strong>。如果您並未請求重置密碼，請忽略此郵件。
+						</p>
+						<p style="font-size: 13px; color: #856404; margin: 0; font-style: italic;">
+							This link will expire in <strong>5 minutes</strong>. If you didn't request a password reset, please ignore this email.
+						</p>
+					</div>
+				</div>
+			</div>
+			
+			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 12px; color: #999; margin: 0;">
+					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
+				</p>
+			</div>
+		</body>
+		</html>
+	`, resetLink, resetLink)
+
+	return SendEmail(email, subject, body)
+}
+
+func SendPasswordChangeNotification(email, username string, clientInfo *ClientInfo) error {
+	subject := "[橘評測 OJ] 密碼變更通知 - Password Change Notification"
+
+	// Format client information for email
+	clientInfoText := "未知 / Unknown"
+	if clientInfo != nil {
+		clientInfoText = fmt.Sprintf(`
+					<strong>IP 地址 / IP Address:</strong> %s<br>
+					<strong>瀏覽器 / Browser:</strong> %s<br>
+					<strong>作業系統 / Operating System:</strong> %s<br>
+					<strong>地點 / Location:</strong> %s, %s`,
+			clientInfo.IPAddress,
+			clientInfo.Browser,
+			clientInfo.OS,
+			clientInfo.Location,
+			clientInfo.Country)
+	}
+
+	body := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+				<h1 style="color: white; margin: 0; font-size: 28px;">密碼變更通知</h1>
+				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Password Change Notification</p>
+			</div>
+			
+			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 16px; margin-bottom: 25px;">
+					Dear %s,
+				</p>
+				
+				<p style="font-size: 16px; margin-bottom: 20px;">
+					您的帳戶密碼已成功變更。如果這不是您本人的操作，請立即聯繫管理員。
+				</p>
+				
+				<p style="font-size: 15px; color: #666; margin-bottom: 25px;">
+					Your account password has been successfully changed. If this wasn't you, please contact the administrator immediately.
+				</p>
+				
+				<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+					<p style="font-size: 14px; color: #666; margin: 0;">
+						<strong>變更時間 / Change Time:</strong> %s
+					</p>
+				</div>
+
+				<div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #0066cc;">
+					<p style="font-size: 14px; color: #0066cc; margin: 0 0 10px 0; font-weight: bold;">
+						🔍 操作來源資訊 / Operation Source Information:
+					</p>
+					<p style="font-size: 13px; color: #444; margin: 0;">
+						%s
+					</p>
+				</div>
+				
+				<div style="background: linear-gradient(135deg, #ffe6e6 0%%, #fff0f0 100%%); border: 1px solid #ffb3b3; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #e74c3c; box-shadow: 0 2px 8px rgba(231, 76, 60, 0.1);">
+					<div style="display: flex; align-items: center; margin-bottom: 12px;">
+						<span style="font-size: 18px; margin-right: 10px; color: #e74c3c;">⚠️</span>
+						<p style="font-size: 15px; color: #c0392b; margin: 0; font-weight: bold;">
+							安全警告 / Security Alert
+						</p>
+					</div>
+					<div style="line-height: 1.6;">
+						<p style="font-size: 14px; color: #c0392b; margin: 0 0 10px 0;">
+							如果您並未進行此操作，請 <strong>立即聯繫系統管理員</strong> 以確保帳戶安全。
+						</p>
+						<p style="font-size: 13px; color: #c0392b; margin: 0; font-style: italic;">
+							If you didn't make this change, please <strong>contact the system administrator immediately</strong> to ensure account security.
+						</p>
+					</div>
+				</div>
+			</div>
+			
+			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 12px; color: #999; margin: 0;">
+					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
+				</p>
+			</div>
+		</body>
+		</html>
+	`, username, time.Now().Format("2006-01-02 15:04:05"), clientInfoText)
+
+	return SendEmail(email, subject, body)
+}
+
+func SendPasswordResetNotification(email, username, newPassword string) error {
+	subject := "[橘評測 OJ] 密碼重置通知 - Password Reset Notification"
+
+	body := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+				<h1 style="color: white; margin: 0; font-size: 28px;">密碼重置通知</h1>
+				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Password Reset Notification</p>
+			</div>
+			
+			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 16px; margin-bottom: 25px;">
+					Dear %s,
+				</p>
+				
+				<p style="font-size: 16px; margin-bottom: 20px;">
+					管理員已為您重置密碼。您的新密碼如下：
+				</p>
+				
+				<p style="font-size: 15px; color: #666; margin-bottom: 25px;">
+					The administrator has reset your password. Your new password is as follows:
+				</p>
+				
+				<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
+					<p style="font-size: 18px; color: #333; margin: 0; font-weight: bold; font-family: monospace;">
+						新密碼 / New Password: <span style="background: #e9ecef; padding: 5px 10px; border-radius: 4px;">%s</span>
+					</p>
+				</div>
+
+				<div style="text-align: center; margin: 35px 0;">
+					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+						立即登入 / Login Now
+					</a>
+				</div>
+				
+				<div style="background: linear-gradient(135deg, #fff3cd 0%%, #fef5cd 100%%); border: 1px solid #ffeaa7; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f39c12; box-shadow: 0 2px 8px rgba(243, 156, 18, 0.1);">
+					<div style="display: flex; align-items: center; margin-bottom: 15px;">
+						<span style="font-size: 18px; margin-right: 10px; color: #f39c12;">⚠️</span>
+						<p style="font-size: 15px; color: #856404; margin: 0; font-weight: bold;">
+							安全提醒 / Security Reminder
+						</p>
+					</div>
+					<div style="line-height: 1.8;">
+						<p style="font-size: 14px; color: #856404; margin: 0 0 12px 0;">
+							<strong>中文說明：</strong>
+						</p>
+						<ul style="color: #856404; font-size: 13px; margin: 0 0 15px 20px; padding: 0;">
+							<li style="margin-bottom: 5px;">請立即登入並變更為您個人的密碼</li>
+							<li style="margin-bottom: 5px;">請勿與他人分享此密碼</li>
+							<li>建議使用包含英文、數字和特殊符號的強密碼</li>
+						</ul>
+						<p style="font-size: 14px; color: #856404; margin: 0 0 8px 0;">
+							<strong>English Instructions:</strong>
+						</p>
+						<ul style="color: #856404; font-size: 13px; margin: 0; padding-left: 20px;">
+							<li style="margin-bottom: 5px;">Please login immediately and change to your personal password</li>
+							<li style="margin-bottom: 5px;">Do not share this password with others</li>
+							<li>We recommend using a strong password with letters, numbers and special symbols</li>
+						</ul>
+					</div>
+				</div>
+				
+				<div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+					<p style="font-size: 14px; color: #666; margin: 0;">
+						重置時間 / Reset Time: %s
+					</p>
+				</div>
+			</div>
+			
+			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 12px; color: #999; margin: 0;">
+					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
+				</p>
+			</div>
+		</body>
+		</html>
+	`, username, newPassword, config.GetFrontendURL(), time.Now().Format("2006-01-02 15:04:05"))
+
+	return SendEmail(email, subject, body)
+}
+
+func SendDefaultPasswordNotification(email, username, newPassword string) error {
+	subject := "[橘評測 OJ] 預設密碼通知 - Default Password Notification"
+
+	body := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+			<div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+				<h1 style="color: white; margin: 0; font-size: 28px;">預設密碼通知</h1>
+				<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Default Password Notification</p>
+			</div>
+			
+			<div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 16px; margin-bottom: 25px;">
+					Dear %s,
+				</p>
+				
+				<p style="font-size: 16px; margin-bottom: 20px;">
+					您的帳戶已由管理員建立。以下是您的預設登入資訊：
+				</p>
+				
+				<p style="font-size: 15px; color: #666; margin-bottom: 25px;">
+					Your account has been created by the administrator. Here is your default login information:
+				</p>
+				
+				<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
+					<p style="font-size: 18px; color: #333; margin: 0 0 15px 0; font-weight: bold; font-family: monospace;">
+						使用者名稱 / Username: <span style="background: #e9ecef; padding: 5px 10px; border-radius: 4px;">%s</span>
+					</p>
+					<p style="font-size: 18px; color: #333; margin: 0; font-weight: bold; font-family: monospace;">
+						預設密碼 / Default Password: <span style="background: #e9ecef; padding: 5px 10px; border-radius: 4px;">%s</span>
+					</p>
+				</div>
+
+				<div style="text-align: center; margin: 35px 0;">
+					<a href="%s" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; text-decoration: none; padding: 15px 35px; border-radius: 25px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+						立即登入 / Login Now
+					</a>
+				</div>
+				
+				<div style="background: linear-gradient(135deg, #fff3cd 0%%, #fef5cd 100%%); border: 1px solid #ffeaa7; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f39c12; box-shadow: 0 2px 8px rgba(243, 156, 18, 0.1);">
+					<div style="display: flex; align-items: center; margin-bottom: 15px;">
+						<span style="font-size: 18px; margin-right: 10px; color: #f39c12;">⚠️</span>
+						<p style="font-size: 15px; color: #856404; margin: 0; font-weight: bold;">
+							安全提醒 / Security Reminder
+						</p>
+					</div>
+					<div style="line-height: 1.8;">
+						<p style="font-size: 14px; color: #856404; margin: 0 0 12px 0;">
+							<strong>中文說明：</strong>
+						</p>
+						<ul style="color: #856404; font-size: 13px; margin: 0 0 15px 20px; padding: 0;">
+							<li style="margin-bottom: 5px;">請於首次登入後立即變更此預設密碼</li>
+							<li style="margin-bottom: 5px;">請勿與他人分享此密碼</li>
+							<li>建議使用包含英文、數字和特殊符號的強密碼</li>
+						</ul>
+						<p style="font-size: 14px; color: #856404; margin: 0 0 8px 0;">
+							<strong>English Instructions:</strong>
+						</p>
+						<ul style="color: #856404; font-size: 13px; margin: 0; padding-left: 20px;">
+							<li style="margin-bottom: 5px;">Please change this default password immediately after your first login</li>
+							<li style="margin-bottom: 5px;">Do not share this password with others</li>
+							<li>We recommend using a strong password with letters, numbers and special symbols</li>
+						</ul>
+					</div>
+				</div>
+				
+				<div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+					<p style="font-size: 14px; color: #666; margin: 0;">
+						帳戶建立時間 / Account Creation Time: %s
+					</p>
+				</div>
+			</div>
+			
+			<div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+				<p style="font-size: 12px; color: #999; margin: 0;">
+					此郵件由系統自動發送，請勿回覆 | This is an automated email, please do not reply
+				</p>
+			</div>
+		</body>
+		</html>
+	`, username, username, newPassword, config.GetFrontendURL(), time.Now().Format("2006-01-02 15:04:05"))
+
+	return SendEmail(email, subject, body)
 }

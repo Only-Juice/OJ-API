@@ -304,15 +304,9 @@ type GetQuestionResponseData struct {
 	ParentGitRepoURL string `json:"parent_git_repo_url" validate:"required"`
 }
 
-func GetReadme(client *gitea.Client, userName string, gitRepoURL string, withToken bool) string {
+func GetReadme(client *gitea.Client, userName string, gitRepoURL string) string {
 	branches := []string{"main", "master"}
 	readmeFiles := []string{"README.md", "README"}
-
-	// 取得 token
-	token := ""
-	if withToken {
-		token, _ = utils.GetTokenByUsername(userName)
-	}
 
 	for _, branch := range branches {
 		for _, readmeFile := range readmeFiles {
@@ -324,15 +318,6 @@ func GetReadme(client *gitea.Client, userName string, gitRepoURL string, withTok
 
 				// Replace relative image paths with absolute paths
 				content = strings.ReplaceAll(content, "](./", "]("+giteaBaseURL+"/"+userName+"/"+gitRepoURL+"/raw/branch/"+branch+"/")
-
-				// Only add token parameter to image URLs that are from our own Gitea instance
-				if withToken && strings.Contains(content, giteaBaseURL) {
-					content = strings.ReplaceAll(content, ".png)", ".png?token="+token+")")
-					content = strings.ReplaceAll(content, ".jpg)", ".jpg?token="+token+")")
-					content = strings.ReplaceAll(content, ".jpeg)", ".jpeg?token="+token+")")
-					content = strings.ReplaceAll(content, ".gif)", ".gif?token="+token+")")
-					content = strings.ReplaceAll(content, ".webp)", ".webp?token="+token+")")
-				}
 
 				return content
 			}
@@ -401,7 +386,7 @@ func GetQuestionByID(c *gin.Context) {
 			GitRepoURL:  question.GitRepoURL,
 			StartTime:   question.StartTime.Format(time.RFC3339),
 			EndTime:     question.EndTime.Format(time.RFC3339),
-			README:      GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1], false),
+			README:      GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
 		},
 	})
 }
@@ -565,7 +550,7 @@ func GetUserQuestionByID(c *gin.Context) {
 			GetQuestionResponseData: GetQuestionResponseData{
 				Title:            question.Title,
 				Description:      question.Description,
-				README:           GetReadme(client, jwtClaims.Username, strings.Split(uqr.GitUserRepoURL, "/")[1], true),
+				README:           GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
 				GitRepoURL:       uqr.GitUserRepoURL,
 				ParentGitRepoURL: question.GitRepoURL,
 			},

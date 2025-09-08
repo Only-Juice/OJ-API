@@ -57,10 +57,41 @@ func GetClientInfo(c *gin.Context) *ClientInfo {
 
 // getClientIP gets the real client IP address
 func getClientIP(c *gin.Context) string {
+	// Priority order for getting the real client IP:
+	// 1. CF-Connecting-IP (Cloudflare) - most reliable when behind Cloudflare
+	// 2. CF-IPCountry header presence indicates Cloudflare is in use
+	// 3. X-Forwarded-For (first IP in the chain)
+	// 4. X-Real-IP
+	// 5. RemoteAddr as fallback
+
+	// Check for CF-Connecting-IP first (Cloudflare's real IP header)
+	cfConnectingIP := c.GetHeader("CF-Connecting-IP")
+	if cfConnectingIP != "" {
+		return strings.TrimSpace(cfConnectingIP)
+	}
+
+	// Check if we're behind Cloudflare by looking for CF-IPCountry header
+	// If present, prioritize X-Forwarded-For as it might contain the real IP
+	cfIPCountry := c.GetHeader("CF-IPCountry")
+	if cfIPCountry != "" {
+		// We're behind Cloudflare, check X-Forwarded-For
+		xForwardedFor := c.GetHeader("X-Forwarded-For")
+		if xForwardedFor != "" {
+			ips := strings.Split(xForwardedFor, ",")
+			if len(ips) > 0 {
+				ip := strings.TrimSpace(ips[0])
+				// Validate it's not a Cloudflare IP (should be the original client IP)
+				if !isCloudflareIP(ip) {
+					return ip
+				}
+			}
+		}
+	}
+
 	// Check for X-Forwarded-For header (common in proxy setups)
 	xForwardedFor := c.GetHeader("X-Forwarded-For")
 	if xForwardedFor != "" {
-		// X-Forwarded-For can contain multiple IPs, get the first one
+		// X-Forwarded-For can contain multiple IPs, get the first one (original client)
 		ips := strings.Split(xForwardedFor, ",")
 		if len(ips) > 0 {
 			return strings.TrimSpace(ips[0])
@@ -70,13 +101,7 @@ func getClientIP(c *gin.Context) string {
 	// Check for X-Real-IP header
 	xRealIP := c.GetHeader("X-Real-IP")
 	if xRealIP != "" {
-		return xRealIP
-	}
-
-	// Check for CF-Connecting-IP (Cloudflare)
-	cfConnectingIP := c.GetHeader("CF-Connecting-IP")
-	if cfConnectingIP != "" {
-		return cfConnectingIP
+		return strings.TrimSpace(xRealIP)
 	}
 
 	// Fall back to RemoteAddr
@@ -311,6 +336,46 @@ func isPrivateIP(ip string) bool {
 	}
 
 	for _, cidr := range privateRanges {
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
+		}
+		if network.Contains(parsedIP) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isCloudflareIP checks if an IP address belongs to Cloudflare's IP ranges
+func isCloudflareIP(ip string) bool {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+
+	// Cloudflare IPv4 ranges (as of 2024 - these may change, check Cloudflare's documentation)
+	// Source: https://www.cloudflare.com/ips/
+	cloudflareRanges := []string{
+		"173.245.48.0/20",
+		"103.21.244.0/22",
+		"103.22.200.0/22",
+		"103.31.4.0/22",
+		"141.101.64.0/18",
+		"108.162.192.0/18",
+		"190.93.240.0/20",
+		"188.114.96.0/20",
+		"197.234.240.0/22",
+		"198.41.128.0/17",
+		"162.158.0.0/15",
+		"104.16.0.0/13",
+		"104.24.0.0/14",
+		"172.64.0.0/13",
+		"131.0.72.0/22",
+	}
+
+	for _, cidr := range cloudflareRanges {
 		_, network, err := net.ParseCIDR(cidr)
 		if err != nil {
 			continue

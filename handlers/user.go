@@ -222,16 +222,24 @@ func ChangeUserPassword(c *gin.Context) {
 		return
 	}
 
-	// Get user email for notification
-	var user models.User
-	if err := db.First(&user, models.User{UserName: jwtClaims.Username}).Error; err == nil {
-		// Send password change notification email
-		if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
-			// Log error but don't fail the request
-			utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+	go func() {
+		// Get user email for notification
+		var user models.User
+		if err := db.First(&user, models.User{UserName: jwtClaims.Username}).Error; err == nil {
+			// Send password change notification email
+			if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
+				// Log error but don't fail the request
+				utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+			}
+			user.RefreshToken = ""
+			if err := db.Save(&user).Error; err != nil {
+				utils.Warnf("Failed to update user after password change: %v", err)
+			}
 		}
-	}
+	}()
 
+	c.Set("internal", true)
+	Logout(c)
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password changed successfully",
@@ -320,28 +328,7 @@ func ResetPasswordPage(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusBadRequest, `
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>密碼重置 - 橘評測 OJ</title>
-	<style>
-		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
-		.error { color: #e74c3c; font-size: 18px; margin-bottom: 20px; }
-		.logo { font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 20px; }
-	</style>
-</head>
-<body>
-	<div class="container">
-		<div class="logo">橘評測 OJ</div>
-		<div class="error">❌ 無效的重置連結</div>
-		<p>重置代碼遺失或無效，請重新申請密碼重置。</p>
-	</div>
-</body>
-</html>`)
+		c.String(http.StatusBadRequest, utils.MissingOrInvalidTokenPage())
 		return
 	}
 
@@ -349,137 +336,13 @@ func ResetPasswordPage(c *gin.Context) {
 	_, err := utils.ValidateResetToken(token)
 	if err != nil {
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusUnauthorized, `
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>密碼重置 - 橘評測 OJ</title>
-	<style>
-		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
-		.error { color: #e74c3c; font-size: 18px; margin-bottom: 20px; }
-		.logo { font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 20px; }
-	</style>
-</head>
-<body>
-	<div class="container">
-		<div class="logo">橘評測 OJ</div>
-		<div class="error">❌ 無效或過期的重置連結</div>
-		<p>重置代碼無效或已過期，請重新申請密碼重置。</p>
-	</div>
-</body>
-</html>`)
+		c.String(http.StatusUnauthorized, utils.ExpiredOrUsedTokenPage())
 		return
 	}
 
 	// Show password reset form
 	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, `
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>重設密碼 - 橘評測 OJ</title>
-	<style>
-		body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-		.container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
-		.logo { text-align: center; font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 30px; }
-		.form-group { margin-bottom: 20px; }
-		label { display: block; margin-bottom: 8px; color: #333; font-weight: bold; }
-		input[type="password"] { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 16px; transition: border-color 0.3s; box-sizing: border-box; }
-		input[type="password"]:focus { outline: none; border-color: #667eea; }
-		.btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
-		.btn:hover { transform: translateY(-2px); }
-		.message { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; }
-		.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-		.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-		.requirements { font-size: 12px; color: #666; margin-top: 5px; }
-	</style>
-</head>
-<body>
-	<div class="container">
-		<div class="logo">🍊 橘評測 OJ</div>
-		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">重設密碼</h2>
-		
-		<form id="resetForm">
-			<div class="form-group">
-				<label for="newPassword">新密碼</label>
-				<input type="password" id="newPassword" name="new_password" required minlength="6">
-				<div class="requirements">密碼長度至少6位字符</div>
-			</div>
-			
-			<div class="form-group">
-				<label for="confirmPassword">確認新密碼</label>
-				<input type="password" id="confirmPassword" name="confirm_password" required minlength="6">
-			</div>
-			
-			<button type="submit" class="btn">重設密碼</button>
-		</form>
-		
-		<div id="message" class="message" style="display: none;"></div>
-	</div>
-
-	<script>
-		document.getElementById('resetForm').addEventListener('submit', async function(e) {
-			e.preventDefault();
-			
-			const newPassword = document.getElementById('newPassword').value;
-			const confirmPassword = document.getElementById('confirmPassword').value;
-			const messageDiv = document.getElementById('message');
-			
-			// Validate passwords match
-			if (newPassword !== confirmPassword) {
-				messageDiv.className = 'message error';
-				messageDiv.textContent = '密碼確認不一致';
-				messageDiv.style.display = 'block';
-				return;
-			}
-			
-			// Validate password length
-			if (newPassword.length < 6) {
-				messageDiv.className = 'message error';
-				messageDiv.textContent = '密碼長度至少6位字符';
-				messageDiv.style.display = 'block';
-				return;
-			}
-			
-			try {
-				const response = await fetch(window.location.href, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						new_password: newPassword
-					})
-				});
-				
-				const result = await response.json();
-				
-				if (result.success) {
-					messageDiv.className = 'message success';
-					messageDiv.textContent = '密碼重設成功！請使用新密碼登入。';
-					messageDiv.style.display = 'block';
-					
-					// Disable form
-					document.getElementById('resetForm').style.display = 'none';
-				} else {
-					messageDiv.className = 'message error';
-					messageDiv.textContent = result.message || '密碼重設失敗';
-					messageDiv.style.display = 'block';
-				}
-			} catch (error) {
-				messageDiv.className = 'message error';
-				messageDiv.textContent = '網路錯誤，請稍後再試';
-				messageDiv.style.display = 'block';
-			}
-		});
-	</script>
-</body>
-</html>`)
+	c.String(http.StatusOK, utils.PasswordResetPage())
 }
 
 // Reset Password (POST)
@@ -583,20 +446,28 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
-		// Log error but don't fail the request
-		utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
-	}
-
-	// Clear the nonce to prevent reuse
-	if err := db.Model(&models.User{}).Where("id = ?", userID).Update("nonce", "").Error; err != nil {
-		c.JSON(503, ResponseHTTP{
+	user.RefreshToken = ""
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
 			Success: false,
-			Message: "Failed to clear nonce",
+			Message: "Failed to update user",
 		})
 		return
 	}
 
+	go func() {
+		if err := utils.SendPasswordChangeNotification(user.Email, user.UserName, utils.GetClientInfo(c)); err != nil {
+			// Log error but don't fail the request
+			utils.Warnf("Failed to send password change notification email to %s: %v", user.Email, err)
+		}
+		// Clear the nonce to prevent reuse
+		if err := db.Model(&models.User{}).Where("id = ?", userID).Update("nonce", "").Error; err != nil {
+			utils.Warnf("Failed to clear nonce for user ID %d: %v", userID, err)
+		}
+	}()
+
+	c.Set("internal", true)
+	Logout(c)
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Password reset successfully",
