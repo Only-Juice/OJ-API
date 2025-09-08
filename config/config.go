@@ -57,7 +57,7 @@ func GetOJExternalURL() string {
 func GetFrontendURL() string {
 	frontendURL := Config("FRONTEND_URL")
 	if frontendURL == "" {
-		frontendURL = "https://oj.is1ab.com/" // Default to a specific URL if not provided
+		frontendURL = "https://oj.is1ab.com" // Default to a specific URL if not provided
 	}
 	return frontendURL
 }
