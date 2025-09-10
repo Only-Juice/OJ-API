@@ -451,6 +451,13 @@ func OAuthCallback(c *gin.Context) {
 		})
 		return
 	}
+	if !existingUser.Enable {
+		c.JSON(401, ResponseHTTP{
+			Success: false,
+			Message: "User is disabled",
+		})
+		return
+	}
 
 	// check Gitea Login
 	var giteaToken string
