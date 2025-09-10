@@ -15,7 +15,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Export question score to CSV or XLSX",
+                "description": "Export question score to CSV, XLSX, or JSON",
                 "consumes": [
                     "application/json"
                 ],
@@ -36,8 +36,8 @@
                     },
                     {
                         "type": "string",
-                        "default": "csv",
-                        "description": "Export format: csv or xlsx",
+                        "default": "json",
+                        "description": "Export format: csv, xlsx, or json",
                         "name": "format",
                         "in": "query"
                     }
@@ -931,7 +931,12 @@
         },
         "/api/exams/{id}/leaderboard": {
             "get": {
-                "description": "Retrieve the leaderboard for a specific exam",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the leaderboard for a specific exam (Optional Authentication if Admin will show all users, otherwise only public users)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2439,7 +2444,12 @@
         },
         "/api/score/leaderboard": {
             "get": {
-                "description": "Get the leaderboard",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the leaderboard (Optional Authentication if Admin will show all users, otherwise only public users)",
                 "consumes": [
                     "application/json"
                 ],
@@ -4810,6 +4820,23 @@
                 },
                 "reset_password": {
                     "type": "boolean"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.ExportQuestionScoreResponse": {
+            "type": "object",
+            "properties": {
+                "earliest_best_submit_time": {
+                    "type": "string"
+                },
+                "git_user_repo_url": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
                 },
                 "user_name": {
                     "type": "string"

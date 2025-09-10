@@ -336,12 +336,13 @@ func UpdateUserInfo(c *gin.Context) {
 
 // Export Question Score
 // @Summary Export question score
-// @Description Export question score to CSV or XLSX
+// @Description Export question score to CSV, XLSX, or JSON
 // @Tags admin
 // @Accept json
 // @Produce json
 // @Param id path int true "Question ID"
-// @Param format query string false "Export format: csv or xlsx" default(csv)
+// @Param format query string false "Export format: csv, xlsx, or json" default(json)
+// @Success 200 {object} ResponseHTTP{data=[]utils.ExportQuestionScoreResponse}
 // @Success 200 {file} application/csv
 // @Success 200 {file} application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 // @Failure 400
@@ -361,13 +362,13 @@ func ExportQuestionScore(c *gin.Context) {
 	}
 	db := database.DBConn
 	id := c.Param("id")
-	format := c.DefaultQuery("format", "csv")
+	format := c.DefaultQuery("format", "json")
 
 	// Validate format parameter
-	if format != "csv" && format != "xlsx" {
+	if format != "csv" && format != "xlsx" && format != "json" {
 		c.JSON(http.StatusBadRequest, ResponseHTTP{
 			Success: false,
-			Message: "Invalid format. Supported formats: csv, xlsx",
+			Message: "Invalid format. Supported formats: csv, xlsx, json",
 		})
 		return
 	}
@@ -385,7 +386,7 @@ func ExportQuestionScore(c *gin.Context) {
 	var scores []utils.ExportQuestionScoreResponse
 	if err := db.Table("user_question_relations UQR").
 		Select("U.user_name as user_name, UQR.git_user_repo_url as git_user_repo_url, COALESCE(MAX(UQT.score), 0) AS score, MIN(CASE WHEN UQT.score = (SELECT MAX(score) FROM user_question_tables WHERE uqr_id = UQR.id) THEN UQT.created_at END) AS earliest_best_submit_time").
-		Where("UQR.question_id = ?", question.ID).
+		Where("UQR.question_id = ? AND U.is_admin = false", question.ID).
 		Joins("JOIN users U ON U.id = UQR.user_id").
 		Joins("LEFT JOIN user_question_tables UQT ON UQT.uqr_id = UQR.id").
 		Group("U.user_name, UQR.git_user_repo_url").
@@ -397,7 +398,8 @@ func ExportQuestionScore(c *gin.Context) {
 		return
 	}
 
-	if format == "csv" {
+	switch format {
+	case "csv":
 		// Generate CSV
 		var csvData bytes.Buffer
 		// Add UTF-8 BOM for proper encoding
@@ -424,7 +426,7 @@ func ExportQuestionScore(c *gin.Context) {
 		c.Header("Content-Type", "application/csv")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"question_%d_%s.csv\"", question.ID, time.Now().Format("20060102_150405")))
 		c.String(http.StatusOK, csvData.String())
-	} else {
+	case "xlsx":
 		// Generate XLSX
 		if err := utils.ExportQuestionScoreToXLSX(c, question.ID, scores); err != nil {
 			c.JSON(http.StatusInternalServerError, ResponseHTTP{
@@ -433,5 +435,12 @@ func ExportQuestionScore(c *gin.Context) {
 			})
 			return
 		}
+	default:
+		// Generate JSON
+		c.JSON(http.StatusOK, ResponseHTTP{
+			Success: true,
+			Data:    scores,
+			Message: "Question scores retrieved successfully",
+		})
 	}
 }

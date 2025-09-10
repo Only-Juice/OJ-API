@@ -771,7 +771,7 @@ type EnhancedGetLeaderboardResponseData struct {
 
 // GetExamLeaderboard retrieves the leaderboard for an exam
 // @Summary      	Get the leaderboard for an exam
-// @Description  	Retrieve the leaderboard for a specific exam
+// @Description  	Retrieve the leaderboard for a specific exam (Optional Authentication if Admin will show all users, otherwise only public users)
 // @Tags         	Exam
 // @Accept			json
 // @Produce		json
@@ -784,7 +784,12 @@ type EnhancedGetLeaderboardResponseData struct {
 // @Failure		404
 // @Failure		503
 // @Router			/api/exams/{id}/leaderboard [get]
+// @Security		BearerAuth
 func GetExamLeaderboard(c *gin.Context) {
+	// Check if user is authenticated (optional)
+	jwtClaims, _ := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	isAuthenticated := jwtClaims != nil
+
 	db := database.DBConn
 
 	id := c.Param("id")
@@ -807,7 +812,8 @@ func GetExamLeaderboard(c *gin.Context) {
 	if err := db.Table("(SELECT DISTINCT user_id FROM user_question_relations "+
 		"JOIN user_question_tables ON user_question_relations.id = user_question_tables.uqr_id "+
 		"JOIN exam_questions ON user_question_relations.question_id = exam_questions.question_id "+
-		"WHERE exam_questions.exam_id = ?) AS t", id).
+		"JOIN users ON user_question_relations.user_id = users.id "+
+		"WHERE exam_questions.exam_id = ? AND users.is_admin = false ) AS t", id).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -834,7 +840,8 @@ func GetExamLeaderboard(c *gin.Context) {
         JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
         JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
 		JOIN questions Q ON UQR.question_id = Q.id
-        WHERE Q.is_active = true AND EQ.exam_id = ?
+		JOIN users ON UQR.user_id = users.id
+        WHERE Q.is_active = true AND EQ.exam_id = ? AND users.is_admin = false
         GROUP BY UQR.user_id, UQR.question_id, EQ.point
     ) AS subquery`, id).
 		Joins("JOIN users ON users.id = subquery.user_id").
@@ -914,7 +921,11 @@ func GetExamLeaderboard(c *gin.Context) {
 	for _, user := range usersWithScores {
 		userName := user.UserName
 		if !user.IsPublic {
-			userName = fmt.Sprintf("User_%d", user.UserID)
+			if !isAuthenticated || !jwtClaims.IsAdmin {
+				userName = fmt.Sprintf("User_%d", user.UserID)
+			} else {
+				userName = user.UserName + " (Private)"
+			}
 		}
 
 		leaderboardScores = append(leaderboardScores, EnhancedLeaderboardScore{

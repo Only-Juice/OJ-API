@@ -787,7 +787,7 @@ type GetLeaderboardResponseData struct {
 // GetLeaderboard is a function to get the leaderboard
 //
 //	@Summary		Get the leaderboard
-//	@Description	Get the leaderboard
+//	@Description	Get the leaderboard (Optional Authentication if Admin will show all users, otherwise only public users)
 //	@Tags			Score
 //	@Accept			json
 //	@Produce		json
@@ -799,7 +799,12 @@ type GetLeaderboardResponseData struct {
 //	@Failure		404
 //	@Failure		503
 //	@Router			/api/score/leaderboard [get]
+//	@Security		BearerAuth
 func GetLeaderboard(c *gin.Context) {
+	// Check if user is authenticated (optional)
+	jwtClaims, _ := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	isAuthenticated := jwtClaims != nil
+
 	db := database.DBConn
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -812,8 +817,10 @@ func GetLeaderboard(c *gin.Context) {
 		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Joins("JOIN users ON users.id = UQR.user_id").
 		Where("Q.is_active = ?", true).
 		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
+		Where("users.is_admin = false").
 		Group("UQR.user_id, UQR.question_id")
 
 	if err := db.Table("(?) AS t", subquery).
@@ -910,7 +917,11 @@ func GetLeaderboard(c *gin.Context) {
 	for _, user := range usersWithScores {
 		userName := user.UserName
 		if !user.IsPublic {
-			userName = fmt.Sprintf("User_%d", user.UserID)
+			if !isAuthenticated || !jwtClaims.IsAdmin {
+				userName = fmt.Sprintf("User_%d", user.UserID)
+			} else {
+				userName = user.UserName + " (Private)"
+			}
 		}
 
 		leaderboardScores = append(leaderboardScores, LeaderboardScore{

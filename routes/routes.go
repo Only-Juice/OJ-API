@@ -177,7 +177,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.AddQuestionToExam)
 		api.DELETE("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.RemoveQuestionFromExam)
 		api.GET("/exams/:id/exam", handlers.GetExamInfo)
-		api.GET("/exams/:id/leaderboard", handlers.GetExamLeaderboard)
+		api.GET("/exams/:id/leaderboard", AuthMiddleware(false), handlers.GetExamLeaderboard)
 		api.GET("/exams/:id/questions", AuthMiddleware(false), handlers.GetExamQuestions)
 		api.GET("/exams/:id/score/top", AuthMiddleware(), handlers.GetTopExamScore)
 
@@ -209,7 +209,7 @@ func RegisterRoutes(r *gin.Engine) {
 		// Score routes
 		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
 		api.GET("/score/all", AuthMiddleware(), handlers.GetAllScore)
-		api.GET("/score/leaderboard", handlers.GetLeaderboard)
+		api.GET("/score/leaderboard", AuthMiddleware(false), handlers.GetLeaderboard)
 		api.GET("/score/:question_id/question", AuthMiddleware(), handlers.GetScoreByQuestionID)
 		api.POST("/score/admin/:question_id/question/rescore", AuthMiddleware(), handlers.ReScoreQuestion)
 		api.GET("/score/top", AuthMiddleware(), handlers.GetTopScore)
