@@ -444,3 +444,114 @@ func ExportQuestionScore(c *gin.Context) {
 		})
 	}
 }
+
+type ChangeUserEmailDTO struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// Change User Email
+// @Summary Change user email
+// @Description Change the email of a user
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param email body ChangeUserEmailDTO true "New email"
+// @Success      200 {object} ResponseHTTP{data=models.User}
+// @Failure      400
+// @Failure      401
+// @Failure      403
+// @Failure      500
+// @Router /api/admin/{id}/user/change_email [post]
+// @Security BearerAuth
+func ChangeUserEmail(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	db := database.DBConn
+	id := c.Param("id")
+	var user models.User
+	if err := db.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	var changeUserEmailDTO ChangeUserEmailDTO
+	if err := c.ShouldBindJSON(&changeUserEmailDTO); err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	// Check if the new email is already in use
+	var existingUser models.User
+	if err := db.Where("email = ?", changeUserEmailDTO.Email).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Email is already in use",
+		})
+		return
+	}
+
+	// Update Gitea user Email
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Gitea API does not allow changing email to an existing one, so we check first
+	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
+		LoginName: user.UserName,
+		Email:     &changeUserEmailDTO.Email,
+	})
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: fmt.Sprintf("Failed to update email in Gitea: %v", err),
+		})
+		return
+	}
+
+	user.Email = changeUserEmailDTO.Email
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user email",
+		})
+		return
+	}
+
+	// Remove sensitive gitea_token and refresh_token field
+	user.GiteaToken = ""
+	user.RefreshToken = ""
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Data:    user,
+		Message: "User email updated successfully",
+	})
+}
