@@ -97,9 +97,11 @@ func PostGiteaHook(c *gin.Context) {
 	}
 
 	newScore := models.UserQuestionTable{
-		UQR:     existingUserQuestionRelation,
-		Score:   -3,
-		Message: "Waiting for judging...",
+		UQR:       existingUserQuestionRelation,
+		Score:     -3,
+		JudgeTime: time.Now().UTC(),
+		Commit:    payload.After,
+		Message:   "Waiting for judging...",
 	}
 	if err := db.Create(&newScore).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
