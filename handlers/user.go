@@ -6,6 +6,7 @@ import (
 	"OJ-API/models"
 	"OJ-API/utils"
 	"net/http"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -261,6 +262,7 @@ type ForgetPasswordRequest struct {
 // @Failure		400
 // @Failure		401
 // @Failure		404
+// @Failure		429
 // @Failure		503
 // @Router		/api/user/forget_password [post]
 func ForgetPassword(c *gin.Context) {
@@ -285,6 +287,15 @@ func ForgetPassword(c *gin.Context) {
 		return
 	}
 
+	// check if a request was made in the last 3 minutes
+	if !user.ForgetPasswordRequestTime.IsZero() && time.Since(user.ForgetPasswordRequestTime) < 3*time.Minute {
+		c.JSON(http.StatusTooManyRequests, ResponseHTTP{
+			Success: false,
+			Message: "A reset request was made recently. Please check your email or try again later.",
+		})
+		return
+	}
+
 	// Generate a reset token
 	resetToken, err := utils.GenerateResetToken(user.ID)
 	if err != nil {
@@ -300,6 +311,16 @@ func ForgetPassword(c *gin.Context) {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
+		})
+		return
+	}
+
+	if eff := db.Model(&user).Updates(models.User{
+		ForgetPasswordRequestTime: time.Now(),
+	}).Error; eff != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user",
 		})
 		return
 	}
