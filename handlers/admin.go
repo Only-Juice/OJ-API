@@ -336,12 +336,13 @@ func UpdateUserInfo(c *gin.Context) {
 
 // Export Question Score
 // @Summary Export question score
-// @Description Export question score to CSV or XLSX
+// @Description Export question score to CSV, XLSX, or JSON
 // @Tags admin
 // @Accept json
 // @Produce json
 // @Param id path int true "Question ID"
-// @Param format query string false "Export format: csv or xlsx" default(csv)
+// @Param format query string false "Export format: csv, xlsx, or json" default(json)
+// @Success 200 {object} ResponseHTTP{data=[]utils.ExportQuestionScoreResponse}
 // @Success 200 {file} application/csv
 // @Success 200 {file} application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 // @Failure 400
@@ -361,13 +362,13 @@ func ExportQuestionScore(c *gin.Context) {
 	}
 	db := database.DBConn
 	id := c.Param("id")
-	format := c.DefaultQuery("format", "csv")
+	format := c.DefaultQuery("format", "json")
 
 	// Validate format parameter
-	if format != "csv" && format != "xlsx" {
+	if format != "csv" && format != "xlsx" && format != "json" {
 		c.JSON(http.StatusBadRequest, ResponseHTTP{
 			Success: false,
-			Message: "Invalid format. Supported formats: csv, xlsx",
+			Message: "Invalid format. Supported formats: csv, xlsx, json",
 		})
 		return
 	}
@@ -385,7 +386,7 @@ func ExportQuestionScore(c *gin.Context) {
 	var scores []utils.ExportQuestionScoreResponse
 	if err := db.Table("user_question_relations UQR").
 		Select("U.user_name as user_name, UQR.git_user_repo_url as git_user_repo_url, COALESCE(MAX(UQT.score), 0) AS score, MIN(CASE WHEN UQT.score = (SELECT MAX(score) FROM user_question_tables WHERE uqr_id = UQR.id) THEN UQT.created_at END) AS earliest_best_submit_time").
-		Where("UQR.question_id = ?", question.ID).
+		Where("UQR.question_id = ? AND U.is_admin = false", question.ID).
 		Joins("JOIN users U ON U.id = UQR.user_id").
 		Joins("LEFT JOIN user_question_tables UQT ON UQT.uqr_id = UQR.id").
 		Group("U.user_name, UQR.git_user_repo_url").
@@ -397,7 +398,8 @@ func ExportQuestionScore(c *gin.Context) {
 		return
 	}
 
-	if format == "csv" {
+	switch format {
+	case "csv":
 		// Generate CSV
 		var csvData bytes.Buffer
 		// Add UTF-8 BOM for proper encoding
@@ -424,7 +426,7 @@ func ExportQuestionScore(c *gin.Context) {
 		c.Header("Content-Type", "application/csv")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"question_%d_%s.csv\"", question.ID, time.Now().Format("20060102_150405")))
 		c.String(http.StatusOK, csvData.String())
-	} else {
+	case "xlsx":
 		// Generate XLSX
 		if err := utils.ExportQuestionScoreToXLSX(c, question.ID, scores); err != nil {
 			c.JSON(http.StatusInternalServerError, ResponseHTTP{
@@ -433,5 +435,123 @@ func ExportQuestionScore(c *gin.Context) {
 			})
 			return
 		}
+	default:
+		// Generate JSON
+		c.JSON(http.StatusOK, ResponseHTTP{
+			Success: true,
+			Data:    scores,
+			Message: "Question scores retrieved successfully",
+		})
 	}
+}
+
+type ChangeUserEmailDTO struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// Change User Email
+// @Summary Change user email
+// @Description Change the email of a user
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param email body ChangeUserEmailDTO true "New email"
+// @Success      200 {object} ResponseHTTP{data=models.User}
+// @Failure      400
+// @Failure      401
+// @Failure      403
+// @Failure      500
+// @Router /api/admin/{id}/user/change_email [post]
+// @Security BearerAuth
+func ChangeUserEmail(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	db := database.DBConn
+	id := c.Param("id")
+	var user models.User
+	if err := db.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	var changeUserEmailDTO ChangeUserEmailDTO
+	if err := c.ShouldBindJSON(&changeUserEmailDTO); err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	// Check if the new email is already in use
+	var existingUser models.User
+	if err := db.Where("email = ?", changeUserEmailDTO.Email).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Email is already in use",
+		})
+		return
+	}
+
+	// Update Gitea user Email
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Gitea API does not allow changing email to an existing one, so we check first
+	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
+		LoginName: user.UserName,
+		Email:     &changeUserEmailDTO.Email,
+	})
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: fmt.Sprintf("Failed to update email in Gitea: %v", err),
+		})
+		return
+	}
+
+	user.Email = changeUserEmailDTO.Email
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update user email",
+		})
+		return
+	}
+
+	// Remove sensitive gitea_token and refresh_token field
+	user.GiteaToken = ""
+	user.RefreshToken = ""
+
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Data:    user,
+		Message: "User email updated successfully",
+	})
 }

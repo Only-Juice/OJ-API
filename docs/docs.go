@@ -22,7 +22,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Export question score to CSV or XLSX",
+                "description": "Export question score to CSV, XLSX, or JSON",
                 "consumes": [
                     "application/json"
                 ],
@@ -43,8 +43,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "default": "csv",
-                        "description": "Export format: csv or xlsx",
+                        "default": "json",
+                        "description": "Export format: csv, xlsx, or json",
                         "name": "format",
                         "in": "query"
                     }
@@ -228,6 +228,76 @@ const docTemplate = `{
                         "in": "body",
                         "schema": {
                             "$ref": "#/definitions/handlers.UpdateUserInfoDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/api/admin/{id}/user/change_email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change the email of a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Change user email",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New email",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ChangeUserEmailDTO"
                         }
                     }
                 ],
@@ -938,7 +1008,12 @@ const docTemplate = `{
         },
         "/api/exams/{id}/leaderboard": {
             "get": {
-                "description": "Retrieve the leaderboard for a specific exam",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the leaderboard for a specific exam (Optional Authentication if Admin will show all users, otherwise only public users)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2446,7 +2521,12 @@ const docTemplate = `{
         },
         "/api/score/leaderboard": {
             "get": {
-                "description": "Get the leaderboard",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the leaderboard (Optional Authentication if Admin will show all users, otherwise only public users)",
                 "consumes": [
                     "application/json"
                 ],
@@ -3805,6 +3885,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ChangeUserEmailDTO": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.ChangeUserPasswordRequest": {
             "type": "object",
             "required": [
@@ -4817,6 +4908,23 @@ const docTemplate = `{
                 },
                 "reset_password": {
                     "type": "boolean"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.ExportQuestionScoreResponse": {
+            "type": "object",
+            "properties": {
+                "earliest_best_submit_time": {
+                    "type": "string"
+                },
+                "git_user_repo_url": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
                 },
                 "user_name": {
                     "type": "string"

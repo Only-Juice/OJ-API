@@ -541,6 +541,13 @@ definitions:
           type: string
         type: array
     type: object
+  handlers.ChangeUserEmailDTO:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   handlers.ChangeUserPasswordRequest:
     properties:
       new_password:
@@ -1205,6 +1212,17 @@ definitions:
       user_name:
         type: string
     type: object
+  utils.ExportQuestionScoreResponse:
+    properties:
+      earliest_best_submit_time:
+        type: string
+      git_user_repo_url:
+        type: string
+      score:
+        type: number
+      user_name:
+        type: string
+    type: object
 info:
   contact: {}
   description: This is a simple OJ-PoC API server.
@@ -1287,6 +1305,48 @@ paths:
       summary: Update user information
       tags:
       - admin
+  /api/admin/{id}/user/change_email:
+    post:
+      consumes:
+      - application/json
+      description: Change the email of a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New email
+        in: body
+        name: email
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangeUserEmailDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Change user email
+      tags:
+      - admin
   /api/admin/{id}/user/reset_password:
     post:
       consumes:
@@ -1327,15 +1387,15 @@ paths:
     get:
       consumes:
       - application/json
-      description: Export question score to CSV or XLSX
+      description: Export question score to CSV, XLSX, or JSON
       parameters:
       - description: Question ID
         in: path
         name: id
         required: true
         type: integer
-      - default: csv
-        description: 'Export format: csv or xlsx'
+      - default: json
+        description: 'Export format: csv, xlsx, or json'
         in: query
         name: format
         type: string
@@ -1567,7 +1627,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve the leaderboard for a specific exam
+      description: Retrieve the leaderboard for a specific exam (Optional Authentication
+        if Admin will show all users, otherwise only public users)
       parameters:
       - description: Exam ID
         in: path
@@ -1602,6 +1663,8 @@ paths:
           description: Not Found
         "503":
           description: Service Unavailable
+      security:
+      - BearerAuth: []
       summary: Get the leaderboard for an exam
       tags:
       - Exam
@@ -2769,7 +2832,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get the leaderboard
+      description: Get the leaderboard (Optional Authentication if Admin will show
+        all users, otherwise only public users)
       parameters:
       - description: page number of results to return (1-based)
         in: query
@@ -2799,6 +2863,8 @@ paths:
           description: Not Found
         "503":
           description: Service Unavailable
+      security:
+      - BearerAuth: []
       summary: Get the leaderboard
       tags:
       - Score
