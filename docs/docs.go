@@ -3001,6 +3001,9 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found"
                     },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
                     "503": {
                         "description": "Service Unavailable"
                     }
@@ -4887,6 +4890,9 @@ const docTemplate = `{
                 },
                 "enable": {
                     "type": "boolean"
+                },
+                "forget_password_request_time": {
+                    "type": "string"
                 },
                 "gitea_token": {
                     "type": "string"
