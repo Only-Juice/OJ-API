@@ -88,7 +88,7 @@ func main() {
 	pb.RegisterSchedulerServiceServer(grpcServer, scheduler)
 
 	// Database migrations
-	database.DBConn.AutoMigrate(
+	models := []interface{}{
 		&models.User{},
 		&models.Announcement{},
 		&models.Exam{},
@@ -99,7 +99,13 @@ func main() {
 		&models.TagAndQuestion{},
 		&models.UserQuestionRelation{},
 		&models.UserQuestionTable{},
-	)
+	}
+
+	for _, m := range models {
+		if err := database.DBConn.AutoMigrate(m); err != nil {
+			utils.Errorf("AutoMigrate %T failed: %v", m, err)
+		}
+	}
 
 	// Initialize Gin router
 	r := gin.Default()

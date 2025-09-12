@@ -416,6 +416,7 @@ func ReScoreUserQuestion(c *gin.Context) {
 		UQR:       uqr,
 		Score:     -3,
 		JudgeTime: time.Now().UTC(),
+		Commit:    "",
 		Message:   "Waiting for judging...",
 	}
 	if err := db.Create(&newScore).Error; err != nil {
@@ -622,6 +623,7 @@ func ReScoreQuestion(c *gin.Context) {
 			UQR:       u,
 			Score:     -3,
 			JudgeTime: time.Now().UTC(),
+			Commit:    "",
 			Message:   "Waiting for judging...",
 		})
 	}
