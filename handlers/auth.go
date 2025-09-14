@@ -247,7 +247,7 @@ func RefreshToken(c *gin.Context) {
 
 	// Check if user exists and refresh token matches
 	var user models.User
-	if err := db.Where("id = ? AND refresh_token = ?", claims.UserID, refreshToken, true).First(&user).Error; err != nil {
+	if err := db.Where("id = ? AND refresh_token = ?", claims.UserID, refreshToken).First(&user).Error; err != nil {
 		c.JSON(401, ResponseHTTP{
 			Success: false,
 			Message: "Invalid refresh token",
