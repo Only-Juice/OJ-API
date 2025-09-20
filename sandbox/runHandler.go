@@ -417,3 +417,12 @@ func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 	}
 
 }
+
+func makeErrorMessage(tag, details string) string {
+	msg := map[string]string{
+		"error":   tag,
+		"details": details,
+	}
+	b, _ := json.MarshalIndent(msg, "", "  ")
+	return string(b)
+}
