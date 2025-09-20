@@ -162,9 +162,10 @@ func (jp *JSONParser) GetScore() float64 {
 }
 
 // writeScore writes the score to score.txt file, keeping the maximum score
-func writeScore(score float64) error {
+func writeScore(score float64) (bool, error) {
 	const file = "score.txt"
-	oldScore := 0.0
+	oldScore := -1.0
+	higher := true
 
 	// Check if file exists and read old score
 	if _, err := os.Stat(file); err == nil {
@@ -183,14 +184,10 @@ func writeScore(score float64) error {
 	newScore := score
 	if oldScore > score {
 		newScore = oldScore
+		higher = false
 	}
 
-	// Write score only if it changed
-	if newScore != oldScore {
-		return os.WriteFile(file, []byte(fmt.Sprintf("%.2f\n", newScore)), 0644)
-	}
-
-	return nil
+	return higher, os.WriteFile(file, []byte(fmt.Sprintf("%.2f\n", newScore)), 0644)
 }
 
 // writeJSONFile copies the JSON file content to message.txt
@@ -230,13 +227,16 @@ func main() {
 	score := parser.GetScore()
 	fmt.Printf("%.2f\n", score)
 
-	if err := writeScore(score); err != nil {
+	higher, err := writeScore(score)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing score: %v\n", err)
 		os.Exit(1)
 	}
 
-	if err := parser.writeJSONFile(os.Args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing JSON file: %v\n", err)
-		os.Exit(1)
+	if higher {
+		if err := parser.writeJSONFile(os.Args[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing JSON file: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
