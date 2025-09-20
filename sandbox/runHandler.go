@@ -81,7 +81,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	case <-parentCtx.Done():
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: "Job cancelled due to server shutdown",
+			Message: NewErrorResult("Judge Done", "Job cancelled due to server shutdown"),
 		})
 		s.Release(boxID)
 		return
@@ -99,7 +99,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		Score:   -1,
-		Message: "Judging...",
+		Message: NewErrorResult("Judge", "Judging..."),
 	})
 
 	// 使用獨立的 context，不會被父 context 取消影響，讓任務完整執行
@@ -112,7 +112,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+			Message: NewErrorResult("Failed to save code as file", err.Error()),
 		})
 		return
 	}
@@ -131,7 +131,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 			utils.Debug(fmt.Sprintf("Failed to copy grp_parser: %v", err))
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: fmt.Sprintf("Failed to copy score parser: %v", err),
+				Message: NewErrorResult("Failed to copy score parser", err.Error()),
 			})
 			return
 		}
@@ -155,7 +155,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+			Message: NewErrorResult("Failed to save code as file", err.Error()),
 		})
 		return
 	}
@@ -174,7 +174,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to save code as file: %v", err),
+			Message: NewErrorResult("Failed to save code as file", err.Error()),
 		})
 		return
 	}
@@ -197,23 +197,23 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 
 		if !compileSuccess {
 			db.Model(&userQuestion).Updates(map[string]interface{}{
-				"score":   0,
-				"message": "Compilation Failed:\n" + compileResult,
+				"score":   -2,
+				"message": NewErrorResult("Compilation Failed", compileResult),
 			})
 			return
 		}
 
 		if !exeSuccess {
 			db.Model(&userQuestion).Updates(map[string]interface{}{
-				"score":   0,
-				"message": "Execute failed:\n" + exeResult,
+				"score":   -2,
+				"message": NewErrorResult("Execute failed", exeResult),
 			})
 			return
 		}
 
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to read score: %v", err),
+			Message: NewErrorResult("Failed to read score", err.Error()),
 		})
 		return
 	}
@@ -222,7 +222,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to convert score to int: %v", err),
+			Message: NewErrorResult("Failed to convert score to int", err.Error()),
 		})
 		return
 	}
@@ -232,7 +232,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to read message: %v", err),
+			Message: NewErrorResult("Failed to read message", err.Error()),
 		})
 		return
 	}
@@ -243,7 +243,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	}).Error; err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: fmt.Sprintf("Failed to update score: %v", err),
+			Message: NewErrorResult("Failed to update score", err.Error()),
 		})
 		return
 	}
@@ -310,6 +310,14 @@ func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, 
 	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
 	out, err := cmd.CombinedOutput()
 
+	/* For Debug
+	if err != nil {
+		utils.Debugf("CE failed: %s\n%s", err.Error(), string(out))
+	} else {
+		utils.Debugf("CE success:\n%s", string(out))
+	}
+	*/
+
 	if err != nil {
 		return err.Error() + "\n" + string(out), false
 	}
@@ -346,6 +354,11 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
+		/* For Debug
+		utils.Debugf("Execute failed!")
+		utils.Debugf("Error: %v", err)
+		utils.Debugf("Output: %s \n", string(out))
+		*/
 		return fmt.Sprintf("%v\n%s", err, string(out)), false
 	}
 
