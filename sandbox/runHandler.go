@@ -81,7 +81,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	case <-parentCtx.Done():
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Judge Done", "Job cancelled due to server shutdown"),
+			Message: NewErrorResult("Judge Done", "Job cancelled due to server shutdown"),
 		})
 		s.Release(boxID)
 		return
@@ -99,7 +99,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		Score:   -1,
-		Message: makeErrorMessage("Judge", "Judging..."),
+		Message: NewErrorResult("Judge", "Judging..."),
 	})
 
 	// 使用獨立的 context，不會被父 context 取消影響，讓任務完整執行
@@ -112,7 +112,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to save code as file", err.Error()),
+			Message: NewErrorResult("Failed to save code as file", err.Error()),
 		})
 		return
 	}
@@ -131,7 +131,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 			utils.Debug(fmt.Sprintf("Failed to copy grp_parser: %v", err))
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: makeErrorMessage("Failed to copy score parser", err.Error()),
+				Message: NewErrorResult("Failed to copy score parser", err.Error()),
 			})
 			return
 		}
@@ -155,7 +155,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to save code as file", err.Error()),
+			Message: NewErrorResult("Failed to save code as file", err.Error()),
 		})
 		return
 	}
@@ -174,7 +174,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to save code as file", err.Error()),
+			Message: NewErrorResult("Failed to save code as file", err.Error()),
 		})
 		return
 	}
@@ -198,7 +198,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 		if !compileSuccess {
 			db.Model(&userQuestion).Updates(map[string]interface{}{
 				"score":   -2,
-				"message": makeErrorMessage("Compilation Failed", compileResult),
+				"message": NewErrorResult("Compilation Failed", compileResult),
 			})
 			return
 		}
@@ -206,14 +206,14 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 		if !exeSuccess {
 			db.Model(&userQuestion).Updates(map[string]interface{}{
 				"score":   -2,
-				"message": makeErrorMessage("Execute failed", exeResult),
+				"message": NewErrorResult("Execute failed", exeResult),
 			})
 			return
 		}
 
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to read score", err.Error()),
+			Message: NewErrorResult("Failed to read score", err.Error()),
 		})
 		return
 	}
@@ -222,7 +222,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to convert score to int", err.Error()),
+			Message: NewErrorResult("Failed to convert score to int", err.Error()),
 		})
 		return
 	}
@@ -232,7 +232,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to read message", err.Error()),
+			Message: NewErrorResult("Failed to read message", err.Error()),
 		})
 		return
 	}
@@ -243,7 +243,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	}).Error; err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: makeErrorMessage("Failed to update score", err.Error()),
+			Message: NewErrorResult("Failed to update score", err.Error()),
 		})
 		return
 	}
