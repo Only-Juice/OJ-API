@@ -847,7 +847,7 @@ func GetExamLeaderboard(c *gin.Context) {
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
-		Order("total_score DESC").
+		Order("total_score DESC, users.id ASC").
 		Offset(offset).
 		Limit(limit).
 		Find(&usersWithScores).Error; err != nil {
@@ -910,7 +910,7 @@ func GetExamLeaderboard(c *gin.Context) {
 		userQuestionScores[qs.UserID] = append(userQuestionScores[qs.UserID], EnhancedQuestionScore{
 			QuestionID:     qs.QuestionID,
 			QuestionTitle:  qs.QuestionTitle,
-			GitUserRepoURL: qs.GitUserRepoURL,
+			GitUserRepoURL: "",
 			Score:          qs.Score,
 			WeightedScore:  qs.WeightedScore,
 		})
