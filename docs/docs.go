@@ -2043,67 +2043,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/questions/uqr/{UQR_ID}/question": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a question by UQR_ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Question"
-                ],
-                "summary": "Get a question by UQR_ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID of the UserQuestionRelation to get",
-                        "name": "UQR_ID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ResponseHTTP"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/handlers.GetQuestionResponseData"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
         "/api/questions/user": {
             "get": {
                 "security": [
@@ -4481,7 +4420,7 @@ const docTemplate = `{
                 },
                 "score_map": {
                     "type": "string",
-                    "example": "Score Map for every task info"
+                    "example": "score map for task score"
                 },
                 "score_script": {
                     "type": "string",
@@ -4549,7 +4488,7 @@ const docTemplate = `{
                 },
                 "score_map": {
                     "type": "string",
-                    "example": "Score Map for get question info"
+                    "example": "score map for task score"
                 },
                 "score_script": {
                     "type": "string",

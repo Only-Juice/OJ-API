@@ -902,7 +902,7 @@ definitions:
         example: 10
         type: integer
       score_map:
-        example: Score Map for every task info
+        example: score map for task score
         type: string
       score_script:
         example: script example
@@ -952,7 +952,7 @@ definitions:
         example: script example
         type: string
       score_map:
-        example: Score Map for get question info
+        example: score map for task score
         type: string
       score_script:
         example: script example
@@ -2502,42 +2502,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Add a question
-      tags:
-      - Question
-  /api/questions/uqr/{UQR_ID}/question:
-    get:
-      consumes:
-      - application/json
-      description: Get a question by UQR_ID
-      parameters:
-      - description: ID of the UserQuestionRelation to get
-        in: path
-        name: UQR_ID
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.GetQuestionResponseData'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Get a question by UQR_ID
       tags:
       - Question
   /api/questions/user:
