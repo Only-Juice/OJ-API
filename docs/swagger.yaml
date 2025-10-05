@@ -481,18 +481,6 @@ definitions:
     - git_repo_url
     - title
     type: object
-  handlers.BasicAuthentication:
-    properties:
-      password:
-        example: password
-        type: string
-      username:
-        example: username
-        type: string
-    required:
-    - password
-    - username
-    type: object
   handlers.BulkCreateUser:
     properties:
       default_password:
@@ -552,6 +540,13 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  handlers.ChangeUserEmailDTO:
+    properties:
+      email:
+        type: string
+    required:
+    - email
     type: object
   handlers.ChangeUserPasswordRequest:
     properties:
@@ -699,7 +694,7 @@ definitions:
         items:
           $ref: '#/definitions/models.User'
         type: array
-      totalCount:
+      total_count:
         type: integer
     type: object
   handlers.GetLeaderboardResponseData:
@@ -1206,6 +1201,8 @@ definitions:
         type: string
       enable:
         type: boolean
+      forget_password_request_time:
+        type: string
       gitea_token:
         type: string
       id:
@@ -1214,10 +1211,23 @@ definitions:
         type: boolean
       is_public:
         type: boolean
+      nonce:
+        type: string
       refresh_token:
         type: string
       reset_password:
         type: boolean
+      user_name:
+        type: string
+    type: object
+  utils.ExportQuestionScoreResponse:
+    properties:
+      earliest_best_submit_time:
+        type: string
+      git_user_repo_url:
+        type: string
+      score:
+        type: number
       user_name:
         type: string
     type: object
@@ -1303,6 +1313,48 @@ paths:
       summary: Update user information
       tags:
       - admin
+  /api/admin/{id}/user/change_email:
+    post:
+      consumes:
+      - application/json
+      description: Change the email of a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New email
+        in: body
+        name: email
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangeUserEmailDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Change user email
+      tags:
+      - admin
   /api/admin/{id}/user/reset_password:
     post:
       consumes:
@@ -1343,15 +1395,15 @@ paths:
     get:
       consumes:
       - application/json
-      description: Export question score to CSV or XLSX
+      description: Export question score to CSV, XLSX, or JSON
       parameters:
       - description: Question ID
         in: path
         name: id
         required: true
         type: integer
-      - default: csv
-        description: 'Export format: csv or xlsx'
+      - default: json
+        description: 'Export format: csv, xlsx, or json'
         in: query
         name: format
         type: string
@@ -1583,7 +1635,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve the leaderboard for a specific exam
+      description: Retrieve the leaderboard for a specific exam (Optional Authentication
+        if Admin will show all users, otherwise only public users)
       parameters:
       - description: Exam ID
         in: path
@@ -1618,6 +1671,8 @@ paths:
           description: Not Found
         "503":
           description: Service Unavailable
+      security:
+      - BearerAuth: []
       summary: Get the leaderboard for an exam
       tags:
       - Exam
@@ -2067,30 +2122,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Bulk create User v2
-      tags:
-      - Gitea
-  /api/gitea/auth:
-    post:
-      consumes:
-      - application/json
-      description: Use basic authentication to access the Gitea API
-      parameters:
-      - description: Basic Authentication
-        in: body
-        name: BasicAuthentication
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.BasicAuthentication'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Return access token
-          schema:
-            $ref: '#/definitions/handlers.ResponseHTTP'
-        "503":
-          description: Service Unavailable
-      summary: Use basic authentication to access the Gitea API
       tags:
       - Gitea
   /api/gitea/user:
@@ -2845,7 +2876,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get the leaderboard
+      description: Get the leaderboard (Optional Authentication if Admin will show
+        all users, otherwise only public users)
       parameters:
       - description: page number of results to return (1-based)
         in: query
@@ -2875,6 +2907,8 @@ paths:
           description: Not Found
         "503":
           description: Service Unavailable
+      security:
+      - BearerAuth: []
       summary: Get the leaderboard
       tags:
       - Score
@@ -3056,6 +3090,8 @@ paths:
           description: Unauthorized
         "404":
           description: Not Found
+        "429":
+          description: Too Many Requests
         "503":
           description: Service Unavailable
       summary: Forget password

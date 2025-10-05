@@ -22,7 +22,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Export question score to CSV or XLSX",
+                "description": "Export question score to CSV, XLSX, or JSON",
                 "consumes": [
                     "application/json"
                 ],
@@ -43,8 +43,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "default": "csv",
-                        "description": "Export format: csv or xlsx",
+                        "default": "json",
+                        "description": "Export format: csv, xlsx, or json",
                         "name": "format",
                         "in": "query"
                     }
@@ -228,6 +228,76 @@ const docTemplate = `{
                         "in": "body",
                         "schema": {
                             "$ref": "#/definitions/handlers.UpdateUserInfoDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/api/admin/{id}/user/change_email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change the email of a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Change user email",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New email",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ChangeUserEmailDTO"
                         }
                     }
                 ],
@@ -938,7 +1008,12 @@ const docTemplate = `{
         },
         "/api/exams/{id}/leaderboard": {
             "get": {
-                "description": "Retrieve the leaderboard for a specific exam",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the leaderboard for a specific exam (Optional Authentication if Admin will show all users, otherwise only public users)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1330,43 +1405,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found"
-                    },
-                    "503": {
-                        "description": "Service Unavailable"
-                    }
-                }
-            }
-        },
-        "/api/gitea/auth": {
-            "post": {
-                "description": "Use basic authentication to access the Gitea API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gitea"
-                ],
-                "summary": "Use basic authentication to access the Gitea API",
-                "parameters": [
-                    {
-                        "description": "Basic Authentication",
-                        "name": "BasicAuthentication",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.BasicAuthentication"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Return access token",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ResponseHTTP"
-                        }
                     },
                     "503": {
                         "description": "Service Unavailable"
@@ -2544,7 +2582,12 @@ const docTemplate = `{
         },
         "/api/score/leaderboard": {
             "get": {
-                "description": "Get the leaderboard",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the leaderboard (Optional Authentication if Admin will show all users, otherwise only public users)",
                 "consumes": [
                     "application/json"
                 ],
@@ -3018,6 +3061,9 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found"
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
                     },
                     "503": {
                         "description": "Service Unavailable"
@@ -3816,23 +3862,6 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.BasicAuthentication": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "password"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "username"
-                }
-            }
-        },
         "handlers.BulkCreateUser": {
             "type": "object",
             "required": [
@@ -3917,6 +3946,17 @@ const docTemplate = `{
                     "example": [
                         "username1"
                     ]
+                }
+            }
+        },
+        "handlers.ChangeUserEmailDTO": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
                 }
             }
         },
@@ -4138,7 +4178,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.User"
                     }
                 },
-                "totalCount": {
+                "total_count": {
                     "type": "integer"
                 }
             }
@@ -4920,6 +4960,9 @@ const docTemplate = `{
                 "enable": {
                     "type": "boolean"
                 },
+                "forget_password_request_time": {
+                    "type": "string"
+                },
                 "gitea_token": {
                     "type": "string"
                 },
@@ -4932,11 +4975,31 @@ const docTemplate = `{
                 "is_public": {
                     "type": "boolean"
                 },
+                "nonce": {
+                    "type": "string"
+                },
                 "refresh_token": {
                     "type": "string"
                 },
                 "reset_password": {
                     "type": "boolean"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.ExportQuestionScoreResponse": {
+            "type": "object",
+            "properties": {
+                "earliest_best_submit_time": {
+                    "type": "string"
+                },
+                "git_user_repo_url": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
                 },
                 "user_name": {
                     "type": "string"
