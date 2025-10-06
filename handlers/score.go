@@ -400,6 +400,14 @@ func ReScoreUserQuestion(c *gin.Context) {
 		})
 		return
 	}
+	// Check question active time
+	if question.StartTime.After(time.Now().UTC()) || question.EndTime.Before(time.Now().UTC()) {
+		c.JSON(410, ResponseHTTP{
+			Success: false,
+			Message: "Question is not in active time range",
+		})
+		return
+	}
 
 	var uqr models.UserQuestionRelation
 	if err := db.Model(&models.UserQuestionRelation{}).
