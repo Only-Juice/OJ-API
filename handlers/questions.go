@@ -348,6 +348,11 @@ type GetQuestionByIDResponseData struct {
 // @Router			/api/questions/{ID}/question [get]
 func GetQuestionByID(c *gin.Context) {
 	db := database.DBConn
+	jwtClaim, ok := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	var isAdmin = false
+	if ok && jwtClaim != nil {
+		isAdmin = jwtClaim.IsAdmin
+	}
 
 	client, err := gitea.NewClient(config.GetGiteaBaseURL())
 	if err != nil {
@@ -368,8 +373,8 @@ func GetQuestionByID(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ? AND is_active = ?", ID, true).Limit(1).Find(&question)
-	if question.ID == 0 {
+	db.Where("id = ?", ID).Limit(1).Find(&question)
+	if question.ID == 0 || (!question.IsActive && !isAdmin) {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
 			Message: "Question not found",
@@ -437,7 +442,7 @@ func GetQuestionLimitByID(c *gin.Context) {
 	}
 
 	var question models.Question
-	db.Where("id = ? AND is_active = ?", ID, true).Limit(1).Find(&question)
+	db.Where("id = ?", ID).Limit(1).Find(&question)
 	if question.ID == 0 {
 		c.JSON(404, ResponseHTTP{
 			Success: false,
@@ -468,93 +473,6 @@ func GetQuestionLimitByID(c *gin.Context) {
 			FileSize:    questionTestScript.FileSize,
 			Processes:   questionTestScript.Processes,
 			OpenFiles:   questionTestScript.OpenFiles,
-		},
-	})
-}
-
-type GetUserQuestionResponseData struct {
-	GetQuestionResponseData
-	UQR_ID uint `json:"uqr_id" validate:"required"`
-}
-
-// GetUserQuestionByID is a function to get a user's question by Question ID
-// @Summary		Get a user's question by Question ID
-// @Description	Retrieve a specific question associated with a user by its Question ID
-// @Tags			Question
-// @Accept			json
-// @Produce		json
-// @Param			ID	path	int	true	"ID of the Question to get"
-// @Success		200		{object}	ResponseHTTP{data=GetUserQuestionResponseData}
-// @Failure		400
-// @Failure		401
-// @Failure		404
-// @Failure		503
-// @Router			/api/questions/user/{ID}/question [get]
-// @Security		BearerAuth
-func GetUserQuestionByID(c *gin.Context) {
-	db := database.DBConn
-	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
-	token, err := utils.GetToken(jwtClaims.UserID)
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: "Failed to retrieve token",
-		})
-		return
-	}
-	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
-		gitea.SetToken(token),
-	)
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	IDstr := c.Param("ID")
-	ID, err := strconv.Atoi(IDstr)
-	if err != nil {
-		c.JSON(503, ResponseHTTP{
-			Success: false,
-			Message: "Invalid ID",
-		})
-		return
-	}
-
-	var uqr models.UserQuestionRelation
-	db.Where("question_id = ? AND user_id = ?", ID, jwtClaims.UserID).Limit(1).Find(&uqr)
-	if uqr.ID == 0 {
-		c.JSON(404, ResponseHTTP{
-			Success: false,
-			Message: "Question not found",
-		})
-		return
-	}
-
-	var question models.Question
-	db.Where("id = ? AND is_active = ?", uqr.QuestionID, true).Limit(1).Find(&question)
-	if question.ID == 0 {
-		c.JSON(404, ResponseHTTP{
-			Success: false,
-			Message: "Question not found",
-		})
-		return
-	}
-
-	c.JSON(200, ResponseHTTP{
-		Success: true,
-		Message: "Question fetched successfully",
-		Data: GetUserQuestionResponseData{
-			GetQuestionResponseData: GetQuestionResponseData{
-				Title:            question.Title,
-				Description:      question.Description,
-				README:           GetReadme(client, strings.Split(question.GitRepoURL, "/")[0], strings.Split(question.GitRepoURL, "/")[1]),
-				GitRepoURL:       uqr.GitUserRepoURL,
-				ParentGitRepoURL: question.GitRepoURL,
-			},
-			UQR_ID: uqr.ID,
 		},
 	})
 }
