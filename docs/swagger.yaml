@@ -901,6 +901,9 @@ definitions:
       processes:
         example: 10
         type: integer
+      score_map:
+        example: score map for task score
+        type: string
       score_script:
         example: script example
         type: string
@@ -947,6 +950,9 @@ definitions:
         type: string
       execute_script:
         example: script example
+        type: string
+      score_map:
+        example: score map for task score
         type: string
       score_script:
         example: script example

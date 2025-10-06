@@ -4418,6 +4418,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 10
                 },
+                "score_map": {
+                    "type": "string",
+                    "example": "score map for task score"
+                },
                 "score_script": {
                     "type": "string",
                     "example": "script example"
@@ -4481,6 +4485,10 @@ const docTemplate = `{
                 "execute_script": {
                     "type": "string",
                     "example": "script example"
+                },
+                "score_map": {
+                    "type": "string",
+                    "example": "score map for task score"
                 },
                 "score_script": {
                     "type": "string",

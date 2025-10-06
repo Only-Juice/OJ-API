@@ -796,6 +796,7 @@ type PatchQuestionRequest struct {
 	CompileScript *string `json:"compile_script" example:"script example"`
 	ExecuteScript *string `json:"execute_script" example:"script example"`
 	ScoreScript   *string `json:"score_script" example:"script example"`
+	ScoreMap      *string `json:"score_map" example:"score map for task score"`
 	Memory        *uint   `json:"memory" example:"262144" description:"Memory limit in KB"`
 	StackMemory   *uint   `json:"stack_memory" example:"8192" description:"Stack memory limit in KB"`
 	Time          *uint   `json:"time" example:"1000" description:"CPU time limit in ms"`
@@ -895,6 +896,9 @@ func PatchQuestion(c *gin.Context) {
 	}
 	if updateQuestion.ExecuteScript != nil {
 		questionscript.ExecuteScript = *updateQuestion.ExecuteScript
+	}
+	if updateQuestion.ExecuteScript != nil {
+		questionscript.ScoreMap = *updateQuestion.ScoreMap
 	}
 	if updateQuestion.Time != nil {
 		questionscript.Time = *updateQuestion.Time
@@ -1004,6 +1008,7 @@ type QuestionScripts struct {
 	CompileScript string `json:"compile_script" example:"script example"`
 	ExecuteScript string `json:"execute_script" example:"script example"`
 	ScoreScript   string `json:"score_script" example:"script example"`
+	ScoreMap      string `json:"score_map" example:"score map for task score"`
 }
 
 // GetQuestionScripts is a function to get the scripts for a question
@@ -1057,6 +1062,7 @@ func GetQuestionScripts(c *gin.Context) {
 			CompileScript: questionTestScript.CompileScript,
 			ExecuteScript: questionTestScript.ExecuteScript,
 			ScoreScript:   questionTestScript.ScoreScript,
+			ScoreMap:      questionTestScript.ScoreMap,
 		},
 	})
 }
