@@ -791,28 +791,6 @@ definitions:
       user_name:
         type: string
     type: object
-  handlers.GetUserQuestionResponseData:
-    properties:
-      description:
-        type: string
-      git_repo_url:
-        type: string
-      parent_git_repo_url:
-        type: string
-      readme:
-        type: string
-      title:
-        type: string
-      uqr_id:
-        type: integer
-    required:
-    - description
-    - git_repo_url
-    - parent_git_repo_url
-    - readme
-    - title
-    - uqr_id
-    type: object
   handlers.GetUsersQuestionsResponseData:
     properties:
       question:
@@ -2543,43 +2521,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get a list of questions by user
-      tags:
-      - Question
-  /api/questions/user/{ID}/question:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a specific question associated with a user by its Question
-        ID
-      parameters:
-      - description: ID of the Question to get
-        in: path
-        name: ID
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ResponseHTTP'
-            - properties:
-                data:
-                  $ref: '#/definitions/handlers.GetUserQuestionResponseData'
-              type: object
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "503":
-          description: Service Unavailable
-      security:
-      - BearerAuth: []
-      summary: Get a user's question by Question ID
       tags:
       - Question
   /api/sandbox/admin/sandbox_cmd:
