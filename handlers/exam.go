@@ -282,7 +282,7 @@ type ExamQuestionData struct {
 	Question    models.Question `json:"question"`
 	Point       int             `json:"point"`
 	HasQuestion bool            `json:"has_question"`
-	TopScore    *int            `json:"top_score,omitempty"`
+	TopScore    *float64        `json:"top_score,omitempty"`
 }
 
 // GetExamQuestions retrieves all questions for a specific exam with user data
@@ -382,8 +382,8 @@ func GetExamQuestions(c *gin.Context) {
 
 		// Get top scores for these questions
 		var topScores []struct {
-			QuestionID uint `json:"question_id"`
-			TopScore   *int `json:"top_score"`
+			QuestionID uint     `json:"question_id"`
+			TopScore   *float64 `json:"top_score"`
 		}
 
 		err := db.Raw(`
@@ -410,7 +410,7 @@ func GetExamQuestions(c *gin.Context) {
 		}
 
 		// Create a map for easy lookup
-		scoreMap := make(map[uint]*int)
+		scoreMap := make(map[uint]*float64)
 		for _, score := range topScores {
 			scoreMap[score.QuestionID] = score.TopScore
 		}
