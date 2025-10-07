@@ -16,7 +16,7 @@ import (
 type _GetQuestionListQuestionData struct {
 	models.Question
 	HasQuestion bool `json:"has_question"`
-	TopScore    *int `json:"top_score,omitempty"`
+	TopScore    *float64 `json:"top_score,omitempty"`
 }
 
 type GetQuestionListResponseData struct {
@@ -161,18 +161,27 @@ func GetQuestionList(c *gin.Context) {
 		}
 
 		// Create a map for easy lookup
-		scoreMap := make(map[uint]*int)
+		scoreMap := make(map[float64]float64)
+
+		// 填入資料
 		for _, score := range topScores {
-			scoreMap[score.QuestionID] = score.TopScore
+			if score.TopScore != nil {
+				// *int → float64
+				scoreMap[float64(score.QuestionID)] = float64(*score.TopScore)
+			} else {
+				// 沒分數給 0.0（或乾脆略過）
+				scoreMap[float64(score.QuestionID)] = 0.0
+			}
 		}
 
 		// Convert to response format and add user-specific data
 		var responseQuestions []_GetQuestionListQuestionData
 		for _, q := range questions {
+			v := scoreMap[float64(q.ID)]
 			responseQ := _GetQuestionListQuestionData{
 				Question:    q,
 				HasQuestion: userQuestionMap[q.ID],
-				TopScore:    scoreMap[q.ID],
+				TopScore:    &v,
 			}
 			responseQuestions = append(responseQuestions, responseQ)
 		}
