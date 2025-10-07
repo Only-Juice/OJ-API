@@ -2112,6 +2112,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/questions/user/{ID}/question": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific question associated with a user by its Question ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Question"
+                ],
+                "summary": "Get a user's question by Question ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID of the Question to get",
+                        "name": "ID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ResponseHTTP"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handlers.GetUserQuestionResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            }
+        },
         "/api/questions/{ID}/question": {
             "get": {
                 "description": "Retrieve only public questions",
@@ -4198,6 +4259,37 @@ const docTemplate = `{
                 },
                 "user_name": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.GetUserQuestionResponseData": {
+            "type": "object",
+            "required": [
+                "description",
+                "git_repo_url",
+                "parent_git_repo_url",
+                "readme",
+                "title",
+                "uqr_id"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "git_repo_url": {
+                    "type": "string"
+                },
+                "parent_git_repo_url": {
+                    "type": "string"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "uqr_id": {
+                    "type": "integer"
                 }
             }
         },

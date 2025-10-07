@@ -205,6 +205,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/questions/admin/:ID/question_limit", AuthMiddleware(), handlers.GetQuestionLimitByID)
 		api.GET("/questions/admin/:ID/scripts", AuthMiddleware(), handlers.GetQuestionScripts)
 		api.GET("/questions/user", AuthMiddleware(), handlers.GetUsersQuestions)
+		api.GET("/questions/user/:ID/question", AuthMiddleware(), handlers.GetUserQuestionByID)
 
 		// Score routes
 		api.GET("/score", AuthMiddleware(), handlers.GetScoreByRepo)
