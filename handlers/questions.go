@@ -16,7 +16,7 @@ import (
 type _GetQuestionListQuestionData struct {
 	models.Question
 	HasQuestion bool `json:"has_question"`
-	TopScore    *int `json:"top_score,omitempty"`
+	TopScore    *float64 `json:"top_score,omitempty"`
 }
 
 type GetQuestionListResponseData struct {
