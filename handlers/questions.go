@@ -134,7 +134,7 @@ func GetQuestionList(c *gin.Context) {
 		// Get top scores for these questions
 		var topScores []struct {
 			QuestionID uint `json:"question_id"`
-			TopScore   *int `json:"top_score"`
+			TopScore   *float64 `json:"top_score"`
 		}
 
 		err := db.Raw(`
