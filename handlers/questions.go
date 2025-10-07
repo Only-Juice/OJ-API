@@ -161,27 +161,20 @@ func GetQuestionList(c *gin.Context) {
 		}
 
 		// Create a map for easy lookup
-		scoreMap := make(map[uint]float64)
+		scoreMap := make(map[uint]*float64)
 
 		// 填入資料
 		for _, score := range topScores {
-			if score.TopScore != nil {
-				// *int → float64
-				scoreMap[score.QuestionID] = float64(*score.TopScore)
-			} else {
-				// 沒分數給 0.0（或乾脆略過）
-				scoreMap[score.QuestionID] = 0.0
-			}
+			scoreMap[score.QuestionID] = score.TopScore
 		}
 
 		// Convert to response format and add user-specific data
 		var responseQuestions []_GetQuestionListQuestionData
 		for _, q := range questions {
-			v := scoreMap[q.ID]
 			responseQ := _GetQuestionListQuestionData{
 				Question:    q,
 				HasQuestion: userQuestionMap[q.ID],
-				TopScore:    &v,
+				TopScore:    scoreMap[q.ID],
 			}
 			responseQuestions = append(responseQuestions, responseQ)
 		}
