@@ -740,7 +740,7 @@ func GetAllScore(c *gin.Context) {
 	var scores []TopScore
 	if err := db.Table("(?) AS sub", subQuery).
 		Select("question_id, title question_title, git_user_repo_url, score, message, judge_time").
-		Order("question_id, judge_time DESC").
+		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&scores).Error; err != nil {
