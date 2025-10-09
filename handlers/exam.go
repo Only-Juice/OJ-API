@@ -811,18 +811,20 @@ func GetExamLeaderboard(c *gin.Context) {
 	var totalCount int64
 	subquery := db.Raw(`
 	SELECT DISTINCT ON (UQR.user_id, UQR.question_id)
-		UQR.user_id AS user_id,
-		UQR.question_id,
-		uqt.id,
-		GREATEST(uqt.score, 0) AS max_score
-	FROM user_question_tables uqt
-	JOIN user_question_relations UQR ON uqt.uqr_id = UQR.id
-	JOIN questions Q ON UQR.question_id = Q.id
-	JOIN users ON users.id = UQR.user_id
-	WHERE Q.is_active = TRUE
-		AND UQR.question_id NOT EXISTS (SELECT 1 FROM exam_questions WHERE eq.question_id = UQR.question_id AND exam_id = ?)
-		AND users.is_admin = FALSE
-	ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.id ASC
+           UQR.user_id AS user_id,
+           UQR.question_id,
+           uqt.created,
+           GREATEST(uqt.score, 0) AS max_score
+    FROM user_question_tables uqt
+    JOIN user_question_relations UQR ON uqt.uqr_id = UQR.id
+    JOIN questions Q ON UQR.question_id = Q.id
+    JOIN users ON users.id = UQR.user_id
+    WHERE Q.is_active = TRUE
+      AND UQR.question_id IN (
+			SELECT eq.question_id FROM exam_questions eq WHERE eq.exam_id = ?
+		)
+      AND users.is_admin = FALSE
+    ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.created ASC
 	`, id)
 
 	if err := db.Table("(?) AS t", subquery).
@@ -848,7 +850,7 @@ func GetExamLeaderboard(c *gin.Context) {
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
-		Order("total_score DESC, MAX(subquery.id) ASC").
+		Order("total_score DESC, MAX(subquery.created) ASC").
 		Offset(offset).
 		Limit(limit).
 		Find(&usersWithScores).Error; err != nil {
