@@ -934,7 +934,8 @@ func GetLeaderboard(c *gin.Context) {
 		userName := user.UserName
 		if !user.IsPublic {
 			if !isAuthenticated || !jwtClaims.IsAdmin {
-				userName = fmt.Sprintf("User_%d", user.UserID)
+				hash := utils.HashUserID(user.UserID)
+				userName = hash[len(hash)-9:]
 			} else {
 				userName = user.UserName + " (Private)"
 			}

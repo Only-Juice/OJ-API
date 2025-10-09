@@ -114,13 +114,19 @@ func GetUser(c *gin.Context) {
 		return
 	}
 
+	username := user.UserName
+	if !user.IsPublic {
+		hash := utils.HashUserID(user.ID)
+		username = hash[len(hash)-9:]
+	}
+
 	// Respond with user info
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "User info retrieved successfully",
 		Data: GetUserData{
 			ID:       user.ID,
-			UserName: user.UserName,
+			UserName: username,
 			Enable:   user.Enable,
 			Email:    user.Email,
 			IsPublic: user.IsPublic,
