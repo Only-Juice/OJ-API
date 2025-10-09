@@ -4056,7 +4056,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.Question"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -4741,7 +4741,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },

@@ -823,15 +823,21 @@ func GetLeaderboard(c *gin.Context) {
 
 	// Get total count of users who have scores
 	var totalCount int64
-	subquery := db.Table("user_question_tables").
-		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
-		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
-		Joins("JOIN questions Q ON UQR.question_id = Q.id").
-		Joins("JOIN users ON users.id = UQR.user_id").
-		Where("Q.is_active = ?", true).
-		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
-		Where("users.is_admin = false").
-		Group("UQR.user_id, UQR.question_id")
+	subquery := db.Raw(`
+	SELECT DISTINCT ON (UQR.user_id, UQR.question_id)
+		UQR.user_id AS user_id,
+		UQR.question_id,
+		uqt.id,
+		GREATEST(uqt.score, 0) AS max_score
+	FROM user_question_tables uqt
+	JOIN user_question_relations UQR ON uqt.uqr_id = UQR.id
+	JOIN questions Q ON UQR.question_id = Q.id
+	JOIN users ON users.id = UQR.user_id
+	WHERE Q.is_active = TRUE
+		AND UQR.question_id NOT IN (SELECT question_id FROM exam_questions)
+		AND users.is_admin = FALSE
+	ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.id ASC
+	`)
 
 	if err := db.Table("(?) AS t", subquery).
 		Select("COUNT(DISTINCT user_id)").
@@ -856,7 +862,7 @@ func GetLeaderboard(c *gin.Context) {
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
-		Order("total_score DESC, users.id ASC").
+		Order("total_score DESC, MAX(subquery.id) ASC").
 		Offset(offset).
 		Limit(limit).
 		Find(&usersWithScores).Error; err != nil {

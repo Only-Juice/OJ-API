@@ -809,11 +809,24 @@ func GetExamLeaderboard(c *gin.Context) {
 
 	// Get total count of users who have scores for this exam
 	var totalCount int64
-	if err := db.Table("(SELECT DISTINCT user_id FROM user_question_relations "+
-		"JOIN user_question_tables ON user_question_relations.id = user_question_tables.uqr_id "+
-		"JOIN exam_questions ON user_question_relations.question_id = exam_questions.question_id "+
-		"JOIN users ON user_question_relations.user_id = users.id "+
-		"WHERE exam_questions.exam_id = ? AND users.is_admin = false ) AS t", id).
+	subquery := db.Raw(`
+	SELECT DISTINCT ON (UQR.user_id, UQR.question_id)
+		UQR.user_id AS user_id,
+		UQR.question_id,
+		uqt.id,
+		GREATEST(uqt.score, 0) AS max_score
+	FROM user_question_tables uqt
+	JOIN user_question_relations UQR ON uqt.uqr_id = UQR.id
+	JOIN questions Q ON UQR.question_id = Q.id
+	JOIN users ON users.id = UQR.user_id
+	WHERE Q.is_active = TRUE
+		AND UQR.question_id NOT IN (SELECT question_id FROM exam_questions WHERE exam_id == ?)
+		AND users.is_admin = FALSE
+	ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.id ASC
+	`, id)
+
+	if err := db.Table("(?) AS t", subquery).
+		Select("COUNT(DISTINCT user_id)").
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
@@ -831,23 +844,11 @@ func GetExamLeaderboard(c *gin.Context) {
 	}
 
 	var usersWithScores []UserWithTotalScore
-	if err := db.Table(`(
-        SELECT 
-            UQR.user_id AS user_id, 
-            GREATEST(MAX(user_question_tables.score), 0) / 100 * EQ.point AS max_score, 
-            UQR.question_id
-        FROM user_question_tables
-        JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id
-        JOIN exam_questions EQ ON UQR.question_id = EQ.question_id
-		JOIN questions Q ON UQR.question_id = Q.id
-		JOIN users ON UQR.user_id = users.id
-        WHERE Q.is_active = true AND EQ.exam_id = ? AND users.is_admin = false
-        GROUP BY UQR.user_id, UQR.question_id, EQ.point
-    ) AS subquery`, id).
+	if err := db.Table("(?) AS subquery", subquery).
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
-		Order("total_score DESC, users.id ASC").
+		Order("total_score DESC, MAX(subquery.id) ASC").
 		Offset(offset).
 		Limit(limit).
 		Find(&usersWithScores).Error; err != nil {
@@ -884,7 +885,7 @@ func GetExamLeaderboard(c *gin.Context) {
 	}
 
 	var questionScores []QuestionScoreDetail
-	subquery := db.Model(&models.UserQuestionTable{}).
+	subquery2 := db.Model(&models.UserQuestionTable{}).
 		Select("UQR.user_id, UQR.question_id, GREATEST(MAX(user_question_tables.score), 0) AS score, MAX(UQR.git_user_repo_url) AS git_user_repo_url, MAX(EQ.point) AS point").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN exam_questions EQ ON UQR.question_id = EQ.question_id").
@@ -894,7 +895,7 @@ func GetExamLeaderboard(c *gin.Context) {
 		Where("EQ.exam_id = ?", id).
 		Group("UQR.user_id, UQR.question_id")
 
-	if err := db.Table("(?) AS sq", subquery).
+	if err := db.Table("(?) AS sq", subquery2).
 		Joins("JOIN questions ON questions.id = sq.question_id").
 		Select("sq.user_id, sq.question_id, questions.title AS question_title, sq.git_user_repo_url, sq.score, sq.point, (sq.score / 100 * sq.point) AS weighted_score").
 		Find(&questionScores).Error; err != nil {

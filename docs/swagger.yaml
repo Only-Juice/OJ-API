@@ -371,7 +371,7 @@ definitions:
       title:
         type: string
       top_score:
-        type: integer
+        type: number
     type: object
   handlers._GetUsersQuestionsResponseData:
     properties:
@@ -654,7 +654,7 @@ definitions:
       question:
         $ref: '#/definitions/models.Question'
       top_score:
-        type: integer
+        type: number
     type: object
   handlers.ExamQuestionsResponse:
     properties:

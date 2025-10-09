@@ -4049,7 +4049,7 @@
                     "$ref": "#/definitions/models.Question"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -4734,7 +4734,7 @@
                     "type": "string"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
