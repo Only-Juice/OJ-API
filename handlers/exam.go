@@ -820,7 +820,7 @@ func GetExamLeaderboard(c *gin.Context) {
 	JOIN questions Q ON UQR.question_id = Q.id
 	JOIN users ON users.id = UQR.user_id
 	WHERE Q.is_active = TRUE
-		AND UQR.question_id NOT IN (SELECT question_id FROM exam_questions WHERE exam_id == ?)
+		AND UQR.question_id NOT EXISTS (SELECT 1 FROM exam_questions WHERE eq.question_id = UQR.question_id AND exam_id = ?)
 		AND users.is_admin = FALSE
 	ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.id ASC
 	`, id)
