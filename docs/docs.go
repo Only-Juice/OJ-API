@@ -4248,6 +4248,9 @@ const docTemplate = `{
                 "enable": {
                     "type": "boolean"
                 },
+                "hash": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
