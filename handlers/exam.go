@@ -813,7 +813,7 @@ func GetExamLeaderboard(c *gin.Context) {
 	SELECT DISTINCT ON (UQR.user_id, UQR.question_id)
            UQR.user_id AS user_id,
            UQR.question_id,
-           uqt.created,
+           uqt.created_at,
            GREATEST(uqt.score, 0) AS max_score
     FROM user_question_tables uqt
     JOIN user_question_relations UQR ON uqt.uqr_id = UQR.id
@@ -824,7 +824,7 @@ func GetExamLeaderboard(c *gin.Context) {
 			SELECT eq.question_id FROM exam_questions eq WHERE eq.exam_id = ?
 		)
       AND users.is_admin = FALSE
-    ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.created ASC
+    ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.created_at ASC
 	`, id)
 
 	if err := db.Table("(?) AS t", subquery).
@@ -850,7 +850,7 @@ func GetExamLeaderboard(c *gin.Context) {
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
-		Order("total_score DESC, MAX(subquery.created) ASC").
+		Order("total_score DESC, MAX(subquery.created_at) ASC").
 		Offset(offset).
 		Limit(limit).
 		Find(&usersWithScores).Error; err != nil {
