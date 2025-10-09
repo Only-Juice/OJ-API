@@ -653,3 +653,121 @@ func DeletePublicKeyGitea(c *gin.Context) {
 		Message: "Public key deleted successfully",
 	})
 }
+
+// Gets the metadata of all the entries of the root dir
+// @Summary	Get root directory metadata
+// @Description Gets the metadata of all the entries of the root dir
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			owner		path		string		true	"owner of the repo"
+// @Param			repo		path		string		true	"name of the repo"
+// @Param			filepath	path		string		false	"The path to the file or directory. Use empty string for root directory." default(/)
+// @Param			ref			query		string		false	"The name of the commit/branch/tag. Default to the repository’s default branch."
+// @Success		200		{object}	ResponseHTTP{data=gitea.ContentsResponse}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/repos/{owner}/{repo}/dir/{filepath} [get]
+func ListRepoDirGitea(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	owner := c.Param("owner")
+	repo := c.Param("repo")
+	filepath := c.Param("filepath")
+	ref := c.Query("ref")
+
+	contents, resp, err := client.ListContents(owner, repo, ref, filepath)
+	if err != nil {
+		c.JSON(resp.StatusCode, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Data:    contents,
+		Message: "Root directory metadata retrieved successfully",
+	})
+}
+
+// Get File Content
+// @Summary	Get File Content
+// @Description Get File Content
+// @Tags			Gitea
+// @Accept			json
+// @Produce			json
+// @Param			owner		path		string		true	"owner of the repo"
+// @Param			repo		path		string		true	"name of the repo"
+// @Param			filepath	path		string		true	"The path to the file."
+// @Param			ref			query		string		false	"The name of the commit/branch/tag. Default to the repository’s default branch."
+// @Success		200		{object}	ResponseHTTP{data=gitea.ContentsResponse}
+// @Failure		400
+// @Failure		401
+// @Failure		404
+// @Failure		503
+// @Security	BearerAuth
+// @Router		/api/gitea/repos/{owner}/{repo}/file/{filepath} [get]
+func GetRepoFileGitea(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	token, err := utils.GetToken(jwtClaims.UserID)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: "Failed to retrieve token",
+		})
+		return
+	}
+	client, err := gitea.NewClient(config.GetGiteaBaseURL(),
+		gitea.SetToken(token),
+	)
+	if err != nil {
+		c.JSON(503, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	owner := c.Param("owner")
+	repo := c.Param("repo")
+	filepath := c.Param("filepath")
+	ref := c.Query("ref")
+
+	content, resp, err := client.GetContents(owner, repo, ref, filepath)
+	if err != nil {
+		c.JSON(resp.StatusCode, ResponseHTTP{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, ResponseHTTP{
+		Success: true,
+		Data:    content,
+		Message: "File content retrieved successfully",
+	})
+}

@@ -195,6 +195,9 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/gitea/user/keys", AuthMiddleware(), handlers.PostCreatePublicKeyGitea)
 		api.GET("/gitea/user/keys", AuthMiddleware(), handlers.ListMyPublicKeysGitea)
 		api.DELETE("/gitea/user/keys", AuthMiddleware(), handlers.DeletePublicKeyGitea)
+		api.GET("/gitea/repos/:owner/:repo/dir", AuthMiddleware(), handlers.ListRepoDirGitea)
+		api.GET("/gitea/repos/:owner/:repo/dir/:filepath", AuthMiddleware(), handlers.ListRepoDirGitea)
+		api.GET("/gitea/repos/:owner/:repo/file/:filepath", AuthMiddleware(), handlers.GetRepoFileGitea)
 
 		// Questions routes
 		api.GET("/questions", AuthMiddleware(false), handlers.GetQuestionList)

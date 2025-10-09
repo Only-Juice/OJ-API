@@ -59,6 +59,45 @@ definitions:
       name:
         type: string
     type: object
+  gitea.ContentsResponse:
+    properties:
+      _links:
+        $ref: '#/definitions/gitea.FileLinksResponse'
+      content:
+        description: '`content` is populated when `type` is `file`, otherwise null'
+        type: string
+      download_url:
+        type: string
+      encoding:
+        description: '`encoding` is populated when `type` is `file`, otherwise null'
+        type: string
+      git_url:
+        type: string
+      html_url:
+        type: string
+      last_commit_sha:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      sha:
+        type: string
+      size:
+        type: integer
+      submodule_git_url:
+        description: '`submodule_git_url` is populated when `type` is `submodule`,
+          otherwise null'
+        type: string
+      target:
+        description: '`target` is populated when `type` is `symlink`, otherwise null'
+        type: string
+      type:
+        description: '`type` will be `file`, `dir`, `symlink`, or `submodule`'
+        type: string
+      url:
+        type: string
+    type: object
   gitea.ExternalTracker:
     properties:
       external_tracker_format:
@@ -76,6 +115,15 @@ definitions:
     properties:
       external_wiki_url:
         description: URL of external wiki.
+        type: string
+    type: object
+  gitea.FileLinksResponse:
+    properties:
+      git:
+        type: string
+      html:
+        type: string
+      self:
         type: string
     type: object
   gitea.InternalTracker:
@@ -371,7 +419,7 @@ definitions:
       title:
         type: string
       top_score:
-        type: integer
+        type: number
     type: object
   handlers._GetUsersQuestionsResponseData:
     properties:
@@ -654,7 +702,7 @@ definitions:
       question:
         $ref: '#/definitions/models.Question'
       top_score:
-        type: integer
+        type: number
     type: object
   handlers.ExamQuestionsResponse:
     properties:
@@ -2122,6 +2170,109 @@ paths:
       security:
       - BearerAuth: []
       summary: Bulk create User v2
+      tags:
+      - Gitea
+  /api/gitea/repos/{owner}/{repo}/dir/{filepath}:
+    get:
+      consumes:
+      - application/json
+      description: Gets the metadata of all the entries of the root dir
+      parameters:
+      - description: owner of the repo
+        in: path
+        name: owner
+        required: true
+        type: string
+      - description: name of the repo
+        in: path
+        name: repo
+        required: true
+        type: string
+      - default: /
+        description: The path to the file or directory. Use empty string for root
+          directory.
+        in: path
+        name: filepath
+        type: string
+      - description: The name of the commit/branch/tag. Default to the repository’s
+          default branch.
+        in: query
+        name: ref
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/gitea.ContentsResponse'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get root directory metadata
+      tags:
+      - Gitea
+  /api/gitea/repos/{owner}/{repo}/file/{filepath}:
+    get:
+      consumes:
+      - application/json
+      description: Get File Content
+      parameters:
+      - description: owner of the repo
+        in: path
+        name: owner
+        required: true
+        type: string
+      - description: name of the repo
+        in: path
+        name: repo
+        required: true
+        type: string
+      - description: The path to the file.
+        in: path
+        name: filepath
+        required: true
+        type: string
+      - description: The name of the commit/branch/tag. Default to the repository’s
+          default branch.
+        in: query
+        name: ref
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ResponseHTTP'
+            - properties:
+                data:
+                  $ref: '#/definitions/gitea.ContentsResponse'
+              type: object
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "503":
+          description: Service Unavailable
+      security:
+      - BearerAuth: []
+      summary: Get File Content
       tags:
       - Gitea
   /api/gitea/user:
