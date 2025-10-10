@@ -838,8 +838,17 @@ func GetLeaderboard(c *gin.Context) {
 		AND users.is_admin = FALSE
 	ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.created_at ASC
 	`)
+	subquery4count := db.Table("user_question_tables").
+		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
+		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
+		Joins("JOIN questions Q ON UQR.question_id = Q.id").
+		Joins("JOIN users ON users.id = UQR.user_id").
+		Where("Q.is_active = ?", true).
+		Where("question_id NOT IN (SELECT question_id FROM exam_questions)").
+		Where("users.is_admin = false").
+		Group("UQR.user_id, UQR.question_id")
 
-	if err := db.Table("(?) AS t", subquery).
+	if err := db.Table("(?) AS t", subquery4count).
 		Select("COUNT(DISTINCT user_id)").
 		Scan(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{

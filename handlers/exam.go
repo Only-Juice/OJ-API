@@ -825,9 +825,11 @@ func GetExamLeaderboard(c *gin.Context) {
       AND users.is_admin = FALSE
     ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.created_at ASC
 	`, id)
-
-	if err := db.Table("(?) AS t", subquery).
-		Select("COUNT(DISTINCT user_id)").
+	if err := db.Table("(SELECT DISTINCT user_id FROM user_question_relations "+
+		"JOIN user_question_tables ON user_question_relations.id = user_question_tables.uqr_id "+
+		"JOIN exam_questions ON user_question_relations.question_id = exam_questions.question_id "+
+		"JOIN users ON user_question_relations.user_id = users.id "+
+		"WHERE exam_questions.exam_id = ? AND users.is_admin = false ) AS t", id).
 		Count(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
