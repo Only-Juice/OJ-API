@@ -4056,7 +4056,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.Question"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -4247,6 +4247,9 @@ const docTemplate = `{
                 },
                 "enable": {
                     "type": "boolean"
+                },
+                "hash": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"
@@ -4741,7 +4744,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },

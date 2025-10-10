@@ -4049,7 +4049,7 @@
                     "$ref": "#/definitions/models.Question"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -4240,6 +4240,9 @@
                 },
                 "enable": {
                     "type": "boolean"
+                },
+                "hash": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"
@@ -4734,7 +4737,7 @@
                     "type": "string"
                 },
                 "top_score": {
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },

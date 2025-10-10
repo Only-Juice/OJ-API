@@ -55,7 +55,8 @@ func CloneRepository(GitFullName, GitRepoURL, GitAfterHash, GitUsername, GitToke
 
 		// Checkout 到指定的 commit hash
 		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(GitAfterHash),
+			Hash:  plumbing.NewHash(GitAfterHash),
+			Force: true,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to checkout to %s: %v", GitAfterHash, err)

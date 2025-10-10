@@ -81,6 +81,7 @@ func PostUserIsPublic(c *gin.Context) {
 type GetUserData struct {
 	ID       uint   `json:"id"`
 	UserName string `json:"user_name"`
+	Hash     string `json:"hash"`
 	Enable   bool   `json:"enable"`
 	Email    string `json:"email"`
 	IsPublic bool   `json:"is_public"`
@@ -114,6 +115,8 @@ func GetUser(c *gin.Context) {
 		return
 	}
 
+	hash := utils.HashUserID(user.ID)
+
 	// Respond with user info
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
@@ -121,6 +124,7 @@ func GetUser(c *gin.Context) {
 		Data: GetUserData{
 			ID:       user.ID,
 			UserName: user.UserName,
+			Hash:     hash[len(hash)-9:],
 			Enable:   user.Enable,
 			Email:    user.Email,
 			IsPublic: user.IsPublic,
