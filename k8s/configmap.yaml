@@ -4,11 +4,15 @@ metadata:
   name: oj-api-config
   namespace: oj-api
 data:
-  # 資料庫配置
-  DB_HOST: "oj-api-postgres.orb.local"
+  # 資料庫配置 - 透過 PGBouncer 連接
+  DB_HOST: "pgbouncer.oj-api.svc.cluster.local"
   DB_PORT: "5432"
   DB_NAME: "ojapi"
   DB_USER: "ojapi"
+  
+  # 實際 PostgreSQL 資料庫配置 (供 PGBouncer 使用)
+  POSTGRES_HOST: "oj-api-postgres.orb.local"
+  POSTGRES_PORT: "5432"
   
   # Log 級別
   LOG_LEVEL: "info"
