@@ -19,7 +19,7 @@ jobs:
     - name: Build the Docker image(sandbox)
       run: docker build . --file Dockerfile.sandbox --tag heavenmanysugar/orangejuice-sandbox:latest
     - name: Push image to Docker Hub
-      run: 
+      run: |
         docker login -u heavenmanysugar -p ${{ secrets.DOCKER_HUB_TOKEN }}
         docker push heavenmanysugar/orangejuice-api:latest
         docker push heavenmanysugar/orangejuice-sandbox:latest
