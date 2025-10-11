@@ -1,5 +1,9 @@
 # Dockerfile for using prebuilt sandbox binary from GitHub Actions
+# Supports multi-architecture builds (amd64, arm64)
 FROM debian:bookworm-slim
+
+# Get the target architecture from buildx
+ARG TARGETARCH
 
 # 更新套件列表並安裝必要依賴
 RUN apt-get update && apt-get install -y \
@@ -19,7 +23,7 @@ RUN mkdir -p /etc/apt/keyrings && \
     curl https://www.ucw.cz/isolate/debian/signing-key.asc > /etc/apt/keyrings/isolate.asc
 
 # 添加 isolate 套件源
-RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ bookworm-isolate main" >> /etc/apt/sources.list
+RUN echo "deb [arch=${TARGETARCH} signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ bookworm-isolate main" >> /etc/apt/sources.list
 
 # 安裝 isolate
 RUN apt-get update && apt-get install -y isolate && rm -rf /var/lib/apt/lists/*
@@ -32,9 +36,9 @@ RUN mkdir -p /sandbox /sandbox/code /sandbox/repo && \
 
 WORKDIR /app
 
-# 複製預編譯的二進制文件
-COPY dist/server-sandbox-linux-amd64 ./sandbox-server
-COPY dist/grp_parser-linux-amd64 ./sandbox/grp_parser/grp_parser
+# 複製預編譯的二進制文件 (根據架構選擇)
+COPY dist/server-sandbox-linux-${TARGETARCH} ./sandbox-server
+COPY dist/grp_parser-linux-${TARGETARCH} ./sandbox/grp_parser/grp_parser
 
 RUN chmod +x ./sandbox-server ./sandbox/grp_parser/grp_parser
 

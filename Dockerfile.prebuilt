@@ -1,11 +1,15 @@
 # Dockerfile for using prebuilt binary from GitHub Actions
+# Supports multi-architecture builds (amd64, arm64)
 FROM alpine:3.22
+
+# Get the target architecture from buildx
+ARG TARGETARCH
 
 RUN mkdir -p /app
 WORKDIR /app
 
-# Copy the prebuilt binary
-COPY dist/server-linux-amd64 /app/OJ_API
+# Copy the prebuilt binary based on architecture
+COPY dist/server-linux-${TARGETARCH} /app/OJ_API
 
 RUN chmod +x /app/OJ_API
 
