@@ -5,7 +5,7 @@ metadata:
   namespace: oj-api
 data:
   # 資料庫配置
-  DB_HOST: "192.168.2.123"
+  DB_HOST: "oj-api-postgres.orb.local"
   DB_PORT: "5432"
   DB_NAME: "ojapi"
   DB_USER: "ojapi"
@@ -24,13 +24,13 @@ data:
   SCHEDULER_ADDRESS: "oj-api-server:3001"
   
   # OJ 配置（請根據實際環境修改）
-  OJ_BASE_URL: "http://oj-api-server:3001"
-  OJ_EXTERNAL_URL: "https://oj.yourdomain.com"
-  FRONTEND_URL: "https://oj.is1ab.com"
+  OJ_BASE_URL: "https://oj-api-mac.ruien.me"
+  OJ_EXTERNAL_URL: "https://oj-api-mac.ruien.me"
+  FRONTEND_URL: "https://oj-mac.ruien.me"
   
   # Gitea 配置（請根據實際環境修改）
-  GIT_HOST: "gitea.yourdomain.com"
-  GIT_BASE_URL: "http://gitea.yourdomain.com"
-  GIT_EXTERNAL_URL: "https://gitea.yourdomain.com"
-  GITEA_URL: "https://gitea.yourdomain.com"
-  GITEA_ISSUER: "https://gitea.yourdomain.com"
+  GIT_HOST: "server.gitea.orb.local:3000"
+  GIT_BASE_URL: "http://server.gitea.orb.local:3000"
+  GIT_EXTERNAL_URL: "https://gitea-mac.ruien.me"
+  GITEA_URL: "https://gitea-mac.ruien.me"
+  GITEA_ISSUER: "https://gitea-mac.ruien.me"

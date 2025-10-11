@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: oj-api
-        image: your-registry/oj-api:latest  # 請替換為您的 Docker 映像
+        image: heavenmanysugar/orangejuice-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3001

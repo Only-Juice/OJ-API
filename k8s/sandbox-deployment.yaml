@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: sandbox
-        image: your-registry/oj-sandbox:latest  # 請替換為您的 Docker 映像
+        image: heavenmanysugar/orangejuice-sandbox:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 50051
