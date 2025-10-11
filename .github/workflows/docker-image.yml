@@ -1,25 +1,58 @@
 name: Docker Image CI
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_run:
+    workflows: ["Build and Release"]
+    types:
+      - completed
 
 jobs:
 
-  build:
-
+  docker-build-and-push:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.workflow_run.head_branch }}
+    
+    - name: Download binaries artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: binaries
+        path: dist
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Get the version from tag
+      id: get_version
+      run: |
+        # 從 workflow_run 事件中取得 tag
+        TAG_NAME="${{ github.event.workflow_run.head_branch }}"
+        echo "VERSION=${TAG_NAME}" >> $GITHUB_OUTPUT
+    
+    - name: Make binaries executable
+      run: |
+        chmod +x dist/server-linux-amd64
+        chmod +x dist/server-sandbox-linux-amd64
+        chmod +x dist/grp_parser-linux-amd64
+        mkdir -p dist/sandbox/grp_parser
+    
     - name: Build the Docker image(api)
-      run: docker build . --file Dockerfile --tag heavenmanysugar/orangejuice-api:latest
+      run: |
+        docker build . --file Dockerfile.prebuilt --tag heavenmanysugar/orangejuice-api:latest
+        docker build . --file Dockerfile.prebuilt --tag heavenmanysugar/orangejuice-api:${{ steps.get_version.outputs.VERSION }}
+    
     - name: Build the Docker image(sandbox)
-      run: docker build . --file Dockerfile.sandbox --tag heavenmanysugar/orangejuice-sandbox:latest
+      run: |
+        docker build . --file Dockerfile.sandbox.prebuilt --tag heavenmanysugar/orangejuice-sandbox:latest
+        docker build . --file Dockerfile.sandbox.prebuilt --tag heavenmanysugar/orangejuice-sandbox:${{ steps.get_version.outputs.VERSION }}
+    
     - name: Push image to Docker Hub
       run: |
         docker login -u heavenmanysugar -p ${{ secrets.DOCKER_HUB_TOKEN }}
         docker push heavenmanysugar/orangejuice-api:latest
+        docker push heavenmanysugar/orangejuice-api:${{ steps.get_version.outputs.VERSION }}
         docker push heavenmanysugar/orangejuice-sandbox:latest
+        docker push heavenmanysugar/orangejuice-sandbox:${{ steps.get_version.outputs.VERSION }}

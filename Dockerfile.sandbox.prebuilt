@@ -1,0 +1,45 @@
+# Dockerfile for using prebuilt sandbox binary from GitHub Actions
+FROM debian:bookworm-slim
+
+# 更新套件列表並安裝必要依賴
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    make \
+    gcc \
+    g++ \
+    cmake \
+    ninja-build \
+    libgtest-dev \
+    valgrind \
+    && rm -rf /var/lib/apt/lists/*
+
+# 創建 keyring 目錄並安裝 isolate 公鑰
+RUN mkdir -p /etc/apt/keyrings && \
+    curl https://www.ucw.cz/isolate/debian/signing-key.asc > /etc/apt/keyrings/isolate.asc
+
+# 添加 isolate 套件源
+RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ bookworm-isolate main" >> /etc/apt/sources.list
+
+# 安裝 isolate
+RUN apt-get update && apt-get install -y isolate && rm -rf /var/lib/apt/lists/*
+
+# 創建isolate所需的目錄
+RUN mkdir -p /var/local/lib/isolate
+
+RUN mkdir -p /sandbox /sandbox/code /sandbox/repo && \
+    chmod 777 /sandbox /sandbox/code /sandbox/repo
+
+WORKDIR /app
+
+# 複製預編譯的二進制文件
+COPY dist/server-sandbox-linux-amd64 ./sandbox-server
+COPY dist/grp_parser-linux-amd64 ./sandbox/grp_parser/grp_parser
+
+RUN chmod +x ./sandbox-server ./sandbox/grp_parser/grp_parser
+
+# 暴露gRPC端口
+EXPOSE 50051
+
+# 運行sandbox服務器
+CMD ["./sandbox-server"]
