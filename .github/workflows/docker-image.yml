@@ -15,11 +15,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image(api)
-      run: docker build . --file Dockerfile --tag heavenmanysugar/orangejuice-api:$(date +%s)
+      run: docker build . --file Dockerfile --tag heavenmanysugar/orangejuice-api:latest
     - name: Build the Docker image(sandbox)
-      run: docker build . --file Dockerfile.sandbox --tag heavenmanysugar/orangejuice-sandbox:$(date +%s)
+      run: docker build . --file Dockerfile.sandbox --tag heavenmanysugar/orangejuice-sandbox:latest
     - name: Push image to Docker Hub
       run: 
         docker login -u heavenmanysugar -p ${{ secrets.DOCKER_HUB_TOKEN }}
-        docker push heavenmanysugar/orangejuice-api:$(date +%s)
-        docker push heavenmanysugar/orangejuice-sandbox:$(date +%s)
+        docker push heavenmanysugar/orangejuice-api:latest
+        docker push heavenmanysugar/orangejuice-sandbox:latest
