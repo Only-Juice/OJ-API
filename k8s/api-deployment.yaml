@@ -1,12 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: oj-api-server
   namespace: oj-api
   labels:
     app: oj-api-server
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: oj-api-server
@@ -143,6 +143,81 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-      # 如果使用私有 Registry，需要配置 imagePullSecrets
-      # imagePullSecrets:
-      # - name: registry-secret
+      - name: sandbox
+        image: heavenmanysugar/orangejuice-sandbox:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50051
+          name: grpc
+          protocol: TCP
+        env:
+        # Scheduler 地址 - 連接到 API Service
+        - name: SCHEDULER_ADDRESS
+          value: "localhost:3001"
+        # 從 ConfigMap 讀取環境變數
+        - name: SANDBOX_COUNT
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: SANDBOX_COUNT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_USER
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: LOG_LEVEL
+        - name: ISOLATE_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: ISOLATE_PATH
+        - name: GIT_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GIT_BASE_URL
+        # 從 Secret 讀取敏感資訊
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: ENCRYPTION_KEY
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: DB_PASSWORD
+        # 特權模式和安全上下文 - isolate 需要
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - SYS_CHROOT
+        # 資源限制
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"

@@ -9,7 +9,6 @@ resources:
 - secret.yaml
 - api-deployment.yaml
 - api-service.yaml
-- sandbox-deployment.yaml
 - ingress.yaml
 
 # 可以添加共同的標籤
