@@ -20,8 +20,8 @@ data:
   SANDBOX_COUNT: "4"
   ISOLATE_PATH: "/var/lib/isolate"
   
-  # Scheduler 地址（API Server 的內部服務名稱）
-  SCHEDULER_ADDRESS: "oj-api-server:3001"
+  # Scheduler 地址（使用 Headless Service 以連接到所有 API Server Pod）
+  SCHEDULER_ADDRESS: "oj-api-server-headless:3001"
   
   # OJ 配置（請根據實際環境修改）
   OJ_BASE_URL: "https://oj-api-mac.ruien.me"

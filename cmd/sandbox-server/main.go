@@ -19,6 +19,10 @@ import (
 	"syscall"
 	"time"
 
+	"net"
+	"strings"
+	"sync"
+
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
@@ -59,8 +63,9 @@ func main() {
 	defer cancel()
 	go sandboxInstance.WorkerLoop(ctx)
 
-	// 生成唯一的沙箱 ID
-	sandboxID := uuid.New().String()
+	// 生成唯一的沙箱 ID（基礎 ID）
+	baseSandboxID := uuid.New().String()
+	utils.Infof("Sandbox base ID: %s", baseSandboxID)
 
 	// 連接到 API Server 調度器
 	schedulerAddress := config.Config("SCHEDULER_ADDRESS")
@@ -72,41 +77,8 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// 啟動重連循環
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				conn, err := connectToScheduler(schedulerAddress, sandboxID)
-				if err != nil {
-					utils.Errorf("Failed to connect to scheduler: %v", err)
-					select {
-					case <-ctx.Done():
-						return
-					case <-time.After(5 * time.Second):
-						continue
-					}
-				}
-
-				// 連接成功，處理連接直到斷線
-				err = handleConnection(ctx, conn, sandboxID, sandboxInstance)
-				if err != nil {
-					utils.Errorf("Connection lost: %v", err)
-				}
-				conn.Close()
-
-				// 連接斷開，等待重連
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(3 * time.Second):
-					utils.Info("Attempting to reconnect to scheduler...")
-				}
-			}
-		}
-	}()
+	// 啟動多連接管理器
+	go manageMultipleConnections(ctx, schedulerAddress, baseSandboxID, sandboxInstance)
 
 	<-sigChan
 	utils.Info("Shutting down sandbox server...")
@@ -149,6 +121,143 @@ func main() {
 		}
 
 		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// manageMultipleConnections 管理到多個 API Server Pod 的連接
+func manageMultipleConnections(ctx context.Context, schedulerAddress string, baseSandboxID string, sandboxInstance *sandbox.Sandbox) {
+	// 定期解析 DNS 並維護連接
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	connections := make(map[string]context.CancelFunc) // host -> cancel function
+	var connMutex sync.Mutex
+
+	// 立即執行一次連接
+	connectToAllSchedulers(ctx, schedulerAddress, baseSandboxID, sandboxInstance, connections, &connMutex)
+
+	for {
+		select {
+		case <-ctx.Done():
+			// 取消所有連接
+			connMutex.Lock()
+			for _, cancel := range connections {
+				cancel()
+			}
+			connMutex.Unlock()
+			return
+		case <-ticker.C:
+			// 定期檢查並更新連接
+			connectToAllSchedulers(ctx, schedulerAddress, baseSandboxID, sandboxInstance, connections, &connMutex)
+		}
+	}
+}
+
+// connectToAllSchedulers 連接到所有可用的調度器
+func connectToAllSchedulers(parentCtx context.Context, schedulerAddress string, baseSandboxID string, sandboxInstance *sandbox.Sandbox, connections map[string]context.CancelFunc, connMutex *sync.Mutex) {
+	// 解析 DNS 獲取所有 IP
+	host, port, err := net.SplitHostPort(schedulerAddress)
+	if err != nil {
+		utils.Errorf("Invalid scheduler address %s: %v", schedulerAddress, err)
+		return
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		utils.Errorf("Failed to resolve scheduler address %s: %v", host, err)
+		return
+	}
+
+	// 構建當前的 IP 列表
+	currentHosts := make(map[string]bool)
+	for _, ip := range ips {
+		hostAddr := net.JoinHostPort(ip.String(), port)
+		currentHosts[hostAddr] = true
+	}
+
+	connMutex.Lock()
+	defer connMutex.Unlock()
+
+	// 移除不再存在的連接
+	for hostAddr, cancel := range connections {
+		if !currentHosts[hostAddr] {
+			utils.Infof("Scheduler %s no longer exists, closing connection", hostAddr)
+			cancel()
+			delete(connections, hostAddr)
+		}
+	}
+
+	// 建立新的連接
+	for hostAddr := range currentHosts {
+		if _, exists := connections[hostAddr]; !exists {
+			utils.Infof("Connecting to new scheduler at %s", hostAddr)
+
+			// 為每個連接創建獨立的 context
+			connCtx, connCancel := context.WithCancel(parentCtx)
+			connections[hostAddr] = connCancel
+
+			// 為每個連接創建唯一的 sandboxID：baseSandboxID-hostAddr
+			// 這樣每個 API Server 都會將此視為不同的 Sandbox 實例
+			uniqueSandboxID := fmt.Sprintf("%s-%s", baseSandboxID, sanitizeHostAddr(hostAddr))
+
+			// 啟動連接 goroutine
+			go maintainConnection(connCtx, hostAddr, uniqueSandboxID, sandboxInstance)
+		}
+	}
+
+	utils.Infof("Managing connections to %d scheduler(s): %v", len(connections), getHostList(currentHosts))
+}
+
+// sanitizeHostAddr 清理主機地址以用於 ID
+func sanitizeHostAddr(hostAddr string) string {
+	// 將 IP:port 轉換為安全的 ID 格式（替換 : 和 .）
+	return strings.ReplaceAll(strings.ReplaceAll(hostAddr, ":", "-"), ".", "-")
+}
+
+// getHostList 獲取主機列表（用於日誌）
+func getHostList(hosts map[string]bool) []string {
+	list := make([]string, 0, len(hosts))
+	for host := range hosts {
+		list = append(list, host)
+	}
+	return list
+}
+
+// maintainConnection 維護單個連接並自動重連
+func maintainConnection(ctx context.Context, hostAddr string, sandboxID string, sandboxInstance *sandbox.Sandbox) {
+	for {
+		select {
+		case <-ctx.Done():
+			utils.Infof("Connection to %s cancelled", hostAddr)
+			return
+		default:
+			conn, err := connectToScheduler(hostAddr, sandboxID)
+			if err != nil {
+				utils.Errorf("Failed to connect to scheduler at %s: %v", hostAddr, err)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+					continue
+				}
+			}
+
+			// 連接成功，處理連接直到斷線
+			utils.Infof("Connected to scheduler at %s", hostAddr)
+			err = handleConnection(ctx, conn, sandboxID, sandboxInstance)
+			if err != nil && !strings.Contains(err.Error(), "context canceled") {
+				utils.Errorf("Connection to %s lost: %v", hostAddr, err)
+			}
+			conn.Close()
+
+			// 連接斷開，等待重連
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(3 * time.Second):
+				utils.Infof("Attempting to reconnect to scheduler at %s...", hostAddr)
+			}
+		}
 	}
 }
 
