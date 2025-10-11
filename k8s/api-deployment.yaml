@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oj-api-server
+  namespace: oj-api
+  labels:
+    app: oj-api-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: oj-api-server
+  template:
+    metadata:
+      labels:
+        app: oj-api-server
+    spec:
+      containers:
+      - name: oj-api
+        image: your-registry/oj-api:latest  # 請替換為您的 Docker 映像
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3001
+          name: http
+          protocol: TCP
+        env:
+        # 從 ConfigMap 讀取環境變數
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_USER
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: LOG_LEVEL
+        - name: GIN_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GIN_MODE
+        - name: OJ_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: OJ_BASE_URL
+        - name: OJ_EXTERNAL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: OJ_EXTERNAL_URL
+        - name: FRONTEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: FRONTEND_URL
+        - name: GIT_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GIT_HOST
+        - name: GIT_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GIT_BASE_URL
+        - name: GIT_EXTERNAL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GIT_EXTERNAL_URL
+        - name: GITEA_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GITEA_URL
+        - name: GITEA_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GITEA_ISSUER
+        # 從 Secret 讀取敏感資訊
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: DB_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: JWT_SECRET
+        - name: GITEA_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: GITEA_CLIENT_ID
+        - name: GITEA_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: GITEA_CLIENT_SECRET
+        # Health Check
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # 資源限制
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      # 如果使用私有 Registry，需要配置 imagePullSecrets
+      # imagePullSecrets:
+      # - name: registry-secret

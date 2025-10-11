@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: oj-api
+  labels:
+    app: oj-api
+    environment: production

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: oj-api
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - api-deployment.yaml
+  - api-service.yaml
+  - sandbox-deployment.yaml
+  - sandbox-service.yaml
+  - ingress.yaml
+
+# 可以添加共同的標籤
+commonLabels:
+  app.kubernetes.io/name: oj-api
+  app.kubernetes.io/managed-by: kustomize
+
+# 可以添加共同的註解
+commonAnnotations:
+  app.kubernetes.io/version: "1.0.0"
+
+# 映像配置 - 方便統一更新映像版本
+images:
+  - name: your-registry/oj-api
+    newTag: latest
+  - name: your-registry/oj-sandbox
+    newTag: latest

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oj-api-config
+  namespace: oj-api
+data:
+  # 資料庫配置
+  DB_HOST: "192.168.2.123"
+  DB_PORT: "5432"
+  DB_NAME: "ojapi"
+  DB_USER: "ojapi"
+  
+  # Log 級別
+  LOG_LEVEL: "info"
+  
+  # Gin 模式
+  GIN_MODE: "release"
+  
+  # Sandbox 配置
+  SANDBOX_COUNT: "4"
+  ISOLATE_PATH: "/var/lib/isolate"
+  
+  # Scheduler 地址（API Server 的內部服務名稱）
+  SCHEDULER_ADDRESS: "oj-api-server:3001"
+  
+  # OJ 配置（請根據實際環境修改）
+  OJ_BASE_URL: "http://oj-api-server:3001"
+  OJ_EXTERNAL_URL: "https://oj.yourdomain.com"
+  FRONTEND_URL: "https://oj.is1ab.com"
+  
+  # Gitea 配置（請根據實際環境修改）
+  GIT_HOST: "gitea.yourdomain.com"
+  GIT_BASE_URL: "http://gitea.yourdomain.com"
+  GIT_EXTERNAL_URL: "https://gitea.yourdomain.com"
+  GITEA_URL: "https://gitea.yourdomain.com"
+  GITEA_ISSUER: "https://gitea.yourdomain.com"
