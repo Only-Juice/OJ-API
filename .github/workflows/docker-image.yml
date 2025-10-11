@@ -21,4 +21,5 @@ jobs:
     - name: Push image to Docker Hub
       run: 
         docker login -u heavenmanysugar -p ${{ secrets.DOCKER_HUB_TOKEN }}
+        docker push heavenmanysugar/orangejuice-api:$(date +%s)
         docker push heavenmanysugar/orangejuice-sandbox:$(date +%s)
