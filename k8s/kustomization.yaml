@@ -4,27 +4,28 @@ kind: Kustomization
 namespace: oj-api
 
 resources:
-  - namespace.yaml
-  - configmap.yaml
-  - secret.yaml
-  - api-deployment.yaml
-  - api-service.yaml
-  - sandbox-deployment.yaml
-  - sandbox-service.yaml
-  - ingress.yaml
+- namespace.yaml
+- configmap.yaml
+- secret.yaml
+- api-deployment.yaml
+- api-service.yaml
+- sandbox-deployment.yaml
+- ingress.yaml
 
 # 可以添加共同的標籤
-commonLabels:
-  app.kubernetes.io/name: oj-api
-  app.kubernetes.io/managed-by: kustomize
 
 # 可以添加共同的註解
 commonAnnotations:
-  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/version: 1.0.0
 
 # 映像配置 - 方便統一更新映像版本
 images:
-  - name: your-registry/oj-api
-    newTag: latest
-  - name: your-registry/oj-sandbox
-    newTag: latest
+- name: heavenmanysugar/orangejuice-api
+  newTag: latest
+- name: heavenmanysugar/orangejuice-sandbox
+  newTag: latest
+labels:
+- includeSelectors: true
+  pairs:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: oj-api

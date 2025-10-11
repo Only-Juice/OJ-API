@@ -29,7 +29,6 @@ data:
   FRONTEND_URL: "https://oj-mac.ruien.me"
   
   # Gitea 配置（請根據實際環境修改）
-  GIT_HOST: "server.gitea.orb.local:3000"
   GIT_BASE_URL: "http://server.gitea.orb.local:3000"
   GIT_EXTERNAL_URL: "https://gitea-mac.ruien.me"
   GITEA_URL: "https://gitea-mac.ruien.me"

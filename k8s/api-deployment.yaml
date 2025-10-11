@@ -6,7 +6,7 @@ metadata:
   labels:
     app: oj-api-server
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: oj-api-server
@@ -24,6 +24,8 @@ spec:
           name: http
           protocol: TCP
         env:
+        - name: API_PORT
+          value: "3001"
         # 從 ConfigMap 讀取環境變數
         - name: DB_HOST
           valueFrom:
@@ -70,11 +72,6 @@ spec:
             configMapKeyRef:
               name: oj-api-config
               key: FRONTEND_URL
-        - name: GIT_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: oj-api-config
-              key: GIT_HOST
         - name: GIT_BASE_URL
           valueFrom:
             configMapKeyRef:
@@ -101,6 +98,11 @@ spec:
             secretKeyRef:
               name: oj-api-secret
               key: DB_PASSWORD
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: ENCRYPTION_KEY
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:

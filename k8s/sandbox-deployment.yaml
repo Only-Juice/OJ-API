@@ -65,7 +65,17 @@ spec:
             configMapKeyRef:
               name: oj-api-config
               key: ISOLATE_PATH
+        - name: GIT_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: GIT_BASE_URL
         # 從 Secret 讀取敏感資訊
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: ENCRYPTION_KEY
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -78,12 +88,6 @@ spec:
             add:
             - SYS_ADMIN
             - SYS_CHROOT
-        # Volume 掛載
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-        - name: isolate
-          mountPath: /var/lib/isolate
         # 資源限制
         resources:
           requests:
