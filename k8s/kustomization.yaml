@@ -9,7 +9,6 @@ resources:
 - secret.yaml
 - api-deployment.yaml
 - api-service.yaml
-- api-service-headless.yaml
 - sandbox-deployment.yaml
 - ingress.yaml
 

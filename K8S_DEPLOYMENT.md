@@ -10,9 +10,9 @@ k8s/
 ├── configmap.yaml          # 配置映射（非敏感配置）
 ├── secret.yaml             # 機密配置（敏感資訊）
 ├── api-deployment.yaml     # API Server 部署
-├── api-service.yaml        # API Server 服務（負載均衡）
-├── api-service-headless.yaml # API Server Headless 服務（gRPC 連接）
+├── api-service.yaml        # API Server 服務
 ├── sandbox-deployment.yaml # Sandbox Server 部署
+├── sandbox-service.yaml    # Sandbox Server 服務
 ├── ingress.yaml            # Ingress 配置（可選）
 └── kustomization.yaml      # Kustomize 配置
 ```
@@ -29,75 +29,6 @@ k8s/
 - **Ingress Controller**（如 Nginx Ingress Controller）- 用於外部訪問
 - **cert-manager** - 用於自動生成 SSL/TLS 證書
 - **kustomize** - 簡化配置管理（kubectl 1.14+ 已內建）
-
-## 架構說明
-
-### 多 API Server Pod 與 Sandbox 連接機制
-
-本系統採用 **雙向 gRPC 流** 架構，支持多個 API Server Pod 同時運行：
-
-```
-                    ┌─────────────────────────────────────┐
-                    │  Ingress / LoadBalancer (HTTP/HTTPS) │
-                    └──────────────┬──────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────────────┐
-                    │  oj-api-server Service (ClusterIP)  │
-                    │  負載均衡 HTTP API 請求              │
-                    └──────────────┬──────────────────────┘
-                                   │
-        ┌──────────────────────────┼──────────────────────────┐
-        │                          │                          │
-   ┌────▼────┐                ┌────▼────┐                ┌────▼────┐
-   │ API Pod │                │ API Pod │                │ API Pod │
-   │    1    │                │    2    │                │    3    │
-   └────▲────┘                └────▲────┘                └────▲────┘
-        │                          │                          │
-        └──────────────────────────┼──────────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────────────┐
-                    │ oj-api-server-headless (Headless)   │
-                    │ 返回所有 Pod IP（DNS A 記錄）        │
-                    └──────────────▲──────────────────────┘
-                                   │
-                          gRPC 雙向流連接
-                                   │
-                    ┌──────────────┴──────────────────────┐
-                    │                                     │
-              ┌─────▼─────┐                       ┌──────▼──────┐
-              │  Sandbox  │                       │  Sandbox    │
-              │   Pod 1   │                       │   Pod 2     │
-              └───────────┘                       └─────────────┘
-```
-
-#### 關鍵設計要點
-
-1. **Headless Service 用於 gRPC 連接**
-   - `oj-api-server-headless` 配置為 `ClusterIP: None`
-   - DNS 查詢返回**所有** API Server Pod 的 IP 地址
-   - Sandbox 通過 DNS 發現所有可用的 API Server Pod
-
-2. **Sandbox 主動建立多個連接**
-   - 每個 Sandbox Pod 定期（10秒）查詢 Headless Service 的 DNS
-   - 為每個發現的 API Server Pod 建立獨立的 gRPC 雙向流連接
-   - 自動處理 Pod 增減，動態維護連接池
-
-3. **每個 API Server 獨立管理沙箱實例**
-   - 每個 API Server Pod 運行獨立的 `SandboxScheduler`
-   - Sandbox 連接到所有 API Server，所有調度器都能看到該 Sandbox
-   - 任務可以從任何 API Server 分發到任何 Sandbox
-
-4. **HTTP API 使用標準 Service**
-   - `oj-api-server` Service 提供負載均衡
-   - Ingress 或外部 LoadBalancer 將 HTTP 請求分發到任意 Pod
-
-#### 優勢
-
-- ✅ **高可用性**：任何 API Server Pod 都可以接收 HTTP 請求並分發任務
-- ✅ **水平擴展**：可以隨時增加/減少 API Server Pod 數量
-- ✅ **自動發現**：Sandbox 自動發現新的 API Server Pod
-- ✅ **故障恢復**：Sandbox 自動重連斷開的連接
-- ✅ **負載均衡**：所有 API Server 都可以向所有 Sandbox 分發任務
 
 ## 部署前準備
 
@@ -178,10 +109,10 @@ kubectl apply -f secret.yaml
 # 部署 API Server
 kubectl apply -f api-deployment.yaml
 kubectl apply -f api-service.yaml
-kubectl apply -f api-service-headless.yaml
 
 # 部署 Sandbox Server
 kubectl apply -f sandbox-deployment.yaml
+kubectl apply -f sandbox-service.yaml
 
 # 部署 Ingress（可選）
 kubectl apply -f ingress.yaml
@@ -338,27 +269,11 @@ kubectl rollout undo deployment/oj-api-server --to-revision=2 -n oj-api
 ### 手動擴展
 
 ```bash
-# 擴展 API Server 副本數（Sandbox 會自動連接到新的 Pod）
+# 擴展 API Server 副本數
 kubectl scale deployment/oj-api-server --replicas=3 -n oj-api
 
 # 擴展 Sandbox Server 副本數
 kubectl scale deployment/oj-sandbox-server --replicas=2 -n oj-api
-```
-
-**重要提示**：擴展 API Server 時，Sandbox 會在 10 秒內自動發現並連接到新的 Pod，無需重啟 Sandbox。
-
-### 驗證多 Pod 連接
-
-擴展 API Server 後，可以檢查 Sandbox 日誌確認連接：
-
-```bash
-# 查看 Sandbox 日誌
-kubectl logs -f <sandbox-pod-name> -n oj-api
-
-# 應該看到類似以下的日誌：
-# Connecting to new scheduler at 10.244.1.5:3001
-# Connected to scheduler at 10.244.1.5:3001
-# Managing connections to 3 scheduler(s): [10.244.1.5:3001 10.244.1.6:3001 10.244.1.7:3001]
 ```
 
 ### 自動擴展（HPA）
