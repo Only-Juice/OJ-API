@@ -11,6 +11,7 @@ WORKDIR /app
 # Copy the prebuilt binary based on architecture
 COPY dist/server-linux-${TARGETARCH} /app/OJ_API
 
+RUN touch ./app/.env.local
 RUN chmod +x /app/OJ_API
 
 # Expose port 3001 to the outside world

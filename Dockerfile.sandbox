@@ -55,6 +55,7 @@ COPY --from=builder /app/sandbox-server .
 
 # 複製sandbox相關文件
 # COPY --from=builder /app/.env.local /app/.env.local
+RUN touch ./.env.local
 COPY --from=builder /app/sandbox/grp_parser/grp_parser ./sandbox/grp_parser/grp_parser
 
 # 暴露gRPC端口

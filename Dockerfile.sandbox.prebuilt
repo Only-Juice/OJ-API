@@ -40,6 +40,7 @@ WORKDIR /app
 COPY dist/server-sandbox-linux-${TARGETARCH} ./sandbox-server
 COPY dist/grp_parser-linux-${TARGETARCH} ./sandbox/grp_parser/grp_parser
 
+RUN touch ./.env.local
 RUN chmod +x ./sandbox-server ./sandbox/grp_parser/grp_parser
 
 # 暴露gRPC端口
