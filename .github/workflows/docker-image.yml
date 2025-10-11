@@ -1,0 +1,24 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the Docker image(api)
+      run: docker build . --file Dockerfile --tag heavenmanysugar/orangejuice-api:$(date +%s)
+    - name: Push image to dockerhub(api)
+      run: docker push heavenmanysugar/orangejuice-api:$(date +%s)
+    - name: Build the Docker image(sandbox)
+      run: docker build . --file Dockerfile.sandbox --tag heavenmanysugar/orangejuice-sandbox:$(date +%s)
+    - name: Push image to dockerhub(sandbox)
+      run: docker push heavenmanysugar/orangejuice-sandbox:$(date +%s)
