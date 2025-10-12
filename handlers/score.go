@@ -740,7 +740,7 @@ func GetAllScore(c *gin.Context) {
 	var scores []TopScore
 	if err := db.Table("(?) AS sub", subQuery).
 		Select("question_id, title question_title, git_user_repo_url, score, message, judge_time").
-		Order("question_id, judge_time DESC").
+		Order("judge_time DESC").
 		Offset(offset).
 		Limit(limit).
 		Find(&scores).Error; err != nil {
@@ -823,7 +823,22 @@ func GetLeaderboard(c *gin.Context) {
 
 	// Get total count of users who have scores
 	var totalCount int64
-	subquery := db.Table("user_question_tables").
+	subquery := db.Raw(`
+	SELECT DISTINCT ON (UQR.user_id, UQR.question_id)
+		UQR.user_id AS user_id,
+		UQR.question_id,
+		uqt.created_at,
+		GREATEST(uqt.score, 0) AS max_score
+	FROM user_question_tables uqt
+	JOIN user_question_relations UQR ON uqt.uqr_id = UQR.id
+	JOIN questions Q ON UQR.question_id = Q.id
+	JOIN users ON users.id = UQR.user_id
+	WHERE Q.is_active = TRUE
+		AND UQR.question_id NOT IN (SELECT question_id FROM exam_questions)
+		AND users.is_admin = FALSE
+	ORDER BY UQR.user_id, UQR.question_id, uqt.score DESC, uqt.created_at ASC
+	`)
+	subquery4count := db.Table("user_question_tables").
 		Select("UQR.user_id AS user_id, GREATEST(MAX(score), 0) AS max_score, UQR.question_id").
 		Joins("JOIN user_question_relations UQR ON user_question_tables.uqr_id = UQR.id").
 		Joins("JOIN questions Q ON UQR.question_id = Q.id").
@@ -833,7 +848,7 @@ func GetLeaderboard(c *gin.Context) {
 		Where("users.is_admin = false").
 		Group("UQR.user_id, UQR.question_id")
 
-	if err := db.Table("(?) AS t", subquery).
+	if err := db.Table("(?) AS t", subquery4count).
 		Select("COUNT(DISTINCT user_id)").
 		Scan(&totalCount).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
@@ -856,7 +871,7 @@ func GetLeaderboard(c *gin.Context) {
 		Joins("JOIN users ON users.id = subquery.user_id").
 		Select("users.id AS user_id, users.user_name, users.is_public, SUM(max_score) AS total_score").
 		Group("users.id, users.user_name, users.is_public").
-		Order("total_score DESC, users.id ASC").
+		Order("total_score DESC, MAX(subquery.created_at) ASC").
 		Offset(offset).
 		Limit(limit).
 		Find(&usersWithScores).Error; err != nil {
@@ -928,7 +943,8 @@ func GetLeaderboard(c *gin.Context) {
 		userName := user.UserName
 		if !user.IsPublic {
 			if !isAuthenticated || !jwtClaims.IsAdmin {
-				userName = fmt.Sprintf("User_%d", user.UserID)
+				hash := utils.HashUserID(user.UserID)
+				userName = hash[len(hash)-9:]
 			} else {
 				userName = user.UserName + " (Private)"
 			}
