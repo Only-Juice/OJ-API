@@ -84,6 +84,21 @@ func AuthBasic(c *gin.Context) {
 		)
 	}
 	if err != nil {
+		if strings.Contains(err.Error(), "user does not exist") {
+			c.JSON(404, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+		if strings.Contains(err.Error(), "user's password is invalid") {
+			c.JSON(401, ResponseHTTP{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+		// Other errors
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
@@ -91,9 +106,9 @@ func AuthBasic(c *gin.Context) {
 		return
 	}
 
-	giteaUser, _, err := client.GetMyUserInfo()
+	giteaUser, resp, err := client.GetMyUserInfo()
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(resp.StatusCode, gin.H{"error": err.Error()})
 		c.Abort()
 		return
 	}
@@ -116,12 +131,12 @@ func AuthBasic(c *gin.Context) {
 
 	if existingUser.GiteaToken == "" {
 		client.DeleteAccessToken("OJ-API")
-		token, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
+		token, resp, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
 			Name:   "OJ-API",
 			Scopes: []gitea.AccessTokenScope{gitea.AccessTokenScopeAll},
 		})
 		if err != nil {
-			c.JSON(503, ResponseHTTP{
+			c.JSON(resp.StatusCode, ResponseHTTP{
 				Success: false,
 				Message: err.Error(),
 			})
@@ -150,12 +165,12 @@ func AuthBasic(c *gin.Context) {
 
 	if err != nil {
 		client.DeleteAccessToken("OJ-API")
-		newToken, _, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
+		newToken, resp, err := client.CreateAccessToken(gitea.CreateAccessTokenOption{
 			Name:   "OJ-API",
 			Scopes: []gitea.AccessTokenScope{gitea.AccessTokenScopeAll},
 		})
 		if err != nil {
-			c.JSON(503, ResponseHTTP{
+			c.JSON(resp.StatusCode, ResponseHTTP{
 				Success: false,
 				Message: err.Error(),
 			})
@@ -418,11 +433,11 @@ func OAuthCallback(c *gin.Context) {
 		return
 	}
 
-	giteaUser, _, err := client.GetMyUserInfo()
+	giteaUser, resp, err := client.GetMyUserInfo()
 	if err != nil {
-		c.JSON(500, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
-			Message: "Failed to retrieve user info from Gitea",
+			Message: err.Error(),
 		})
 		return
 	}

@@ -339,7 +339,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 	repo, _, err := client.GetRepo(jwtClaims.Username, parentRepoName)
 	if err != nil {
 		// Use migrate to create a private copy of the repository
-		migrateRepo, _, err := client.MigrateRepo(gitea.MigrateRepoOption{
+		migrateRepo, resp, err := client.MigrateRepo(gitea.MigrateRepoOption{
 			RepoName:    parentRepoName,
 			CloneAddr:   config.GetGiteaBaseURL() + "/" + parentRepoUsername + "/" + parentRepoName + ".git",
 			Service:     gitea.GitServiceType("git"),
@@ -348,7 +348,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 			Mirror:      false, // Set to false to create an independent copy
 		})
 		if err != nil {
-			c.JSON(503, ResponseHTTP{
+			c.JSON(resp.StatusCode, ResponseHTTP{
 				Success: false,
 				Message: "Failed to migrate repository: " + err.Error(),
 			})
@@ -357,9 +357,9 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		repo = migrateRepo
 	}
 
-	hooks, _, err := client.ListRepoHooks(jwtClaims.Username, parentRepoName, gitea.ListHooksOptions{})
+	hooks, resp, err := client.ListRepoHooks(jwtClaims.Username, parentRepoName, gitea.ListHooksOptions{})
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: "Failed to list repository hooks: " + err.Error(),
 		})
@@ -379,7 +379,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 		return
 	}
 	if !hookExists {
-		if _, _, err := client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
+		if _, resp, err := client.CreateRepoHook(jwtClaims.Username, parentRepoName, gitea.CreateHookOption{
 			Type:   "gitea",
 			Active: true,
 			Events: []string{"push"},
@@ -389,7 +389,7 @@ func PostCreateQuestionRepositoryGitea(c *gin.Context) {
 			},
 			AuthorizationHeader: "Bearer " + accessToken,
 		}); err != nil {
-			c.JSON(503, ResponseHTTP{
+			c.JSON(resp.StatusCode, ResponseHTTP{
 				Success: false,
 				Message: "Failed to create repository hook: " + err.Error(),
 			})
@@ -457,9 +457,9 @@ func GetUserProfileGitea(c *gin.Context) {
 		return
 	}
 
-	user, _, err := client.GetMyUserInfo()
+	user, resp, err := client.GetMyUserInfo()
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
 		})
@@ -523,12 +523,12 @@ func PostCreatePublicKeyGitea(c *gin.Context) {
 		return
 	}
 
-	if _, _, err := client.CreatePublicKey(gitea.CreateKeyOption{
+	if _, resp, err := client.CreatePublicKey(gitea.CreateKeyOption{
 		Key:      publicKey.Key,
 		ReadOnly: publicKey.ReadOnly,
 		Title:    publicKey.Title,
 	}); err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
 		})
@@ -575,9 +575,9 @@ func ListMyPublicKeysGitea(c *gin.Context) {
 		return
 	}
 
-	keys, _, err := client.ListMyPublicKeys(gitea.ListPublicKeysOptions{})
+	keys, resp, err := client.ListMyPublicKeys(gitea.ListPublicKeysOptions{})
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
 		})
@@ -639,9 +639,9 @@ func DeletePublicKeyGitea(c *gin.Context) {
 		return
 	}
 
-	_, err = client.DeletePublicKey(deleteKey.ID)
+	resp, err := client.DeletePublicKey(deleteKey.ID)
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
 		})

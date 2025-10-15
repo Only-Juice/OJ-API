@@ -15,7 +15,7 @@ import (
 
 type _GetQuestionListQuestionData struct {
 	models.Question
-	HasQuestion bool `json:"has_question"`
+	HasQuestion bool     `json:"has_question"`
 	TopScore    *float64 `json:"top_score,omitempty"`
 }
 
@@ -133,7 +133,7 @@ func GetQuestionList(c *gin.Context) {
 
 		// Get top scores for these questions
 		var topScores []struct {
-			QuestionID uint `json:"question_id"`
+			QuestionID uint     `json:"question_id"`
 			TopScore   *float64 `json:"top_score"`
 		}
 
@@ -695,13 +695,13 @@ func AddQuestion(c *gin.Context) {
 			return
 		}
 		// 如果倉庫不存在，則創建一個新的倉庫
-		_, _, err := client.CreateRepo(gitea.CreateRepoOption{
+		_, resp, err := client.CreateRepo(gitea.CreateRepoOption{
 			Name:     repo,
 			Private:  false,
 			AutoInit: false,
 		})
 		if err != nil {
-			c.JSON(503, ResponseHTTP{
+			c.JSON(resp.StatusCode, ResponseHTTP{
 				Success: false,
 				Message: "Failed to create repository in Gitea: " + err.Error(),
 			})

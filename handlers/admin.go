@@ -524,14 +524,14 @@ func ChangeUserEmail(c *gin.Context) {
 	}
 
 	// Gitea API does not allow changing email to an existing one, so we check first
-	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
+	resp, err := client.AdminEditUser(user.UserName, gitea.EditUserOption{
 		LoginName: user.UserName,
 		Email:     &changeUserEmailDTO.Email,
 	})
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
-			Message: fmt.Sprintf("Failed to update email in Gitea: %v", err),
+			Message: err.Error(),
 		})
 		return
 	}

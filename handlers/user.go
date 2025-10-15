@@ -215,12 +215,12 @@ func ChangeUserPassword(c *gin.Context) {
 		})
 		return
 	}
-	_, err = client.AdminEditUser(jwtClaims.Username, gitea.EditUserOption{
+	resp, err := client.AdminEditUser(jwtClaims.Username, gitea.EditUserOption{
 		LoginName: jwtClaims.Username,
 		Password:  request.NewPassword,
 	})
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: err.Error(),
 		})
@@ -459,12 +459,12 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
-	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
+	resp, err := client.AdminEditUser(user.UserName, gitea.EditUserOption{
 		LoginName: user.UserName,
 		Password:  request.NewPassword,
 	})
 	if err != nil {
-		c.JSON(503, ResponseHTTP{
+		c.JSON(resp.StatusCode, ResponseHTTP{
 			Success: false,
 			Message: "Failed to update password in Gitea",
 		})
