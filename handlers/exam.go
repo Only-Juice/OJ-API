@@ -243,11 +243,26 @@ type ExamListData struct {
 // @Success      200 {object} ResponseHTTP{data=[]ExamListData}
 // @Failure      500 {object} ResponseHTTP{}
 // @Router       /api/exams [get]
+// @Security     BearerAuth
 func ListExams(c *gin.Context) {
 	var exams []models.Exam
 
 	db := database.DBConn
-	if err := db.Where("start_time < ? AND end_time > ?", time.Now(), time.Now()).Find(&exams).Error; err != nil {
+
+	// Check if user is admin
+	jwtClaims, _ := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	isAdmin := jwtClaims != nil && jwtClaims.IsAdmin
+
+	var query *gorm.DB
+	if isAdmin {
+		// Admin can see all exams
+		query = db.Find(&exams)
+	} else {
+		// Non-admin users only see ongoing exams
+		query = db.Where("start_time < ? AND end_time > ?", time.Now(), time.Now()).Find(&exams)
+	}
+
+	if err := query.Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ResponseHTTP{
 			Success: false,
 			Message: "Failed to retrieve exams",
@@ -466,6 +481,7 @@ type ExamInfoResponse struct {
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
 // @Router       /api/exams/{id}/exam [get]
+// @Security     BearerAuth
 func GetExamInfo(c *gin.Context) {
 	id := c.Param("id")
 	var exam models.Exam
@@ -477,6 +493,22 @@ func GetExamInfo(c *gin.Context) {
 			Message: "Exam not found",
 		})
 		return
+	}
+
+	// Check if user is authenticated (optional)
+	jwtClaims, _ := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	isAdmin := jwtClaims != nil && jwtClaims.IsAdmin
+
+	// Non-admin users can only view ongoing exams
+	if !isAdmin {
+		now := time.Now()
+		if now.Before(exam.StartTime) || now.After(exam.EndTime) {
+			c.JSON(http.StatusForbidden, ResponseHTTP{
+				Success: false,
+				Message: "Exam is not currently available",
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, ResponseHTTP{
