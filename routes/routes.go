@@ -14,6 +14,59 @@ import (
 	"OJ-API/utils"
 )
 
+var WhitelistDomains = []string{
+	// 測試用白名單
+	"http://localhost:3001",
+	"http://localhost:3000",
+	"https://ojapi.zre.tw",
+	"https://ojapi.ruien.me",
+	"https://ojapi-dev.ruien.me",
+	"https://ojapi.is1ab.com",
+}
+
+// CSRFMiddleware validates CSRF tokens for state-changing requests
+func CSRFMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Whitelist domain for CSRF protection
+		origin := c.Request.Header.Get("Origin")
+		// If Origin in whitelist, skip CSRF check
+		allowed := false
+		for _, domain := range WhitelistDomains {
+			if origin == domain {
+				allowed = true
+				break
+			}
+		}
+		if allowed {
+			return
+		}
+
+		// Only check CSRF for state-changing methods
+		method := c.Request.Method
+		if method == "GET" || method == "HEAD" || method == "OPTIONS" {
+			return
+		}
+
+		// Get CSRF token from header
+		token := c.GetHeader("X-CSRF-Token")
+
+		// If no token in header, try to get from form data
+		if token == "" {
+			token = c.PostForm("csrf_token")
+		}
+
+		// Validate CSRF token
+		if err := utils.ValidateCSRFToken(token); err != nil {
+			c.JSON(http.StatusForbidden, handlers.ResponseHTTP{
+				Success: false,
+				Message: "Invalid or missing CSRF token",
+			})
+			c.Abort()
+			return
+		}
+	}
+}
+
 func AuthMiddleware(required ...bool) gin.HandlerFunc {
 	isRequired := true
 	if len(required) > 0 {
@@ -40,6 +93,7 @@ func AuthMiddleware(required ...bool) gin.HandlerFunc {
 			if err == nil {
 				haveAuth = true
 				jwt = cookie
+				CSRFMiddleware()(c)
 			}
 		}
 
