@@ -616,8 +616,8 @@ func ReScoreQuestion(c *gin.Context) {
 
 	var uqr []models.UserQuestionRelation
 	if err := db.Model(&models.UserQuestionRelation{}).
-		Where("question_id = ? AND user_id = ?", questionID, jwtClaims.UserID).
-		First(&uqr).Error; err != nil {
+		Where("question_id = ?", questionID).
+		Find(&uqr).Error; err != nil {
 		c.JSON(503, ResponseHTTP{
 			Success: false,
 			Message: "Failed to re-score the question",
