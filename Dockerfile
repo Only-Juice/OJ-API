@@ -26,7 +26,8 @@ RUN mkdir -p /app
 WORKDIR /app
 
 # Copy the built Go app from the builder stage
-COPY --from=builder /app/.env.local /app/.env.local
+# COPY --from=builder /app/.env.local /app/.env.local
+RUN touch ./app/.env.local
 COPY --from=builder /app/OJ_API /app/OJ_API
 
 RUN chmod +x /app/OJ_API

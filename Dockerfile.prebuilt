@@ -1,0 +1,21 @@
+# Dockerfile for using prebuilt binary from GitHub Actions
+# Supports multi-architecture builds (amd64, arm64)
+FROM debian:bookworm-slim
+
+# Get the target architecture from buildx
+ARG TARGETARCH
+
+RUN mkdir -p /app
+WORKDIR /app
+
+# Copy the prebuilt binary based on architecture
+COPY dist/server-linux-${TARGETARCH} /app/OJ_API
+
+RUN touch ./app/.env.local
+RUN chmod +x /app/OJ_API
+
+# Expose port 3001 to the outside world
+EXPOSE 3001
+
+# Command to run the executable
+ENTRYPOINT ["/app/OJ_API"]

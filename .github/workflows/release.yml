@@ -28,6 +28,25 @@ jobs:
           GOOS=linux GOARCH=amd64 go build -o dist/server-sandbox-linux-amd64 ./cmd/sandbox-server
           GOOS=linux GOARCH=arm64 go build -o dist/server-sandbox-linux-arm64 ./cmd/sandbox-server
 
+      - name: Build grp_parser
+        run: |
+          cd sandbox/grp_parser
+          GOOS=linux GOARCH=amd64 go build -o ../../dist/grp_parser-linux-amd64 main.go
+          GOOS=linux GOARCH=arm64 go build -o ../../dist/grp_parser-linux-arm64 main.go
+
+      - name: Upload artifacts for Docker build
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            dist/server-linux-amd64
+            dist/server-linux-arm64
+            dist/server-sandbox-linux-amd64
+            dist/server-sandbox-linux-arm64
+            dist/grp_parser-linux-amd64
+            dist/grp_parser-linux-arm64
+          retention-days: 1
+
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:

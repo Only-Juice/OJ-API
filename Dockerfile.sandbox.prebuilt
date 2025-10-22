@@ -1,23 +1,9 @@
-# Sandbox gRPC Server Dockerfile
-FROM golang:1.24.5-bookworm AS builder
-
-WORKDIR /app
-
-# 複製go.mod和go.sum
-COPY go.mod go.sum ./
-RUN go mod download
-
-# 複製源代碼
-COPY . .
-
-# 編譯sandbox服務器
-RUN go build -o sandbox-server ./cmd/sandbox-server
-
-# build grp_parser
-RUN cd ./sandbox/grp_parser && \
-    go build -o grp_parser main.go
-
+# Dockerfile for using prebuilt sandbox binary from GitHub Actions
+# Supports multi-architecture builds (amd64, arm64)
 FROM debian:bookworm-slim
+
+# Get the target architecture from buildx
+ARG TARGETARCH
 
 # 更新套件列表並安裝必要依賴
 RUN apt-get update && apt-get install -y \
@@ -37,7 +23,7 @@ RUN mkdir -p /etc/apt/keyrings && \
     curl https://www.ucw.cz/isolate/debian/signing-key.asc > /etc/apt/keyrings/isolate.asc
 
 # 添加 isolate 套件源
-RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ bookworm-isolate main" >> /etc/apt/sources.list
+RUN echo "deb [arch=${TARGETARCH} signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ bookworm-isolate main" >> /etc/apt/sources.list
 
 # 安裝 isolate
 RUN apt-get update && apt-get install -y isolate && rm -rf /var/lib/apt/lists/*
@@ -50,13 +36,12 @@ RUN mkdir -p /sandbox /sandbox/code /sandbox/repo && \
 
 WORKDIR /app
 
-# 複製編譯的二進制文件
-COPY --from=builder /app/sandbox-server .
+# 複製預編譯的二進制文件 (根據架構選擇)
+COPY dist/server-sandbox-linux-${TARGETARCH} ./sandbox-server
+COPY dist/grp_parser-linux-${TARGETARCH} ./sandbox/grp_parser/grp_parser
 
-# 複製sandbox相關文件
-# COPY --from=builder /app/.env.local /app/.env.local
 RUN touch ./.env.local
-COPY --from=builder /app/sandbox/grp_parser/grp_parser ./sandbox/grp_parser/grp_parser
+RUN chmod +x ./sandbox-server ./sandbox/grp_parser/grp_parser
 
 # 暴露gRPC端口
 EXPOSE 50051

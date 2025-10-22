@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: oj-api
+  labels:
+    app: pgbouncer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      containers:
+      - name: pgbouncer
+        image: edoburu/pgbouncer:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5432
+          name: postgres
+          protocol: TCP
+        env:
+        # PostgreSQL 資料庫配置
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: POSTGRES_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: oj-api-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: oj-api-secret
+              key: DB_PASSWORD
+        # DATABASE_URL 使用實際的 PostgreSQL 地址
+        - name: DATABASE_URL
+          value: "postgres://$(DB_USER):$(DB_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(DB_NAME)"
+        # PGBouncer 配置
+        - name: POOL_MODE
+          value: "transaction"
+        - name: MAX_CLIENT_CONN
+          value: "1000"
+        - name: DEFAULT_POOL_SIZE
+          value: "25"
+        - name: MIN_POOL_SIZE
+          value: "10"
+        - name: RESERVE_POOL_SIZE
+          value: "5"
+        - name: RESERVE_POOL_TIMEOUT
+          value: "3"
+        - name: MAX_DB_CONNECTIONS
+          value: "100"
+        - name: MAX_USER_CONNECTIONS
+          value: "100"
+        - name: SERVER_IDLE_TIMEOUT
+          value: "600"
+        - name: SERVER_LIFETIME
+          value: "3600"
+        - name: SERVER_CONNECT_TIMEOUT
+          value: "15"
+        - name: QUERY_TIMEOUT
+          value: "0"
+        - name: QUERY_WAIT_TIMEOUT
+          value: "120"
+        - name: CLIENT_IDLE_TIMEOUT
+          value: "0"
+        - name: CLIENT_LOGIN_TIMEOUT
+          value: "60"
+        - name: AUTODB_IDLE_TIMEOUT
+          value: "3600"
+        - name: STATS_USERS
+          value: "$(DB_USER)"
+        # 認證配置 - 支援 SCRAM-SHA-256
+        - name: AUTH_TYPE
+          value: "scram-sha-256"
+        - name: AUTH_HBA_FILE
+          value: ""
+        - name: AUTH_QUERY
+          value: "SELECT usename, passwd FROM pg_shadow WHERE usename=$1"
+        # Health Check
+        livenessProbe:
+          tcpSocket:
+            port: 5432
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 5432
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # 資源限制
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer
+  namespace: oj-api
+  labels:
+    app: pgbouncer
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: pgbouncer

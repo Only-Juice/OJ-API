@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oj-api-config
+  namespace: oj-api
+data:
+  # 資料庫配置 - 透過 PGBouncer 連接
+  DB_HOST: "pgbouncer.oj-api.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "ojapi"
+  DB_USER: "ojapi"
+  
+  # 實際 PostgreSQL 資料庫配置 (供 PGBouncer 使用)
+  POSTGRES_HOST: "oj-api-postgres.orb.local"
+  POSTGRES_PORT: "5432"
+  
+  # Log 級別
+  LOG_LEVEL: "info"
+  
+  # Gin 模式
+  GIN_MODE: "release"
+  
+  # Sandbox 配置
+  SANDBOX_COUNT: "4"
+  ISOLATE_PATH: "/var/lib/isolate"
+    
+  # OJ 配置（請根據實際環境修改）
+  OJ_BASE_URL: "https://oj-api-mac.ruien.me"
+  OJ_EXTERNAL_URL: "https://oj-api-mac.ruien.me"
+  FRONTEND_URL: "https://oj-mac.ruien.me"
+  
+  # Gitea 配置（請根據實際環境修改）
+  GIT_BASE_URL: "http://server.gitea.orb.local:3000"
+  GIT_EXTERNAL_URL: "https://gitea-mac.ruien.me"
+  GITEA_URL: "https://gitea-mac.ruien.me"
+  GITEA_ISSUER: "https://gitea-mac.ruien.me"
