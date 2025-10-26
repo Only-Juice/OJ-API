@@ -217,51 +217,6 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 		}
 	}
 
-	/*
-
-		// read score from file
-		score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", []byte(boxRoot)))
-
-		if err != nil {
-
-			db.Model(&userQuestion).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: NewErrorResult(SYSTEM_FAILED, "Failed to read score", err.Error()),
-			})
-			return
-		}
-		// save score to database
-		scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
-		if err != nil {
-			db.Model(&userQuestion).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: NewErrorResult(SYSTEM_FAILED, "Failed to convert score to int", err.Error()),
-			})
-			return
-		}
-
-		// read message from file
-		message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", []byte(boxRoot)))
-		if err != nil {
-			db.Model(&userQuestion).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: NewErrorResult(SYSTEM_FAILED, "Failed to read message", err.Error()),
-			})
-			return
-		}
-
-		if err := db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   scoreFloat,
-			Message: strings.TrimSpace(string(message)),
-		}).Error; err != nil {
-			db.Model(&userQuestion).Updates(models.UserQuestionTable{
-				Score:   -2,
-				Message: NewErrorResult(SYSTEM_FAILED, "Failed to update score", err.Error()),
-			})
-			return
-		}
-	*/
-
 	utils.Debug("Done for judge!")
 }
 
