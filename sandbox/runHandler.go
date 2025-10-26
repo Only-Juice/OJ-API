@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -75,13 +76,15 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	codePath := judgeinfo.CodePath
 	mothercodePath := judgeinfo.MotherCodePath
 	cmd := judgeinfo.QuestionInfo
+	var scoreMap CompileFile
+	json.Unmarshal([]byte(cmd.ScoreMap), &scoreMap)
 
 	// 檢查父 context 是否已經被取消，如果是則不開始新任務
 	select {
 	case <-parentCtx.Done():
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: NewErrorResult("Judge Done", "Job cancelled due to server shutdown"),
+			Message: NewErrorResult(WAITING_TO_JUDGE, "Judge Done", "Job cancelled due to server shutdown"),
 		})
 		s.Release(boxID)
 		return
@@ -99,7 +102,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 
 	db.Model(&userQuestion).Updates(models.UserQuestionTable{
 		Score:   -1,
-		Message: NewErrorResult("Judge", "Judging..."),
+		Message: NewErrorResult(JUDGING, "Judge", "Judging..."),
 	})
 
 	// 使用獨立的 context，不會被父 context 取消影響，讓任務完整執行
@@ -112,7 +115,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: NewErrorResult("Failed to save code as file", err.Error()),
+			Message: NewErrorResult(SYSTEM_FAILED, "System_Failed", err.Error()),
 		})
 		return
 	}
@@ -131,7 +134,7 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 			utils.Debug(fmt.Sprintf("Failed to copy grp_parser: %v", err))
 			db.Model(&userQuestion).Updates(models.UserQuestionTable{
 				Score:   -2,
-				Message: NewErrorResult("Failed to copy score parser", err.Error()),
+				Message: NewErrorResult(SYSTEM_FAILED, "Failed to copy score parser", err.Error()),
 			})
 			return
 		}
@@ -141,11 +144,13 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	defer os.RemoveAll(string(codePath))
 	defer os.RemoveAll(string(mothercodePath))
 
+	var SandboxJudgeInfo SandboxResult
+
 	/*
 		Compile the code
 	*/
 
-	compileResult, compileSuccess := s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot))
+	SandboxJudgeInfo.CompileResult = s.runCompile(boxID, ctx, shellFilename(codeID, boxID), []byte(boxRoot), scoreMap)
 
 	/*
 		Execute the code
@@ -155,13 +160,14 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: NewErrorResult("Failed to save code as file", err.Error()),
+			Message: NewErrorResult(SYSTEM_FAILED, "Failed to save code as file", err.Error()),
 		})
 		return
 	}
+
 	defer os.Remove(shellFilename(execodeID, boxID))
 
-	exeResult, exeSuccess := s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot))
+	SandboxJudgeInfo.ExecuteResult = s.runExecute(boxID, ctx, cmd, shellFilename(execodeID, boxID), []byte(boxRoot), SandboxJudgeInfo.CompileResult)
 	/*
 	*
 	*	Part for calculate score.
@@ -174,12 +180,14 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	if err != nil {
 		db.Model(&userQuestion).Updates(models.UserQuestionTable{
 			Score:   -2,
-			Message: NewErrorResult("Failed to save code as file", err.Error()),
+			Message: NewErrorResult(SYSTEM_FAILED, "Failed to save code as file", err.Error()),
 		})
 		return
 	}
 	defer os.Remove(shellFilename(execodeID, boxID))
-	s.runScore(boxID, ctx, shellFilename(scoreScriptID, boxID), []byte(boxRoot))
+
+	compileAndExecuteResult := s.mergeCompileAndExecuteResult(SandboxJudgeInfo.CompileResult, SandboxJudgeInfo.ExecuteResult)
+	SandboxJudgeInfo.JudgeScoreResult = s.runScore(boxID, ctx, shellFilename(scoreScriptID, boxID), []byte(boxRoot), compileAndExecuteResult)
 
 	/*
 
@@ -190,62 +198,23 @@ func (s *Sandbox) runShellCommand(parentCtx context.Context, judgeinfo JudgeInfo
 	utils.Debug("Compilation and execution finished successfully.")
 	utils.Debug("Ready to proceed to the next step or return output.")
 
-	// read score from file
-	score, err := os.ReadFile(fmt.Sprintf("%s/score.txt", []byte(boxRoot)))
+	totalResult, score, _ := MergeJudgeResults(boxRoot, SandboxJudgeInfo.JudgeScoreResult)
 
+	jsonBytes, err := json.MarshalIndent(totalResult, "", "  ")
 	if err != nil {
-
-		if !compileSuccess {
-			db.Model(&userQuestion).Updates(map[string]interface{}{
-				"score":   -2,
-				"message": NewErrorResult("Compilation Failed", compileResult),
+		utils.Debugf("[runHandler] Failed to marshal totalResult: %v\n", err)
+	} else {
+		result := string(jsonBytes)
+		if err := db.Model(&userQuestion).Updates(models.UserQuestionTable{
+			Score:   score,
+			Message: strings.TrimSpace(string(result)),
+		}).Error; err != nil {
+			db.Model(&userQuestion).Updates(models.UserQuestionTable{
+				Score:   -2,
+				Message: NewErrorResult(SYSTEM_FAILED, "Failed to update score", err.Error()),
 			})
 			return
 		}
-
-		if !exeSuccess {
-			db.Model(&userQuestion).Updates(map[string]interface{}{
-				"score":   -2,
-				"message": NewErrorResult("Execute failed", exeResult),
-			})
-			return
-		}
-
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: NewErrorResult("Failed to read score", err.Error()),
-		})
-		return
-	}
-	// save score to database
-	scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(string(score)), 64)
-	if err != nil {
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: NewErrorResult("Failed to convert score to int", err.Error()),
-		})
-		return
-	}
-
-	// read message from file
-	message, err := os.ReadFile(fmt.Sprintf("%s/message.txt", []byte(boxRoot)))
-	if err != nil {
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: NewErrorResult("Failed to read message", err.Error()),
-		})
-		return
-	}
-
-	if err := db.Model(&userQuestion).Updates(models.UserQuestionTable{
-		Score:   scoreFloat,
-		Message: strings.TrimSpace(string(message)),
-	}).Error; err != nil {
-		db.Model(&userQuestion).Updates(models.UserQuestionTable{
-			Score:   -2,
-			Message: NewErrorResult("Failed to update score", err.Error()),
-		})
-		return
 	}
 
 	utils.Debug("Done for judge!")
@@ -286,115 +255,169 @@ func (s *Sandbox) runShellCommandByRepo(ctx context.Context, boxID int, work *Jo
 	s.runShellCommand(ctx, judgeinfo)
 }
 
-func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
+func (s *Sandbox) runCompile(box int, ctx context.Context, shellCommand string, codePath []byte, compilefile CompileFile) []SandboxJudgeResult {
+	var results []SandboxJudgeResult
+	for _, task := range compilefile.Task {
+		cmdArgs := []string{
+			fmt.Sprintf("--box-id=%v", box),
+			"--fsize=10240",
+			"--wait",
+			"--processes",
+			"--open-files=0",
+			"--env=PATH",
+		}
+		if len(codePath) > 0 {
+			cmdArgs = append(cmdArgs,
+				fmt.Sprintf("--chdir=%v", string(codePath)),
+				fmt.Sprintf("--dir=%v:rw", string(codePath)),
+				fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+		}
 
-	cmdArgs := []string{
-		fmt.Sprintf("--box-id=%v", box),
-		"--fsize=10240",
-		"--wait",
-		"--processes",
-		"--open-files=0",
-		"--env=PATH",
+		scriptFile := shellCommand
+		cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", scriptFile, task.Target)
+
+		cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+		result := SandboxJudgeResult{
+			Target: task.Target,
+		}
+
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			result.Status = string(COMPILE_ERROR)
+			result.Result = string(out)
+		} else {
+			result.Status = "SUCCESS"
+			result.Result = string(out)
+		}
+		results = append(results, result)
 	}
 
-	if len(codePath) > 0 {
-		cmdArgs = append(cmdArgs,
-			fmt.Sprintf("--chdir=%v", string(codePath)),
-			fmt.Sprintf("--dir=%v:rw", string(codePath)),
-			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
-	}
-
-	scriptFile := shellCommand
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/sh", scriptFile)
-
-	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
-	out, err := cmd.CombinedOutput()
-
-	/* For Debug
-	if err != nil {
-		utils.Debugf("CE failed: %s\n%s", err.Error(), string(out))
-	} else {
-		utils.Debugf("CE success:\n%s", string(out))
-	}
-	*/
-
-	if err != nil {
-		return err.Error() + "\n" + string(out), false
-	}
-
-	return string(out), true
+	return results
 }
 
-func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte) (string, bool) {
-	cmdArgs := []string{
-		fmt.Sprintf("--box-id=%v", box),
-		fmt.Sprintf("--fsize=%v", qt.FileSize),
-		"--wait",
-		fmt.Sprintf("--processes=%v", qt.Processes),
-		fmt.Sprintf("--open-files=%v", qt.OpenFiles),
-		"--env=PATH",
-		fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
-		fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
-		fmt.Sprintf("--mem=%v", qt.Memory),
-		fmt.Sprintf("--stack=%v", qt.StackMemory),
+func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTestScript, shellCommand string, codePath []byte, compileResult []SandboxJudgeResult) []SandboxJudgeResult {
+	var results []SandboxJudgeResult
+	for _, target := range compileResult {
+		if target.Status == "FAILED" {
+			result := SandboxJudgeResult{
+				Target: target.Target,
+				Result: "COMPILE NOT SUCCESS",
+				Status: "FAILED",
+			}
+			results = append(results, result)
+			continue
+		}
+		cmdArgs := []string{
+			fmt.Sprintf("--box-id=%v", box),
+			fmt.Sprintf("--fsize=%v", qt.FileSize),
+			"--wait",
+			fmt.Sprintf("--processes=%v", qt.Processes),
+			fmt.Sprintf("--open-files=%v", qt.OpenFiles),
+			"--env=PATH",
+			fmt.Sprintf("--time=%.3f", float64(qt.Time)/1000.0),
+			fmt.Sprintf("--wall-time=%.3f", float64(qt.WallTime)/1000.0),
+			fmt.Sprintf("--mem=%v", qt.Memory),
+			fmt.Sprintf("--stack=%v", qt.StackMemory),
+		}
+
+		if len(codePath) > 0 {
+			cmdArgs = append(cmdArgs,
+				fmt.Sprintf("--chdir=%v", string(codePath)),
+				fmt.Sprintf("--dir=%v:rw", string(codePath)),
+				fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+		}
+
+		cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand, target.Target)
+
+		cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+		result := SandboxJudgeResult{
+			Target: target.Target,
+		}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			outStr := string(out)
+			hasCore := strings.Contains(outStr, "core dumped") ||
+				strings.Contains(outStr, "Illegal instruction") ||
+				strings.Contains(outStr, "Segmentation fault") ||
+				strings.Contains(outStr, "Aborted")
+
+			hasExit := strings.Contains(outStr, "Exited with error status")
+
+			if hasCore && hasExit {
+				// 提取 exit code
+				exitLine := regexp.MustCompile(`Exited with error status [0-9]+`).FindString(outStr)
+				result.Result = "Illegal instruction (core dumped)\n" + exitLine + "\n請檢查程式中是否有使用未初始化指標、陣列越界、或動態記憶體錯誤等行為。"
+				result.Status = string(RUNTIME_ERROR)
+			} else {
+				result.Result = outStr
+				result.Status = "FAILED"
+			}
+
+		} else {
+			result.Status = "SUCCESS"
+			result.Result = string(out)
+		}
+		results = append(results, result)
+
 	}
 
-	if len(codePath) > 0 {
-		cmdArgs = append(cmdArgs,
-			fmt.Sprintf("--chdir=%v", string(codePath)),
-			fmt.Sprintf("--dir=%v:rw", string(codePath)),
-			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
-	}
-
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand)
-
-	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
-	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
-
-	out, err := cmd.CombinedOutput()
-
-	if err != nil {
-		/* For Debug
-		utils.Debugf("Execute failed!")
-		utils.Debugf("Error: %v", err)
-		utils.Debugf("Output: %s \n", string(out))
-		*/
-		return fmt.Sprintf("%v\n%s", err, string(out)), false
-	}
-
-	return string(out), true
+	return results
 }
 
-func (s *Sandbox) runScore(box int, ctx context.Context, shellCommand string, codePath []byte) (string, bool) {
-	cmdArgs := []string{
-		fmt.Sprintf("--box-id=%v", box),
-		"--fsize=10240",
-		"--wait",
-		"--processes=100",
-		"--open-files=65536",
-		"--env=PATH",
+func (s *Sandbox) runScore(box int, ctx context.Context, shellCommand string, codePath []byte, mergeResult []SandboxJudgeResult) []SandboxScoreResult {
+	var results []SandboxScoreResult
+	for _, target := range mergeResult {
+		if target.Status != "SUCCESS" {
+			result := SandboxScoreResult{
+				Target: target.Target,
+				Result: target.Result,
+				Status: target.Status,
+				Score:  0.0,
+			}
+			results = append(results, result)
+			continue
+		}
+		cmdArgs := []string{
+			fmt.Sprintf("--box-id=%v", box),
+			"--fsize=10240",
+			"--wait",
+			"--processes=100",
+			"--open-files=65536",
+			"--env=PATH",
+		}
+
+		if len(codePath) > 0 {
+			cmdArgs = append(cmdArgs,
+				fmt.Sprintf("--chdir=%v", string(codePath)),
+				fmt.Sprintf("--dir=%v:rw", string(codePath)),
+				fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
+		}
+
+		cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand, target.Target)
+
+		utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
+		cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
+
+		out, err := cmd.CombinedOutput()
+		result := SandboxScoreResult{
+			Target: target.Target,
+		}
+		if err != nil {
+			result.Status = "FAILED"
+			result.Result = string(out)
+
+		} else {
+			score, _ := s.extractScore(string(out))
+			result.Status = "SUCCESS"
+			result.Result = string(out)
+			result.Score = score
+		}
+		results = append(results, result)
 	}
 
-	if len(codePath) > 0 {
-		cmdArgs = append(cmdArgs,
-			fmt.Sprintf("--chdir=%v", string(codePath)),
-			fmt.Sprintf("--dir=%v:rw", string(codePath)),
-			fmt.Sprintf("--env=CODE_PATH=%v", string(codePath)))
-	}
-
-	cmdArgs = append(cmdArgs, "--run", "--", "/usr/bin/bash", shellCommand)
-
-	utils.Debugf("Command: isolate %s", strings.Join(cmdArgs, " "))
-	cmd := exec.CommandContext(ctx, "isolate", cmdArgs...)
-
-	out, err := cmd.CombinedOutput()
-
-	if err != nil {
-		utils.Errorf("Failed to run command: %v", err)
-		return "Execute with Error!", false
-	}
-
-	return string(out), true
+	return results
 }
 
 func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
@@ -415,14 +438,69 @@ func (s *Sandbox) getJsonfromdb(path string, row models.QuestionTestScript) {
 		fmt.Println("WriteFile error:", err)
 		return
 	}
-
 }
 
-func makeErrorMessage(tag, details string) string {
-	msg := map[string]string{
-		"error":   tag,
-		"details": details,
+func (s *Sandbox) mergeCompileAndExecuteResult(
+	compileResult []SandboxJudgeResult,
+	executeResult []SandboxJudgeResult,
+) []SandboxJudgeResult {
+
+	finalResults := make([]SandboxJudgeResult, 0)
+	compileMap := make(map[string]SandboxJudgeResult)
+
+	// 建立 compile map
+	for _, c := range compileResult {
+		compileMap[c.Target] = c
 	}
-	b, _ := json.MarshalIndent(msg, "", "  ")
-	return string(b)
+
+	// 逐一比對 execute 結果
+	for _, e := range executeResult {
+		comp, ok := compileMap[e.Target]
+		if ok && comp.Status == "SUCCESS" && e.Status == "SUCCESS" {
+			// compile + execute 成功
+			finalResults = append(finalResults, SandboxJudgeResult{
+				Target: e.Target,
+				Status: "SUCCESS",
+				Result: "Compile amd Execute success, ready for scoring.",
+			})
+		} else {
+			// 任一失敗
+			failMsg := ""
+			status := ""
+
+			if !ok {
+				failMsg = "Missing compile result."
+			} else if comp.Status != "SUCCESS" {
+				failMsg = fmt.Sprintf("Compile failed: %s", comp.Result)
+				status = comp.Status
+			} else if e.Status != "SUCCESS" {
+				failMsg = fmt.Sprintf("Execute failed: %s", e.Result)
+				status = e.Status
+			}
+
+			finalResults = append(finalResults, SandboxJudgeResult{
+				Target: e.Target,
+				Status: status,
+				Result: failMsg,
+			})
+		}
+	}
+
+	return finalResults
+}
+
+func (s *Sandbox) extractScore(out string) (float64, bool) {
+	re := regexp.MustCompile(`\b\d+(\.\d+)?\b`)
+	lines := strings.Split(out, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if re.MatchString(line) && !strings.Contains(line, "OK") {
+			numStr := re.FindString(line)
+			if score, err := strconv.ParseFloat(numStr, 64); err == nil {
+				return score, true
+			}
+		}
+	}
+	return 0, false
 }
