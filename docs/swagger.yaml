@@ -1093,6 +1093,21 @@ definitions:
     - question_title
     - score
     type: object
+  handlers.UpdateExamRequest:
+    properties:
+      description:
+        type: string
+      end_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      start_time:
+        example: "2006-01-02T15:04:05Z"
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
   handlers.UpdateUserInfoDTO:
     properties:
       enable:
@@ -1597,6 +1612,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
       summary: List all exams
       tags:
       - Exam
@@ -1630,6 +1647,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
       summary: Get basic information about an exam
       tags:
       - Exam
@@ -1876,7 +1895,7 @@ paths:
         name: exam
         required: true
         schema:
-          $ref: '#/definitions/models.Exam'
+          $ref: '#/definitions/handlers.UpdateExamRequest'
       produces:
       - application/json
       responses:
@@ -1887,7 +1906,7 @@ paths:
             - $ref: '#/definitions/handlers.ResponseHTTP'
             - properties:
                 data:
-                  $ref: '#/definitions/models.Exam'
+                  $ref: '#/definitions/handlers.UpdateExamRequest'
               type: object
         "400":
           description: Bad Request

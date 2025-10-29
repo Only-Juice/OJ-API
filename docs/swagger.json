@@ -558,6 +558,11 @@
         },
         "/api/exams": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a list of all exams",
                 "produces": [
                     "application/json"
@@ -742,7 +747,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Exam"
+                            "$ref": "#/definitions/handlers.UpdateExamRequest"
                         }
                     }
                 ],
@@ -758,7 +763,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Exam"
+                                            "$ref": "#/definitions/handlers.UpdateExamRequest"
                                         }
                                     }
                                 }
@@ -948,6 +953,11 @@
         },
         "/api/exams/{id}/exam": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve basic information about an exam, including title, description, start and end times",
                 "produces": [
                     "application/json"
@@ -4661,6 +4671,28 @@
                 "score": {
                     "type": "number",
                     "example": 100
+                }
+            }
+        },
+        "handlers.UpdateExamRequest": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
