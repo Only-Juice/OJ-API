@@ -64,7 +64,7 @@ func giteaCheck() {
 		hooks, _, err := client.ListRepoHooks(username, reponame, gitea.ListHooksOptions{})
 		if err != nil {
 			utils.Errorf("Failed to list hooks for %s/%s: %v", username, reponame, err)
-			return
+			continue
 		}
 		token, err := utils.GenerateAccessToken(item.User.ID, item.User.UserName, item.User.IsAdmin)
 		if err != nil {
@@ -103,7 +103,7 @@ func giteaCheck() {
 				AuthorizationHeader: "Bearer " + token,
 			}); err != nil {
 				utils.Errorf("Failed to create hook for %s/%s: %v", username, reponame, err)
-				return
+				continue
 			}
 		}
 		// wait 100 ms

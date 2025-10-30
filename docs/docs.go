@@ -565,6 +565,11 @@ const docTemplate = `{
         },
         "/api/exams": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a list of all exams",
                 "produces": [
                     "application/json"
@@ -955,6 +960,11 @@ const docTemplate = `{
         },
         "/api/exams/{id}/exam": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve basic information about an exam, including title, description, start and end times",
                 "produces": [
                     "application/json"
