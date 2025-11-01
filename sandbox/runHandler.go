@@ -338,6 +338,14 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			outStr := string(out)
+			if strings.Contains(outStr, "Exited with error status 1") {
+				result.Status = "SUCCESS" // 整體執行成功
+				result.Result = "⚠️ GTest 測試未全數通過，請檢查 JSON 結果。"
+				results = append(results, result)
+				continue
+			}
+
+			// ✅ 再檢查是否為 core dumped / Segfault 類型
 			hasCore := strings.Contains(outStr, "core dumped") ||
 				strings.Contains(outStr, "Illegal instruction") ||
 				strings.Contains(outStr, "Segmentation fault") ||
@@ -348,7 +356,8 @@ func (s *Sandbox) runExecute(box int, ctx context.Context, qt models.QuestionTes
 			if hasCore && hasExit {
 				// 提取 exit code
 				exitLine := regexp.MustCompile(`Exited with error status [0-9]+`).FindString(outStr)
-				result.Result = "Illegal instruction (core dumped)\n" + exitLine + "\n請檢查程式中是否有使用未初始化指標、陣列越界、或動態記憶體錯誤等行為。"
+				result.Result = "Illegal instruction (core dumped)\n" + exitLine +
+					"\n請檢查程式中是否有使用未初始化指標、陣列越界、或動態記憶體錯誤等行為。"
 				result.Status = string(RUNTIME_ERROR)
 			} else {
 				result.Result = outStr
@@ -461,7 +470,7 @@ func (s *Sandbox) mergeCompileAndExecuteResult(
 			finalResults = append(finalResults, SandboxJudgeResult{
 				Target: e.Target,
 				Status: "SUCCESS",
-				Result: "Compile amd Execute success, ready for scoring.",
+				Result: "Compile and Execute success, ready for scoring.",
 			})
 		} else {
 			// 任一失敗
