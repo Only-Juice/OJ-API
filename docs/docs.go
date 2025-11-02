@@ -754,7 +754,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Exam"
+                            "$ref": "#/definitions/handlers.UpdateExamRequest"
                         }
                     }
                 ],
@@ -770,7 +770,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Exam"
+                                            "$ref": "#/definitions/handlers.UpdateExamRequest"
                                         }
                                     }
                                 }
@@ -4678,6 +4678,28 @@ const docTemplate = `{
                 "score": {
                     "type": "number",
                     "example": 100
+                }
+            }
+        },
+        "handlers.UpdateExamRequest": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },

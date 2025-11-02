@@ -122,6 +122,13 @@ func GetExam(c *gin.Context) {
 	})
 }
 
+type UpdateExamRequest struct {
+	Title       string    `json:"title" binding:"required"`
+	Description string    `json:"description"`
+	StartTime   time.Time `json:"start_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+	EndTime     time.Time `json:"end_time" example:"2006-01-02T15:04:05Z" time_format:"RFC3339"`
+}
+
 // UpdateExam updates an existing exam
 // @Summary      Update an existing exam
 // @Description  Update the details of an existing exam by ID
@@ -129,8 +136,8 @@ func GetExam(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "Exam ID"
-// @Param        exam body models.Exam true "Updated exam details"
-// @Success      200 {object} ResponseHTTP{data=models.Exam}
+// @Param        exam body UpdateExamRequest true "Updated exam details"
+// @Success      200 {object} ResponseHTTP{data=UpdateExamRequest}
 // @Failure      400 {object} ResponseHTTP{}
 // @Failure      404 {object} ResponseHTTP{}
 // @Failure      500 {object} ResponseHTTP{}
@@ -147,10 +154,11 @@ func UpdateExam(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	var exam models.Exam
+	var exam UpdateExamRequest
+	var existingExam models.Exam
 
 	db := database.DBConn
-	if err := db.First(&exam, id).Error; err != nil {
+	if err := db.First(&existingExam, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, ResponseHTTP{
 			Success: false,
 			Message: "Exam not found",
@@ -165,13 +173,49 @@ func UpdateExam(c *gin.Context) {
 		})
 		return
 	}
+	// Validate that start time is before end time if both are provided
+	if !exam.StartTime.IsZero() && !exam.EndTime.IsZero() && exam.StartTime.After(exam.EndTime) {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Start time must be before end time",
+		})
+		return
+	}
+	if exam.Title != "" {
+		existingExam.Title = exam.Title
+	}
+	if exam.Description != "" {
+		existingExam.Description = exam.Description
+	}
+	if !exam.StartTime.IsZero() {
+		existingExam.StartTime = exam.StartTime
+	}
+	if !exam.EndTime.IsZero() {
+		existingExam.EndTime = exam.EndTime
+	}
 
-	if err := db.Save(&exam).Error; err != nil {
+	if err := db.Save(&existingExam).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, ResponseHTTP{
 			Success: false,
 			Message: "Failed to update exam",
 		})
 		return
+	}
+
+	// update exam questions's start and end time if exam time is updated
+	if !exam.StartTime.IsZero() || !exam.EndTime.IsZero() {
+		if err := db.Model(&models.Question{}).
+			Where("id IN (SELECT question_id FROM exam_questions WHERE exam_id = ?)", id).
+			Updates(map[string]any{
+				"start_time": exam.StartTime,
+				"end_time":   exam.EndTime,
+			}).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, ResponseHTTP{
+				Success: false,
+				Message: "Failed to update exam questions",
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, ResponseHTTP{
