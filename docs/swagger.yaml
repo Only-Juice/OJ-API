@@ -1125,8 +1125,6 @@ definitions:
     properties:
       score:
         type: integer
-    required:
-    - score
     type: object
   models.Exam:
     properties:
@@ -1983,6 +1981,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Add a question to an exam
+      tags:
+      - Exam
+    put:
+      consumes:
+      - application/json
+      description: Update the score associated with a question in a specific exam
+      parameters:
+      - description: Exam ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Question ID
+        in: path
+        name: question_id
+        required: true
+        type: string
+      - description: Updated score for the question
+        in: body
+        name: point
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.point'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ResponseHTTP'
+      security:
+      - BearerAuth: []
+      summary: Update a question's score in an exam
       tags:
       - Exam
   /api/gitea:

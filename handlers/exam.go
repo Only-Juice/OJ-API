@@ -523,7 +523,7 @@ func GetExamInfo(c *gin.Context) {
 }
 
 type point struct {
-	Score int `json:"score" binding:"required"`
+	Score int `json:"score"`
 }
 
 // AddQuestionToExam adds a question to an exam
@@ -580,10 +580,10 @@ func AddQuestionToExam(c *gin.Context) {
 		})
 		return
 	}
-	if point.Score <= 0 {
+	if point.Score < 0 {
 		c.JSON(http.StatusBadRequest, ResponseHTTP{
 			Success: false,
-			Message: "Score must be greater than 0",
+			Message: "Score must be non-negative",
 		})
 		return
 	}
@@ -612,6 +612,86 @@ func AddQuestionToExam(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseHTTP{
 		Success: true,
 		Message: "Question added to exam successfully",
+	})
+}
+
+// UpdateQuestionInExam updates the score of a question in an exam
+// @Summary      Update a question's score in an exam
+// @Description  Update the score associated with a question in a specific exam
+// @Tags         Exam
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Exam ID"
+// @Param        question_id path string true "Question ID"
+// @Param		 point body point true "Updated score for the question"
+// @Success      200 {object} ResponseHTTP{}
+// @Failure      404 {object} ResponseHTTP{}
+// @Failure      500 {object} ResponseHTTP{}
+// @Router       /api/exams/admin/{id}/questions/{question_id}/question [put]
+// @Security BearerAuth
+func UpdateQuestionInExam(c *gin.Context) {
+	jwtClaims := c.Request.Context().Value(models.JWTClaimsKey).(*utils.JWTClaims)
+	if !jwtClaims.IsAdmin {
+		c.JSON(403, ResponseHTTP{
+			Success: false,
+			Message: "Permission denied",
+		})
+		return
+	}
+	id := c.Param("id")
+	var exam models.Exam
+	db := database.DBConn
+	if err := db.First(&exam, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "Exam not found",
+		})
+		return
+	}
+	questionID := c.Param("question_id")
+	var question models.Question
+	if err := db.First(&question, questionID).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "Question not found",
+		})
+		return
+	}
+	point := point{}
+	if err := c.ShouldBindJSON(&point); err != nil {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Invalid input: " + err.Error(),
+		})
+		return
+	}
+	if point.Score < 0 {
+		c.JSON(http.StatusBadRequest, ResponseHTTP{
+			Success: false,
+			Message: "Score must be non-negative",
+		})
+		return
+	}
+	// Check if the question is associated with the exam
+	var examQuestion models.ExamQuestion
+	if err := db.Where("exam_id = ? AND question_id = ?", exam.ID, question.ID).First(&examQuestion).Error; err != nil {
+		c.JSON(http.StatusNotFound, ResponseHTTP{
+			Success: false,
+			Message: "Question not associated with the exam",
+		})
+		return
+	}
+	examQuestion.Point = point.Score
+	if err := db.Save(&examQuestion).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, ResponseHTTP{
+			Success: false,
+			Message: "Failed to update question score in exam",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, ResponseHTTP{
+		Success: true,
+		Message: "Question score updated in exam successfully",
 	})
 }
 
