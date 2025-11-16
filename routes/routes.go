@@ -177,6 +177,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/exams", AuthMiddleware(false), handlers.ListExams)
 		api.POST("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.AddQuestionToExam)
 		api.DELETE("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.RemoveQuestionFromExam)
+		api.PUT("/exams/admin/:id/questions/:question_id/question", AuthMiddleware(), handlers.UpdateQuestionInExam)
 		api.GET("/exams/:id/exam", AuthMiddleware(false), handlers.GetExamInfo)
 		api.GET("/exams/:id/leaderboard", AuthMiddleware(false), handlers.GetExamLeaderboard)
 		api.GET("/exams/:id/questions", AuthMiddleware(false), handlers.GetExamQuestions)
